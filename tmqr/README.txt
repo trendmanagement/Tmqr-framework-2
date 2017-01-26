@@ -1,0 +1,1 @@
+This is a root package and it contains most essential settings and modules
