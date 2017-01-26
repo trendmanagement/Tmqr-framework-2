@@ -1,0 +1,8 @@
+pymongo
+pika
+pandas
+numpy
+cython
+tqdm
+bdateutil
+holidays
