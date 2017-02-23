@@ -34,5 +34,5 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        tickers_list = [FutureContract(x['tckr']) for x in self.data_engine.get_futures_chain(instrument, self.date_start)]
+        tickers_list = [x['tckr'] for x in self.data_engine.get_futures_chain(instrument, self.date_start)]
         return FutureChain(tickers_list)
