@@ -90,7 +90,7 @@ print("Pickle/Unpickle roundtrip {1} days {0}s".format((time.time() - time_pickl
 
 print("Pickled object size: {0}".format(len(pcl_data)))
 
-sys.exit(-2)
+#sys.exit(-2)
 db['bundled_quotes'].drop()
 db['splitted_quotes'].drop()
 db['pickled_quotes'].drop()
