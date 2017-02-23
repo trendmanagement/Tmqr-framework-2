@@ -171,10 +171,10 @@ class OptionContract(ContractBase):
     @property
     def underlying(self):
         """
-        Options contract underlying FutureContract class instance or ContractBase class instance.
+        Option contract's underlying FutureContract class instance or ContractBase class instance.
+
         Example: US.C.F-ZB-H11-110322.110121@89.0 -> US.F.ZB.H11.110322 future instance
         US.C.S-AAPL.110121@89.0 -> US.S.AAPL for stock options
-
         :return: FutureContract class instance or ContractBase class instance
         """
         if self._underlying is None:
