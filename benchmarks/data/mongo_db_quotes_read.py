@@ -46,12 +46,14 @@ def read_single():
         for rec in db['splitted_quotes'].find({'ticker': 'RANDOM', 'dt': {'$gte': start_date, '$lte': end_date}}):
             continue
 
+
 def read_bundled():
     db['bundled_quotes'].create_index([('ticker', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)])
 
     with Timer("Bundled quotes Mongo query") as t:
         for rec in db['bundled_quotes'].find({'ticker': 'RANDOM', 'dt': {'$gte': start_date, '$lte': end_date}}):
             continue
+
 
 read_pickled()
 

@@ -16,7 +16,6 @@ current_date = datetime(2010, 1, 10)
 
 
 def write_pickled(dt, random_values):
-
     array = []
     for i, r in enumerate(random_values):
         record = {
@@ -40,7 +39,6 @@ def write_pickled(dt, random_values):
 
 
 def write_minute_by_minute(dt, random_values):
-
     for i, r in enumerate(random_values):
         record = {
             'ticker': TICKER,
@@ -52,6 +50,7 @@ def write_minute_by_minute(dt, random_values):
             'v': r[4],
         }
         db['splitted_quotes'].insert(record)
+
 
 def write_bundled_record(dt, random_values):
     record = {
@@ -78,7 +77,7 @@ def write_bundled_record(dt, random_values):
 # Preventing MongoDB quote overwriting
 
 
-rand_data = np.random.uniform(size=(60*24, 5))
+rand_data = np.random.uniform(size=(60 * 24, 5))
 
 time_pickle = time.time()
 df = pd.DataFrame(rand_data)
@@ -86,18 +85,17 @@ n = 2560
 for i in range(n):
     pcl_data = pickle.dumps(df)
     pickle.loads(pcl_data)
-print("Pickle/Unpickle roundtrip {1} days {0}s".format((time.time() - time_pickle)/n, n))
+print("Pickle/Unpickle roundtrip {1} days {0}s".format((time.time() - time_pickle) / n, n))
 
 print("Pickled object size: {0}".format(len(pcl_data)))
 
-#sys.exit(-2)
+# sys.exit(-2)
 db['bundled_quotes'].drop()
 db['splitted_quotes'].drop()
 db['pickled_quotes'].drop()
 
 while current_date < datetime.now():
-
-    rand_data = np.random.uniform(size=(60*24, 5))
+    rand_data = np.random.uniform(size=(60 * 24, 5))
 
     time_splitted_begin = time.time()
     write_minute_by_minute(current_date, rand_data)
@@ -112,8 +110,8 @@ while current_date < datetime.now():
     time_pickled_end = time.time()
 
     print("{0} Splitted write: {1}s Bundled: {2}s Pickled: {3}s".format(current_date,
-                                                          time_splitted_end-time_splitted_begin,
-                                                          time_bundled_end-time_bundled_begin,
-                                                          time_pickled_end-time_pickled_begin))
+                                                                        time_splitted_end - time_splitted_begin,
+                                                                        time_bundled_end - time_bundled_begin,
+                                                                        time_pickled_end - time_pickled_begin))
     current_date += timedelta(days=1)
 print('Done')

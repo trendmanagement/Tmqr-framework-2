@@ -13,6 +13,7 @@ class DataEngineBase:
     def __init__(self, **kwargs):
         pass
 
+
 class DataEngineMongo(DataEngineBase):
     """
     This class implements low-level data fetching from MongoDB

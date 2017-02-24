@@ -5,6 +5,7 @@ class FutureChain:
     """
     Futures chain class
     """
+
     def __init__(self, fut_tckr_list):
         self.futures = [FutureContract(f) for f in fut_tckr_list]
 
