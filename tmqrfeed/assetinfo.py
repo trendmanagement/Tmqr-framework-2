@@ -1,4 +1,5 @@
 import pytz
+from tmqrfeed.assetsession import AssetSession
 
 
 class AssetInfo:
@@ -12,6 +13,7 @@ class AssetInfo:
         self.ticksize = self._info_dict['ticksize']
         self.tickvalue = self._info_dict['tickvalue']
         self.timezone = pytz.timezone(self._info_dict['timezone'])
+        self.session = AssetSession(self._info_dict['trading_session'], self.timezone)
 
 
     def __getattr__(self, item):

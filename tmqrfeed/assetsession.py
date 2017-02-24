@@ -86,5 +86,5 @@ class AssetSession:
                 execution = self._time_combine(item, sess['execution'])
                 return start, decision, execution
 
-        raise ValueError("Trading sessions information doesn't contain information for so early date, "
+        raise ValueError("Trading sessions information doesn't contain records for so early date, "
                          "try to add '1900-01-01' record to implement default session")

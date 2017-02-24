@@ -29,6 +29,7 @@ class AssetInfoTestCase(unittest.TestCase):
         # These values fetched dynamically
         self.assertEqual(ai.rollover_days_before, 2)
         self.assertEqual(ai.futures_months, [3, 6, 9, 12])
+        self.assertEqual(True, isinstance(ai.session, AssetSession))
 
     def test_dynamic_params_getting(self):
         ai = AssetInfo(self.info_dic)
