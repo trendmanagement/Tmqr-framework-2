@@ -1,7 +1,7 @@
 from tmqrfeed._dataengines import DataEngineMongo
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contracts import FutureContract
-
+from datetime import timedelta
 
 class DataFeed:
     """
@@ -28,11 +28,12 @@ class DataFeed:
         # Initializing common datafeed settings
         self.date_start = kwargs.get('date_start', None)
 
-    def get_fut_chain(self, instrument):
+    def get_fut_chain(self, instrument, **kwargs):
         """
         Fetch futures chain for particular instrument
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        tickers_list = [x['tckr'] for x in self.data_engine.get_futures_chain(instrument, self.date_start)]
-        return FutureChain(tickers_list)
+        tickers_list = [x['tckr'] for x in self.data_engine.get_futures_chain(instrument,
+                                                                              self.date_start - timedelta(days=180))]
+        return FutureChain(tickers_list, **kwargs)

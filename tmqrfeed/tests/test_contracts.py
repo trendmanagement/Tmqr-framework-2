@@ -29,7 +29,42 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.name, 'CLM83')
         self.assertEqual(contract.instrument, 'US.CL')
         self.assertEqual(contract.instrument, contract.underlying)
-        self.assertEqual(contract.expiration, datetime(1983, 5, 20))
+        self.assertEqual(contract.exp_date, datetime(1983, 5, 20))
+        self.assertEqual(contract.exp_month, 6)
+
+    def test_futurecontract_get_month_by_letter(self):
+        contract = FutureContract('US.F.CL.M83.830520')
+        self.assertEqual(contract.exp_month, 6)
+
+        """
+        http://www.cmegroup.com/month-codes.html
+        January	F
+        February	G
+        March	H
+        April	J
+        May	K
+        June	M
+        July	N
+        August	Q
+        September	U
+        October	V
+        November	X
+        December	Z
+
+        """
+        self.assertEqual(contract._get_month_by_code('f'), 1)
+        self.assertEqual(contract._get_month_by_code('g'), 2)
+        self.assertEqual(contract._get_month_by_code('H'), 3)
+        self.assertEqual(contract._get_month_by_code('J'), 4)
+        self.assertEqual(contract._get_month_by_code('K'), 5)
+        self.assertEqual(contract._get_month_by_code('M'), 6)
+        self.assertEqual(contract._get_month_by_code('N'), 7)
+        self.assertEqual(contract._get_month_by_code('Q'), 8)
+        self.assertEqual(contract._get_month_by_code('U'), 9)
+        self.assertEqual(contract._get_month_by_code('V'), 10)
+        self.assertEqual(contract._get_month_by_code('X'), 11)
+        self.assertEqual(contract._get_month_by_code('Z'), 12)
+        self.assertRaises(KeyError, contract._get_month_by_code, 'A')
 
     def test_futurecontract_wrong_ctype_or_tockens_count(self):
         self.assertRaises(ValueError, FutureContract, 'US.S.AAPL')
@@ -52,7 +87,7 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.name, 'ZBH11.110121@89.0')
         self.assertEqual(contract.instrument, 'US.ZB')
         self.assertEqual(contract.underlying.ticker, 'US.F.ZB.H11.110322')
-        self.assertEqual(contract.expiration, datetime(2011, 1, 21))
+        self.assertEqual(contract.exp_date, datetime(2011, 1, 21))
         self.assertEqual(contract.strike, 89.0)
 
         self.assertRaises(ValueError, OptionContract, 'US.C.F-ZB-H11-110322.XX.110121@89.0')

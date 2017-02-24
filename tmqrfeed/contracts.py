@@ -105,7 +105,8 @@ class FutureContract(ContractBase):
             raise ValueError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
             raise ValueError("Future contract must have 5 tokens in ticker, like: US.F.CL.M83.830520")
-        self.expiration = self._parse_expiration(self._toks[4])
+        self.exp_date = self._parse_expiration(self._toks[4])
+        self.exp_month = self._get_month_by_code(self._toks[3][0])
 
     @property
     def name(self):
@@ -131,6 +132,27 @@ class FutureContract(ContractBase):
         """
         return self.instrument
 
+    def _get_month_by_code(self, month_letter):
+        """
+        http://www.cmegroup.com/month-codes.html
+        January	F
+        February	G
+        March	H
+        April	J
+        May	K
+        June	M
+        July	N
+        August	Q
+        September	U
+        October	V
+        November	X
+        December	Z
+        :param month_letter:
+        :return:
+        """
+        month_letters = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6, 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12 }
+        return month_letters[month_letter.upper()]
+
 
 class OptionContract(ContractBase):
     """
@@ -148,7 +170,7 @@ class OptionContract(ContractBase):
         if len(self._toks) != 5:
             raise ValueError("Option contract must have 5 tokens in ticker, like: US.C.F-ZB-H11-110322.110121@89.0")
 
-        self.expiration = self._parse_expiration(self._toks[3])
+        self.exp_date = self._parse_expiration(self._toks[3])
         self.strike = float(self._toks[4])
         self._underlying = None
 
