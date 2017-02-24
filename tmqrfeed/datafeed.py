@@ -22,8 +22,8 @@ class DataFeed:
 
         # Initiating low-level data engine
         self.data_engine_settings = kwargs.get('data_engine_settings', {})
-        DataEngineCls = kwargs.get('data_engine_cls', DataEngineMongo)
-        self.data_engine = DataEngineCls(**self.data_engine_settings)
+        data_engine_cls = kwargs.get('data_engine_cls', DataEngineMongo)
+        self.data_engine = data_engine_cls(**self.data_engine_settings)
 
         # Initializing common datafeed settings
         self.date_start = kwargs.get('date_start', None)

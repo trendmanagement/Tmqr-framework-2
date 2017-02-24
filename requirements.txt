@@ -6,3 +6,4 @@ cython
 tqdm
 bdateutil
 holidays
+pytz
