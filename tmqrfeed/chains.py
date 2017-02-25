@@ -17,8 +17,6 @@ class FutureChain:
         raw_futures = [FutureContract(f) for f in fut_tckr_list]
         self.futchain = self._generate_chains(raw_futures)
 
-
-
     def _generate_chains(self, raw_futures):
         """
         Creates historical chains
@@ -31,8 +29,6 @@ class FutureChain:
         chain = []
 
         for i, fut in enumerate(raw_futures):
-            if fut.exp_date < date_start:
-                continue
             if fut.exp_month not in self.futures_months:
                 continue
 
@@ -42,14 +38,46 @@ class FutureChain:
             else:
                 chain.append({
                     'ticker': fut,
-                    'date_start': prev_fut.exp_date - BDay(self.rollover_days_before + 1),
+                    'date_start': prev_fut.exp_date - BDay(self.rollover_days_before - 1),
                     'date_end': fut.exp_date - BDay(self.rollover_days_before),
                 })
                 prev_fut = fut
 
-        return pd.DataFrame(chain).set_index('ticker')
+        df = pd.DataFrame(chain).set_index('ticker')
+        return df[df.date_end > date_start]
 
+    def get_list(self, date, offset=0, limit=0):
+        """
+        Returns list of actual futures contracts for particular date
+        :param date: actual date
+        :param offset: chain offset, 0 - front chain, +1 - front+1, etc.
+        :param limit: Number contracts to return (0 - all)
+        :return: pd.DataFrame with chain information
+        """
+        df = self.futchain[self.futchain.date_end > date]
 
+        if offset < 0:
+            raise ValueError("'offset' argument must be >= 0")
+        elif offset > 0:
+            df = df.shift(offset).dropna()
 
-    def __len__(self):
-        return len(self.futchain)
+        if limit < 0:
+            raise ValueError("'limit' argument must be >= 0")
+        elif limit > 0:
+            df = df.head(limit)
+
+        if len(df) == 0:
+            raise ValueError("Can't get futures chain at {0} limit: {1} offset: {2}. "
+                             "Too strict request or not enough data".format(date, limit, offset))
+
+        return df
+
+    def get(self, date, offset=0):
+        """
+        Returns future contract for particular date
+        :param date: actual date
+        :param offset: chain offset, 0 - front chain, +1 - front+1, etc.
+        :return: FutureContract class instance
+        """
+        df = self.get_list(date, offset, limit=1)
+        return df.iloc[0].name

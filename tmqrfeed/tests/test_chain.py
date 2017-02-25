@@ -2,6 +2,7 @@ import unittest
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.assetinfo import AssetInfo
 from datetime import datetime
+from tmqrfeed.contracts import FutureContract
 
 class FutChainTestCase(unittest.TestCase):
     def setUp(self):
@@ -40,61 +41,176 @@ class FutChainTestCase(unittest.TestCase):
                              'US.F.CL.V12.120920',
                              'US.F.CL.X12.121022',
                              'US.F.CL.Z12.121120',
-                             'US.F.CL.F13.121220',
-                             'US.F.CL.G13.130122',
-                             'US.F.CL.H13.130220',
-                             'US.F.CL.J13.130320',
-                             'US.F.CL.K13.130422',
-                             'US.F.CL.M13.130522',
-                             'US.F.CL.N13.130620',
-                             'US.F.CL.Q13.130722',
-                             'US.F.CL.U13.130821',
-                             'US.F.CL.V13.130920',
-                             'US.F.CL.X13.131022',
-                             'US.F.CL.Z13.131120',
-                             'US.F.CL.F14.131220',
-                             'US.F.CL.G14.140122',
-                             'US.F.CL.H14.140220',
-                             'US.F.CL.J14.140320',
-                             'US.F.CL.K14.140422',
-                             'US.F.CL.M14.140521',
-                             'US.F.CL.N14.140620',
-                             'US.F.CL.Q14.140722',
-                             'US.F.CL.U14.140820',
-                             'US.F.CL.V14.140922',
-                             'US.F.CL.X14.141022',
-                             'US.F.CL.Z14.141120',
-                             'US.F.CL.F15.141219',
-                             'US.F.CL.G15.150120',
-                             'US.F.CL.H15.150220',
-                             'US.F.CL.J15.150320',
-                             'US.F.CL.K15.150421',
-                             'US.F.CL.M15.150519',
-                             'US.F.CL.N15.150622',
-                             'US.F.CL.Q15.150721',
-                             'US.F.CL.U15.150820',
-                             'US.F.CL.V15.150922',
-                             'US.F.CL.X15.151020',
-                             'US.F.CL.Z15.151120',
-                             'US.F.CL.F16.151221',
-                             'US.F.CL.G16.160120',
-                             'US.F.CL.H16.160222',
-                             'US.F.CL.J16.160321',
-                             'US.F.CL.K16.160420',
-                             'US.F.CL.M16.160520',
-                             'US.F.CL.N16.160621',
-                             'US.F.CL.Q16.160720',
-                             'US.F.CL.U16.160822',
-                             'US.F.CL.V16.160920',
-                             'US.F.CL.X16.161020',
-                             'US.F.CL.Z16.161121',
-                             'US.F.CL.M17.170522',
-                             'US.F.CL.Z17.171121',
-                             'US.F.CL.M18.180522',
-                             'US.F.CL.Z18.181119',
-                             'US.F.CL.Z19.191120']
+                             ]
 
     def test_init(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
-        # TODO: Test chains output
-        pass
+
+        self.assertEqual('US.F.CL.M11.110520', chain.futchain.iloc[0].name.ticker)
+        for i in range(1, len(chain.futchain)):
+            row = chain.futchain.iloc[i]
+            prev_row = chain.futchain.iloc[i-1]
+            fut = row.name
+
+            self.assertTrue(fut.exp_month in [3, 6, 9, 12])
+            self.assertEqual(True, row.date_end > row.date_start)
+            self.assertEqual(True, row.date_start > prev_row.date_end)
+            self.assertEqual(True, row.date_end < fut.exp_date)
+
+    def test_init_kwargs(self):
+        chain1 = FutureChain(self.chain_tickers, self.ainfo)
+        self.assertEqual('US.F.CL.M11.110520', chain1.futchain.iloc[0].name.ticker)
+
+        chain = FutureChain(self.chain_tickers, self.ainfo,
+                            rollover_days_before=3,
+                            futures_months=[3, 6])
+        self.assertEqual('US.F.CL.M11.110520', chain.futchain.iloc[0].name.ticker)
+        self.assertTrue(chain1.futchain.iloc[0].date_end > chain.futchain.iloc[0].date_end)
+
+
+        for i in range(1, len(chain.futchain)):
+            row = chain.futchain.iloc[i]
+            prev_row = chain.futchain.iloc[i-1]
+            fut = row.name
+
+            self.assertTrue(fut.exp_month in [3, 6])
+            self.assertEqual(True, row.date_end > row.date_start)
+            self.assertEqual(True, row.date_start > prev_row.date_end)
+            self.assertEqual(True, row.date_end < fut.exp_date)
+
+        chain = FutureChain(self.chain_tickers, self.ainfo,
+                            date_start=datetime(2012, 1, 1))
+        self.assertEqual('US.F.CL.H12.120222', chain.futchain.iloc[0].name.ticker)
+
+    def test_get_list(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+
+        df = chain.get_list(datetime(2012, 5, 1))
+
+        """'US.F.CL.G12.120120',
+        'US.F.CL.H12.120222',
+        'US.F.CL.J12.120321',
+        'US.F.CL.K12.120420',
+        'US.F.CL.M12.120522', +
+        'US.F.CL.N12.120620',
+        'US.F.CL.Q12.120720',
+        'US.F.CL.U12.120822', +
+        'US.F.CL.V12.120920',
+        'US.F.CL.X12.121022',
+        'US.F.CL.Z12.121120', +
+        """
+        self.assertEqual(3, len(df))
+        self.assertEqual('US.F.CL.M12.120522', df.iloc[0].name.ticker)
+        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
+        self.assertEqual(datetime(2012, 2, 21), df.iloc[0].date_start)
+
+        self.assertEqual('US.F.CL.U12.120822', df.iloc[1].name.ticker)
+        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
+        self.assertEqual(datetime(2012, 5, 21), df.iloc[1].date_start)
+
+        self.assertEqual('US.F.CL.Z12.121120', df.iloc[2].name.ticker)
+        self.assertEqual(datetime(2012, 11, 16), df.iloc[2].date_end)
+        self.assertEqual(datetime(2012, 8, 21), df.iloc[2].date_start)
+
+    def test_get_list_datepicking_check(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+
+        df = chain.get_list(datetime(2012, 5, 18))
+
+        """'US.F.CL.G12.120120',
+        'US.F.CL.H12.120222',
+        'US.F.CL.J12.120321',
+        'US.F.CL.K12.120420',
+        'US.F.CL.M12.120522', +
+        'US.F.CL.N12.120620',
+        'US.F.CL.Q12.120720',
+        'US.F.CL.U12.120822', +
+        'US.F.CL.V12.120920',
+        'US.F.CL.X12.121022',
+        'US.F.CL.Z12.121120', +
+        """
+        self.assertEqual(2, len(df))
+        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
+        self.assertEqual(datetime(2012, 8, 20), df.iloc[0].date_end)
+        self.assertEqual(datetime(2012, 5, 21), df.iloc[0].date_start)
+
+        self.assertEqual('US.F.CL.Z12.121120', df.iloc[1].name.ticker)
+        self.assertEqual(datetime(2012, 11, 16), df.iloc[1].date_end)
+        self.assertEqual(datetime(2012, 8, 21), df.iloc[1].date_start)
+
+
+
+    def test_get_list_limit(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+
+        df = chain.get_list(datetime(2012, 5, 1), limit=2)
+        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), limit=-2)
+
+        """'US.F.CL.G12.120120',
+        'US.F.CL.H12.120222',
+        'US.F.CL.J12.120321',
+        'US.F.CL.K12.120420',
+        'US.F.CL.M12.120522', +
+        'US.F.CL.N12.120620',
+        'US.F.CL.Q12.120720',
+        'US.F.CL.U12.120822', +
+        'US.F.CL.V12.120920',
+        'US.F.CL.X12.121022',
+        'US.F.CL.Z12.121120', +
+        """
+        self.assertEqual(2, len(df))
+        self.assertEqual('US.F.CL.M12.120522', df.iloc[0].name.ticker)
+        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
+        self.assertEqual(datetime(2012, 2, 21), df.iloc[0].date_start)
+
+        self.assertEqual('US.F.CL.U12.120822', df.iloc[1].name.ticker)
+        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
+        self.assertEqual(datetime(2012, 5, 21), df.iloc[1].date_start)
+
+    def test_get_list_offset(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+
+        df = chain.get_list(datetime(2012, 5, 1), offset=1)
+
+        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), offset=-1)
+
+        """'US.F.CL.G12.120120',
+        'US.F.CL.H12.120222',
+        'US.F.CL.J12.120321',
+        'US.F.CL.K12.120420',
+        'US.F.CL.M12.120522', +
+        'US.F.CL.N12.120620',
+        'US.F.CL.Q12.120720',
+        'US.F.CL.U12.120822', +
+        'US.F.CL.V12.120920',
+        'US.F.CL.X12.121022',
+        'US.F.CL.Z12.121120', +
+        """
+        self.assertEqual(2, len(df))
+        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
+        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
+        self.assertEqual(datetime(2012, 2, 21), df.iloc[0].date_start)
+
+        self.assertEqual('US.F.CL.Z12.121120', df.iloc[1].name.ticker)
+        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
+        self.assertEqual(datetime(2012, 5, 21), df.iloc[1].date_start)
+
+
+        df = chain.get_list(datetime(2012, 5, 1), offset=1, limit=1)
+        self.assertEqual(1, len(df))
+        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
+        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
+        self.assertEqual(datetime(2012, 2, 21), df.iloc[0].date_start)
+
+        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), offset=3)
+
+    def test_get(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+
+        self.assertEqual(True, isinstance(chain.get(datetime(2012, 5, 1)), FutureContract))
+        self.assertEqual('US.F.CL.M12.120522', chain.get(datetime(2012, 5, 1)).ticker)
+        self.assertEqual('US.F.CL.U12.120822', chain.get(datetime(2012, 5, 1), offset=1).ticker)
+
+
+
+
