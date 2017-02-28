@@ -3,6 +3,7 @@ from datetime import timedelta, datetime
 from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
+from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import DataEngineMongo
 
 
@@ -51,8 +52,9 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        tickers_list = [x['tckr'] for x in self.data_engine.get_futures_chain(instrument,
-                                                                              self.date_start - timedelta(days=180))]
+        chain_dict = self.data_engine.get_futures_chain(instrument,
+                                                        self.date_start - timedelta(days=180))
+        tickers_list = [FutureContract(x['tckr'], datafeed=self) for x in chain_dict]
         return FutureChain(tickers_list,
                            self.get_asset_info(instrument),
                            **kwargs)

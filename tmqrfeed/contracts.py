@@ -36,6 +36,8 @@ class ContractBase:
         self.datafeed = datafeed
         """Global DataFeed class instance"""
 
+        self._contract_info = None
+
     @property
     def instrument(self):
         """
@@ -59,6 +61,17 @@ class ContractBase:
         :return:
         """
         return self._toks[2]
+
+    @property
+    def info(self):
+        """
+        Return ContractInfo class values
+        :return: ContractInfo class instance
+        """
+        if self._contract_info is None:
+            # Fill cache
+            self._contract_info = self.datafeed.get_contract_info(self.ticker)
+        return self._contract_info
 
     @staticmethod
     def _parse(ticker):

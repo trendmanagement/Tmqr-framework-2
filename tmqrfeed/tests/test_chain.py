@@ -20,7 +20,7 @@ class FutChainTestCase(unittest.TestCase):
                                               'execution': '10:45',
                                               'start': '00:32'}]}
         self.ainfo = AssetInfo(self.info_dic)
-        self.chain_tickers = ['US.F.CL.G11.110120',
+        self.tickers = ['US.F.CL.G11.110120',
                               'US.F.CL.H11.110222',
                               'US.F.CL.J11.110322',
                               'US.F.CL.K11.110419',
@@ -31,9 +31,9 @@ class FutChainTestCase(unittest.TestCase):
                               'US.F.CL.V11.110921',
                               'US.F.CL.X11.111020',
                               'US.F.CL.Z11.111121',
-                              'US.F.CL.F12.111221',
-                              'US.F.CL.G12.120120',
-                              'US.F.CL.H12.120222',
+                        'US.F.CL.F12.111221',
+                        'US.F.CL.G12.120120',
+                        'US.F.CL.H12.120222',
                               'US.F.CL.J12.120321',
                               'US.F.CL.K12.120420',
                               'US.F.CL.M12.120522',
@@ -43,7 +43,8 @@ class FutChainTestCase(unittest.TestCase):
                               'US.F.CL.V12.120920',
                               'US.F.CL.X12.121022',
                               'US.F.CL.Z12.121120',
-                              ]
+                        ]
+        self.chain_tickers = [FutureContract(x) for x in self.tickers]
 
     def test_init(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)

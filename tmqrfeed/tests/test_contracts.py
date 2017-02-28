@@ -1,6 +1,9 @@
 import unittest
+from unittest import mock
+
 from tmqrfeed.contracts import *
-from datetime import datetime
+from tmqrfeed.datafeed import DataFeed
+
 
 class ContractsTestCase(unittest.TestCase):
     def test_contractbase_init(self):
@@ -16,12 +19,12 @@ class ContractsTestCase(unittest.TestCase):
     def test_contractbase_toshort_contract(self):
         self.assertRaises(ValueError, ContractBase, 'US.AAPL')
 
-
     def test_contractbase_parse_ticker(self):
         contract = ContractBase('US.S.AAPL')
         self.assertEqual(contract._parse('US.S.AAPL'), ['US', 'S', 'AAPL'])
         self.assertEqual(contract._parse('US.F.CL.M83.830520'), 'US.F.CL.M83.830520'.split('.'))
-        self.assertEqual(contract._parse('US.C.F-ZB-H11-110322.110121@89.0'), ['US', 'C', 'F-ZB-H11-110322', '110121', '89.0'])
+        self.assertEqual(contract._parse('US.C.F-ZB-H11-110322.110121@89.0'),
+                         ['US', 'C', 'F-ZB-H11-110322', '110121', '89.0'])
 
     def test_futurecontract_init(self):
         contract = FutureContract('US.F.CL.M83.830520')
@@ -70,7 +73,6 @@ class ContractsTestCase(unittest.TestCase):
         self.assertRaises(ValueError, FutureContract, 'US.S.AAPL')
         self.assertRaises(ValueError, FutureContract, 'US.F.CLM83.830520')
 
-
     def test_futurecontract_parse_expiration(self):
         self.assertRaises(ValueError, FutureContract._parse_expiration, 'xxx')
         self.assertRaises(ValueError, FutureContract._parse_expiration, '59032x')
@@ -100,3 +102,34 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.instrument, 'US.AAPL')
         self.assertEqual(contract.underlying.ticker, 'US.S.AAPL')
         self.assertEqual(True, isinstance(contract.underlying, ContractBase))
+
+    def test_contract_info(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_contract_info') as eng_ainfo:
+            feed = DataFeed()
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datafeed=feed)
+
+            eng_ainfo.return_value = {
+                "extra_data": {
+                    "name": "C.US.USAG118900",
+                    "year": 2011,
+                    "monthint": 2,
+                    "month": "G",
+                    "sqlid": 1.0
+                },
+                "optcode": "",
+                "underlying": "US.F.ZB.H11.110322",
+                "mkt": "US",
+                "type": "C",
+                "tckr": "US.C.F-ZB-H11-110322.110121@89.0",
+                "instr": "US.ZB",
+                "exp": datetime(2011, 1, 21),
+                "strike": 89.0,
+                "opttype": "C"
+            }
+
+            self.assertEqual(1.0, contract.info.extra('sqlid'))
+
+            # Check that asset info requested only once (i.e. cached)
+            eng_ainfo.reset_mock()
+            self.assertEqual(1.0, contract.info.extra('sqlid'))
+            self.assertEqual(False, eng_ainfo.called)

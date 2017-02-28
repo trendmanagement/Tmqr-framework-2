@@ -3,8 +3,6 @@ from datetime import datetime
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from tmqrfeed.contracts import FutureContract
-
 
 class FutureChain:
     """
@@ -22,8 +20,7 @@ class FutureChain:
         self.futures_months = kwargs.get('futures_months', default_fut_months)
         self.date_start = kwargs.get('date_start', None)
 
-        raw_futures = [FutureContract(f) for f in fut_tckr_list]
-        self._futchain = self._generate_chains(raw_futures)
+        self._futchain = self._generate_chains(fut_tckr_list)
 
     def _generate_chains(self, raw_futures):
         """
