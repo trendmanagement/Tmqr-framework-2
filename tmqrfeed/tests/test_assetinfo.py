@@ -1,8 +1,10 @@
-import unittest
 import datetime
+import unittest
+
+import pytz
+
 from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.assetsession import AssetSession
-import pytz
 
 
 class AssetInfoTestCase(unittest.TestCase):
@@ -39,3 +41,8 @@ class AssetInfoTestCase(unittest.TestCase):
         ai = AssetInfo(self.info_dic)
         self.assertEqual(ai.rollover_days_before, 2)
         self.assertRaises(KeyError, ai.__getattr__, 'nonexistingkey')
+
+    def test_dynamic_get_with_default(self):
+        ai = AssetInfo(self.info_dic)
+        self.assertEqual(1.0, ai.get('nonexistingkey', 1.0))
+        self.assertEqual(None, ai.get('nonexistingkey'))

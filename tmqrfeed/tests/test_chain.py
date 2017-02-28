@@ -1,8 +1,10 @@
 import unittest
-from tmqrfeed.chains import FutureChain
-from tmqrfeed.assetinfo import AssetInfo
 from datetime import datetime
+
+from tmqrfeed.assetinfo import AssetInfo
+from tmqrfeed.chains import FutureChain
 from tmqrfeed.contracts import FutureContract
+
 
 class FutChainTestCase(unittest.TestCase):
     def setUp(self):
@@ -81,6 +83,10 @@ class FutChainTestCase(unittest.TestCase):
         chain = FutureChain(self.chain_tickers, self.ainfo,
                             date_start=datetime(2012, 1, 1))
         self.assertEqual('US.F.CL.H12.120222', chain.futchain.iloc[0].name.ticker)
+
+    def test_init_empty_or_none_tickers_list(self):
+        self.assertRaises(ValueError, FutureChain, None, self.ainfo)
+        self.assertRaises(ValueError, FutureChain, [], self.ainfo)
 
     def test_get_list(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
@@ -210,7 +216,3 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(True, isinstance(chain.get(datetime(2012, 5, 1)), FutureContract))
         self.assertEqual('US.F.CL.M12.120522', chain.get(datetime(2012, 5, 1)).ticker)
         self.assertEqual('US.F.CL.U12.120822', chain.get(datetime(2012, 5, 1), offset=1).ticker)
-
-
-
-

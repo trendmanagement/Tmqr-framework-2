@@ -1,4 +1,5 @@
 import pytz
+
 from tmqrfeed.assetsession import AssetSession
 
 
@@ -16,7 +17,21 @@ class AssetInfo:
         self.timezone = pytz.timezone(self._info_dict['timezone'])
         self.session = AssetSession(self._info_dict['trading_session'], self.timezone)
 
+    def get(self, item, default_value=None):
+        """
+        Get extra value of asset info
+        :param item: asset info item
+        :param default_value: default value if 'item' is not found
+        :return:
+        """
+        return self._info_dict.get(item, default_value)
+
     def __getattr__(self, item):
+        """
+        Get extra value of asset info by name (like asset_info.some_item)
+        :param item:
+        :return:
+        """
         if item not in self._info_dict:
             raise KeyError("Value '{0}' is not found in AssetInfo record for {1}".format(item, self.instrument))
         return self._info_dict[item]

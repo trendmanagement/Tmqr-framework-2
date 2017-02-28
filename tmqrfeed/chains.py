@@ -1,7 +1,10 @@
-from tmqrfeed.contracts import FutureContract
-from pandas.tseries.offsets import BDay
 from datetime import datetime
+
 import pandas as pd
+from pandas.tseries.offsets import BDay
+
+from tmqrfeed.contracts import FutureContract
+
 
 class FutureChain:
     """
@@ -9,9 +12,14 @@ class FutureChain:
     """
 
     def __init__(self, fut_tckr_list, asset_info, **kwargs):
+
+        if fut_tckr_list is None or len(fut_tckr_list) == 0:
+            raise ValueError("Failed to initiate futures chain empty tickers list")
+
         self.ainfo = asset_info
         self.rollover_days_before = kwargs.get('rollover_days_before', self.ainfo.rollover_days_before)
-        self.futures_months = kwargs.get('futures_months', self.ainfo.futures_months)
+        default_fut_months = self.ainfo.get('futures_months', range(1, 12))
+        self.futures_months = kwargs.get('futures_months', default_fut_months)
         self.date_start = kwargs.get('date_start', None)
 
         raw_futures = [FutureContract(f) for f in fut_tckr_list]

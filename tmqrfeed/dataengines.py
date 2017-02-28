@@ -1,4 +1,5 @@
 from pymongo import MongoClient
+
 from tmqr.settings import *
 
 
@@ -39,3 +40,27 @@ class DataEngineMongo(DataEngineBase):
             req = {'type': 'F', 'instr': instrument, 'exp': {'$gt': start_date}}
 
         return list(self.db['asset_index'].find(req, projection=['tckr']).sort('exp', 1))
+
+    def get_asset_info(self, instrument):
+        """
+        Fetch asset info
+        :param instrument:
+        :return:
+        """
+        toks = instrument.split('.')
+        if len(toks) != 2:
+            raise ValueError("Instrument name must be <MARKET>.<INSTRUMENT>")
+        mkt_name, instr_name = toks
+
+        ainfo_default = self.db['asset_info'].find_one({'instrument': '{0}.$DEFAULT$'.format(mkt_name)})
+        if ainfo_default is None:
+            raise ValueError("{0}.$DEFAULT$ record is not found in 'asset_info' collection".format(mkt_name))
+
+        ainfo_instrument = self.db['asset_info'].find_one({'instrument': '{0}'.format(instrument)})
+
+        if ainfo_instrument is not None:
+            ainfo_default.update(ainfo_instrument)
+        else:
+            ainfo_default['instrument'] = instrument
+
+        return ainfo_default
