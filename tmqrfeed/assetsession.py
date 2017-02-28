@@ -6,6 +6,7 @@ class AssetSession:
     """
     Implementation of instrument session handling
     """
+
     def __init__(self, sessions, tz):
         """
         Init asset session class
@@ -21,12 +22,14 @@ class AssetSession:
         Checks the validity of input data
         :return:
         """
-        def _check_time(s, name):
-            str_time = s[name]
+
+        def _check_time(session, name):
+            str_time = session[name]
             if re.match(r'^\d\d:\d\d$', str_time) is None:
                 raise ValueError("Wrong time pattern for '{0}' required 'HH:MM' but '{1}' given".format(name,
                                                                                                         str_time
                                                                                                         ))
+
         if self.sessions is None or len(self.sessions) == 0:
             raise ValueError("Asset trading session settings are empty")
 

@@ -1,11 +1,11 @@
+import pickle
+import sys
+import time
+from datetime import datetime, timedelta
+import numpy as np
+import pandas as pd
 from pymongo import MongoClient
 from tmqr.settings import *
-import numpy as np
-from datetime import datetime, timedelta
-import time
-import pickle
-import pandas as pd
-import sys
 
 TICKER = "RANDOM"
 

@@ -1,12 +1,13 @@
-from tmqrfeed._dataengines import DataEngineMongo
-from tmqrfeed.chains import FutureChain
-from tmqrfeed.contracts import FutureContract
 from datetime import timedelta
+from tmqrfeed.chains import FutureChain
+from tmqrfeed.dataengines import DataEngineMongo
+
 
 class DataFeed:
     """
     Class used to fetch data from different data sources and asset indexes
     """
+
     def __init__(self, preprocessorcls, postprocessors, **kwargs):
         """
         Initiate datafeed engine

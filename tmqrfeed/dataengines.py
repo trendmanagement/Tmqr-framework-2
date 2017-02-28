@@ -1,7 +1,5 @@
-import pickle
-from tmqr.settings import *
 from pymongo import MongoClient
-from datetime import datetime
+from tmqr.settings import *
 
 
 class DataEngineBase:

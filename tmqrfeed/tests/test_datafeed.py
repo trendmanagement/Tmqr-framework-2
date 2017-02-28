@@ -1,6 +1,6 @@
 import unittest
 from tmqrfeed.datafeed import DataFeed
-from tmqrfeed._dataengines import DataEngineMongo
+from tmqrfeed.dataengines import DataEngineMongo
 from datetime import datetime
 from tmqrfeed.chains import FutureChain
 
@@ -25,14 +25,3 @@ class DataFeedTestCase(unittest.TestCase):
         self.assertEqual(dfeed.PreprocessorCls, 'Prepro')
         self.assertEqual(dfeed.data_engine_settings, {'test': 'ok'})
         self.assertEqual(dfeed.date_start, datetime(2011, 1, 1))
-
-    def test_get_fut_chain(self):
-        dfeed = DataFeed("Prepro",
-                         'PostPro',
-                         data_engine_settings={'test': 'ok'},
-                         date_start=datetime(2011, 1, 1),
-                         )
-        chain = dfeed.get_fut_chain('US.CL')
-        self.assertEqual(True, isinstance(chain, FutureChain))
-
-

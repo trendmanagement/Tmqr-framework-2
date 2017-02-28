@@ -5,6 +5,7 @@ class ContractBase:
     """
     Base class for generic asset
     """
+
     def __init__(self, tckr):
         """
         Init generic contract from special `tckr` code
@@ -95,6 +96,7 @@ class FutureContract(ContractBase):
     """
     Future contract asset class
     """
+
     def __init__(self, tckr):
         """
         Init future contract from special `tckr` code
@@ -132,7 +134,8 @@ class FutureContract(ContractBase):
         """
         return self.instrument
 
-    def _get_month_by_code(self, month_letter):
+    @staticmethod
+    def _get_month_by_code(month_letter):
         """
         http://www.cmegroup.com/month-codes.html
         January	F
@@ -150,7 +153,8 @@ class FutureContract(ContractBase):
         :param month_letter:
         :return:
         """
-        month_letters = {'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6, 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12 }
+        month_letters = {
+            'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6, 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
         return month_letters[month_letter.upper()]
 
 
