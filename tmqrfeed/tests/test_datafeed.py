@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest import mock
 
 from tmqrfeed.assetinfo import AssetInfo
+from tmqrfeed.chains import FutureChain
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
 
@@ -56,5 +57,16 @@ class DataFeedTestCase(unittest.TestCase):
 
     def test_get_fut_chain_no_data(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_futures_chain') as mock_eng_chain:
+            mock_eng_chain.return_value = []
             dfeed = DataFeed()
-            self.assertRaises(ValueError, dfeed.get_fut_chain, 'US.CL')
+            self.assertRaises(ValueError, dfeed.get_fut_chain, 'US.NONEXISTING')
+
+    def test_get_fut_chain_success(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_futures_chain') as mock_eng_chain:
+            mock_eng_chain.return_value = [{'tckr': 'US.F.CL.G11.110120'},
+                                           {'tckr': 'US.F.CL.H11.110222'},
+                                           {'tckr': 'US.F.CL.J11.110322'},
+                                           {'tckr': 'US.F.CL.K11.110419'}, ]
+            dfeed = DataFeed()
+            chain = dfeed.get_fut_chain('US.CL')
+            self.assertEqual(FutureChain, type(chain))

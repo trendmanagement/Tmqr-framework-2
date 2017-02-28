@@ -27,17 +27,17 @@ class DataEngineMongo(DataEngineBase):
         self.db = self.client[mongo_db]
         self.cursors = {}
 
-    def get_futures_chain(self, instrument, start_date=None):
+    def get_futures_chain(self, instrument, date_start=None):
         """
         Fetch futures chain for particular instrument
         :param instrument: Full-qualified instrument name <Market>.<Name>
-        :param start_date: Starting date of chain
+        :param date_start: Starting date of chain
         :return: List of futures' full-qualified ticker names
         """
-        if start_date is None:
+        if date_start is None:
             req = {'type': 'F', 'instr': instrument}
         else:
-            req = {'type': 'F', 'instr': instrument, 'exp': {'$gt': start_date}}
+            req = {'type': 'F', 'instr': instrument, 'exp': {'$gt': date_start}}
 
         return list(self.db['asset_index'].find(req, projection=['tckr']).sort('exp', 1))
 

@@ -48,10 +48,10 @@ class FutChainTestCase(unittest.TestCase):
     def test_init(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
 
-        self.assertEqual('US.F.CL.M11.110520', chain.futchain.iloc[0].name.ticker)
-        for i in range(1, len(chain.futchain)):
-            row = chain.futchain.iloc[i]
-            prev_row = chain.futchain.iloc[i-1]
+        self.assertEqual('US.F.CL.M11.110520', chain._futchain.iloc[0].name.ticker)
+        for i in range(1, len(chain._futchain)):
+            row = chain._futchain.iloc[i]
+            prev_row = chain._futchain.iloc[i - 1]
             fut = row.name
 
             self.assertTrue(fut.exp_month in [3, 6, 9, 12])
@@ -59,20 +59,24 @@ class FutChainTestCase(unittest.TestCase):
             self.assertEqual(True, row.date_start > prev_row.date_end)
             self.assertEqual(True, row.date_end < fut.exp_date)
 
+    def test_futures(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo)
+        self.assertEqual(len(chain._futchain), len(chain.futures))
+
+
     def test_init_kwargs(self):
         chain1 = FutureChain(self.chain_tickers, self.ainfo)
-        self.assertEqual('US.F.CL.M11.110520', chain1.futchain.iloc[0].name.ticker)
+        self.assertEqual('US.F.CL.M11.110520', chain1._futchain.iloc[0].name.ticker)
 
         chain = FutureChain(self.chain_tickers, self.ainfo,
                             rollover_days_before=3,
                             futures_months=[3, 6])
-        self.assertEqual('US.F.CL.M11.110520', chain.futchain.iloc[0].name.ticker)
-        self.assertTrue(chain1.futchain.iloc[0].date_end > chain.futchain.iloc[0].date_end)
+        self.assertEqual('US.F.CL.M11.110520', chain._futchain.iloc[0].name.ticker)
+        self.assertTrue(chain1._futchain.iloc[0].date_end > chain._futchain.iloc[0].date_end)
 
-
-        for i in range(1, len(chain.futchain)):
-            row = chain.futchain.iloc[i]
-            prev_row = chain.futchain.iloc[i-1]
+        for i in range(1, len(chain._futchain)):
+            row = chain._futchain.iloc[i]
+            prev_row = chain._futchain.iloc[i - 1]
             fut = row.name
 
             self.assertTrue(fut.exp_month in [3, 6])
@@ -82,7 +86,7 @@ class FutChainTestCase(unittest.TestCase):
 
         chain = FutureChain(self.chain_tickers, self.ainfo,
                             date_start=datetime(2012, 1, 1))
-        self.assertEqual('US.F.CL.H12.120222', chain.futchain.iloc[0].name.ticker)
+        self.assertEqual('US.F.CL.H12.120222', chain._futchain.iloc[0].name.ticker)
 
     def test_init_empty_or_none_tickers_list(self):
         self.assertRaises(ValueError, FutureChain, None, self.ainfo)

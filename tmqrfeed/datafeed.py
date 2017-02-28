@@ -31,6 +31,11 @@ class DataFeed:
         self.futchain_cache = {}
 
     def get_asset_info(self, instrument):
+        """
+        Returns instance of instrument AssetInfo class
+        :param instrument: full qualified instrument name
+        :return: AssetInfo class instance
+        """
         if instrument in self.ainfo_cache:
             # Use caching
             return self.ainfo_cache[instrument]

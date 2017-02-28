@@ -23,7 +23,7 @@ class FutureChain:
         self.date_start = kwargs.get('date_start', None)
 
         raw_futures = [FutureContract(f) for f in fut_tckr_list]
-        self.futchain = self._generate_chains(raw_futures)
+        self._futchain = self._generate_chains(raw_futures)
 
     def _generate_chains(self, raw_futures):
         """
@@ -62,7 +62,7 @@ class FutureChain:
         :param limit: Number contracts to return (0 - all)
         :return: pd.DataFrame with chain information
         """
-        df = self.futchain[self.futchain.date_end > date]
+        df = self._futchain[self._futchain.date_end > date]
 
         if offset < 0:
             raise ValueError("'offset' argument must be >= 0")
@@ -89,3 +89,7 @@ class FutureChain:
         """
         df = self.get_list(date, offset, limit=1)
         return df.iloc[0].name
+
+    @property
+    def futures(self):
+        return self._futchain.index
