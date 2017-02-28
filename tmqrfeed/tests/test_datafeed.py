@@ -4,6 +4,7 @@ from unittest import mock
 
 from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
+from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
 
@@ -70,3 +71,20 @@ class DataFeedTestCase(unittest.TestCase):
             dfeed = DataFeed()
             chain = dfeed.get_fut_chain('US.CL')
             self.assertEqual(FutureChain, type(chain))
+
+    def test_get_contract_info(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_contract_info') as mock_contr_info:
+            mock_contr_info.return_value = {
+
+                "underlying": "US.CL",
+                "type": "F",
+                "contr": "CL.Q83",
+                "tckr": "US.F.CL.Q83.830720",
+                "instr": "US.CL",
+                "exp": datetime(1983, 7, 20),
+                "mkt": "US"
+            }
+            dfeed = DataFeed()
+            ci = dfeed.get_contract_info("US.F.CL.Q83.830720")
+            self.assertEqual(ContractInfo, type(ci))
+            self.assertEqual(ci.ticker, "US.F.CL.Q83.830720")

@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime
 
 from tmqrfeed.contracts import FutureContract
-from tmqrfeed.dataengines import DataEngineMongo
+from tmqrfeed.dataengines import *
 
 
 class DataEngineTestCase(unittest.TestCase):
@@ -54,3 +54,10 @@ class DataEngineTestCase(unittest.TestCase):
             if prev_exp is not None:
                 self.assertTrue(f.exp_date > prev_exp)
             prev_exp = f.exp_date
+
+    def test_get_contract_info(self):
+        deng = DataEngineMongo()
+        ci = deng.get_contract_info('US.C.F-ZB-H11-110322.110121@89.0')
+        self.assertEqual(ci['tckr'], 'US.C.F-ZB-H11-110322.110121@89.0')
+
+        self.assertRaises(DataEngineContractInfoNotFound, deng.get_contract_info, 'NON_EXISTING_TICKER')

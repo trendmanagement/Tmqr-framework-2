@@ -2,6 +2,7 @@ from datetime import timedelta, datetime
 
 from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
+from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
 
 
@@ -55,3 +56,11 @@ class DataFeed:
         return FutureChain(tickers_list,
                            self.get_asset_info(instrument),
                            **kwargs)
+
+    def get_contract_info(self, tckr):
+        """
+        Fetch contract info for full qualified ticker name
+        :param tckr: full qualified ticker
+        :return: ContractInfo class instance
+        """
+        return ContractInfo(self.data_engine.get_contract_info(tckr))

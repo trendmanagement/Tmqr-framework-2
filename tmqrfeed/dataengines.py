@@ -3,6 +3,9 @@ from pymongo import MongoClient
 from tmqr.settings import *
 
 
+class DataEngineContractInfoNotFound(Exception):
+    pass
+
 class DataEngineBase:
     """
     This class implements low-level interface for data fetching for different data sources
@@ -45,7 +48,7 @@ class DataEngineMongo(DataEngineBase):
         """
         Fetch asset info
         :param instrument:
-        :return:
+        :return: asset info Mongo dict
         """
         toks = instrument.split('.')
         if len(toks) != 2:
@@ -64,3 +67,16 @@ class DataEngineMongo(DataEngineBase):
             ainfo_default['instrument'] = instrument
 
         return ainfo_default
+
+    def get_contract_info(self, tckr):
+        """
+        Fetch contract information by full qualified ticker
+        :param tckr: full qualified ticker
+        :return: Contract info Mongo dict
+        """
+
+        result = self.db['asset_index'].find_one({'tckr': tckr})
+        if result is None:
+            raise DataEngineContractInfoNotFound("Contract info for {0} not found".format(tckr))
+
+        return result

@@ -6,10 +6,11 @@ class ContractBase:
     Base class for generic asset
     """
 
-    def __init__(self, tckr):
+    def __init__(self, tckr, datafeed=None):
         """
         Init generic contract from special `tckr` code
         :param tckr: Ticker code
+        :param datafeed: DataFeed instance
         """
 
         #: Full-qualified ticker name
@@ -31,6 +32,9 @@ class ContractBase:
         #: 'S' - Stock
         self.ctype = self._toks[1]
         """Contract type"""
+
+        self.datafeed = datafeed
+        """Global DataFeed class instance"""
 
     @property
     def instrument(self):
@@ -97,12 +101,13 @@ class FutureContract(ContractBase):
     Future contract asset class
     """
 
-    def __init__(self, tckr):
+    def __init__(self, tckr, datafeed=None):
         """
         Init future contract from special `tckr` code
         :param tckr: Ticker code
+        :param datafeed: DataFeed instance
         """
-        super().__init__(tckr)
+        super().__init__(tckr, datafeed)
         if self.ctype != 'F':
             raise ValueError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
@@ -163,12 +168,13 @@ class OptionContract(ContractBase):
     Option contract asset class
     """
 
-    def __init__(self, tckr):
+    def __init__(self, tckr, datafeed=None):
         """
         Init option contract from special `tckr` code
         :param tckr: Ticker code
+        :param datafeed: DataFeed instance
         """
-        super().__init__(tckr)
+        super().__init__(tckr, datafeed)
         if self.ctype != 'P' and self.ctype != 'C':
             raise ValueError("Contract type 'C' or 'P' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
