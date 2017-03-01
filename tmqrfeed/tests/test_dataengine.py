@@ -26,7 +26,7 @@ class DataEngineTestCase(unittest.TestCase):
 
     def test_get_asset_info_non_existing_market(self):
         deng = DataEngineMongo()
-        self.assertRaises(ValueError, deng.get_asset_info, "NONEXISTINGMARKET.ES")
+        self.assertRaises(DataEngineNotFoundError, deng.get_asset_info, "NONEXISTINGMARKET.ES")
 
     def test_get_futures_chain(self):
         deng = DataEngineMongo()
@@ -60,4 +60,4 @@ class DataEngineTestCase(unittest.TestCase):
         ci = deng.get_contract_info('US.C.F-ZB-H11-110322.110121@89.0')
         self.assertEqual(ci['tckr'], 'US.C.F-ZB-H11-110322.110121@89.0')
 
-        self.assertRaises(DataEngineContractInfoNotFound, deng.get_contract_info, 'NON_EXISTING_TICKER')
+        self.assertRaises(DataEngineNotFoundError, deng.get_contract_info, 'NON_EXISTING_TICKER')

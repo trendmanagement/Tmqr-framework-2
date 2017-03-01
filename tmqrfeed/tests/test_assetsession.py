@@ -1,6 +1,8 @@
 import datetime
 import unittest
+
 import pytz
+
 from tmqrfeed.assetsession import AssetSession
 
 
@@ -38,7 +40,7 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution = sess[datetime.datetime(2005, 2, 5, 12, 45)]
+        start, decision, execution = sess.get(datetime.datetime(2005, 2, 5, 12, 45))
 
         self.assertEqual(start, datetime.datetime(2005, 2, 5, 0, 32, tzinfo=tz))
         self.assertEqual(decision, datetime.datetime(2005, 2, 5, 10, 40, tzinfo=tz))
@@ -158,19 +160,19 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution = sess[datetime.datetime(2010, 12, 30, 12, 45)]
+        start, decision, execution = sess.get(datetime.datetime(2010, 12, 30, 12, 45))
 
         self.assertEqual(start, datetime.datetime(2010, 12, 30, 0, 32, tzinfo=tz))
         self.assertEqual(decision, datetime.datetime(2010, 12, 30, 10, 40, tzinfo=tz))
         self.assertEqual(execution, datetime.datetime(2010, 12, 30, 10, 45, tzinfo=tz))
 
-        start, decision, execution = sess[datetime.datetime(2010, 12, 31, 12, 45)]
+        start, decision, execution = sess.get(datetime.datetime(2010, 12, 31, 12, 45))
 
         self.assertEqual(start, datetime.datetime(2010, 12, 31, 1, 32, tzinfo=tz))
         self.assertEqual(decision, datetime.datetime(2010, 12, 31, 11, 40, tzinfo=tz))
         self.assertEqual(execution, datetime.datetime(2010, 12, 31, 11, 45, tzinfo=tz))
 
-        start, decision, execution = sess[datetime.datetime(2011, 1, 1, 12, 45)]
+        start, decision, execution = sess.get(datetime.datetime(2011, 1, 1, 12, 45))
 
         self.assertEqual(start, datetime.datetime(2011, 1, 1, 2, 32, tzinfo=tz))
         self.assertEqual(decision, datetime.datetime(2011, 1, 1, 12, 40, tzinfo=tz))
@@ -180,4 +182,4 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        self.assertRaises(ValueError, sess.__getitem__, datetime.datetime(1800, 12, 30, 12, 45))
+        self.assertRaises(ValueError, sess.get, datetime.datetime(1800, 12, 30, 12, 45))

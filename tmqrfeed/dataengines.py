@@ -2,9 +2,19 @@ from pymongo import MongoClient
 
 from tmqr.settings import *
 
+#
+# Collection names constants
+#
+COLLECTION_ASSET_INDEX = 'asset_index'
+COLLECTION_ASSET_INFO = 'asset_info'
 
-class DataEngineContractInfoNotFound(Exception):
+
+#
+# Custom exceptions classes
+#
+class DataEngineNotFoundError(Exception):
     pass
+
 
 class DataEngineBase:
     """
@@ -42,7 +52,7 @@ class DataEngineMongo(DataEngineBase):
         else:
             req = {'type': 'F', 'instr': instrument, 'exp': {'$gt': date_start}}
 
-        return list(self.db['asset_index'].find(req, projection=['tckr']).sort('exp', 1))
+        return list(self.db[COLLECTION_ASSET_INDEX].find(req, projection=['tckr']).sort('exp', 1))
 
     def get_asset_info(self, instrument):
         """
@@ -55,11 +65,12 @@ class DataEngineMongo(DataEngineBase):
             raise ValueError("Instrument name must be <MARKET>.<INSTRUMENT>")
         mkt_name, instr_name = toks
 
-        ainfo_default = self.db['asset_info'].find_one({'instrument': '{0}.$DEFAULT$'.format(mkt_name)})
+        ainfo_default = self.db[COLLECTION_ASSET_INFO].find_one({'instrument': '{0}.$DEFAULT$'.format(mkt_name)})
         if ainfo_default is None:
-            raise ValueError("{0}.$DEFAULT$ record is not found in 'asset_info' collection".format(mkt_name))
+            raise DataEngineNotFoundError(
+                "{0}.$DEFAULT$ record is not found in 'asset_info' collection".format(mkt_name))
 
-        ainfo_instrument = self.db['asset_info'].find_one({'instrument': '{0}'.format(instrument)})
+        ainfo_instrument = self.db[COLLECTION_ASSET_INFO].find_one({'instrument': '{0}'.format(instrument)})
 
         if ainfo_instrument is not None:
             ainfo_default.update(ainfo_instrument)
@@ -75,8 +86,8 @@ class DataEngineMongo(DataEngineBase):
         :return: Contract info Mongo dict
         """
 
-        result = self.db['asset_index'].find_one({'tckr': tckr})
+        result = self.db[COLLECTION_ASSET_INDEX].find_one({'tckr': tckr})
         if result is None:
-            raise DataEngineContractInfoNotFound("Contract info for {0} not found".format(tckr))
+            raise DataEngineNotFoundError("Contract info for {0} not found".format(tckr))
 
         return result

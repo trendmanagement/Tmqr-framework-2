@@ -76,17 +76,17 @@ class AssetSession:
         return datetime.combine(source_date.date(),
                                 time(hh, mm, tzinfo=self.tz))
 
-    def __getitem__(self, item):
+    def get(self, date):
         """
         Get trading session params for particular date
-        :param item: datetime like object
+        :param date: datetime like object
         :return: tuple of (start, decision, execution) tz-aware dates for particular date
         """
         for i, sess in enumerate(reversed(self.sessions)):
-            if item.date() >= sess['dt'].date():
-                start = self._time_combine(item, sess['start'])
-                decision = self._time_combine(item, sess['decision'])
-                execution = self._time_combine(item, sess['execution'])
+            if date.date() >= sess['dt'].date():
+                start = self._time_combine(date, sess['start'])
+                decision = self._time_combine(date, sess['decision'])
+                execution = self._time_combine(date, sess['execution'])
                 return start, decision, execution
 
         raise ValueError("Trading sessions information doesn't contain records for so early date, "
