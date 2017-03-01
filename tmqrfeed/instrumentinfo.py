@@ -3,9 +3,9 @@ import pytz
 from tmqrfeed.assetsession import AssetSession
 
 
-class AssetInfo:
+class InstrumentInfo:
     """
-    AssetInfo class implements interface to raw asset information stored in the DB
+    InstrumentInfo class implements interface to raw asset information stored in the DB
     """
 
     def __init__(self, asset_info_dict):

@@ -1,9 +1,9 @@
 import unittest
 from datetime import datetime
 
-from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contracts import FutureContract
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
 class FutChainTestCase(unittest.TestCase):
@@ -19,7 +19,7 @@ class FutChainTestCase(unittest.TestCase):
                                               'dt': datetime(1900, 1, 1, 0, 0),
                                               'execution': '10:45',
                                               'start': '00:32'}]}
-        self.ainfo = AssetInfo(self.info_dic)
+        self.ainfo = InstrumentInfo(self.info_dic)
         self.tickers = ['US.F.CL.G11.110120',
                               'US.F.CL.H11.110222',
                               'US.F.CL.J11.110322',

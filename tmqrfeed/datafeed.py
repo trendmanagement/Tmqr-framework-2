@@ -1,10 +1,10 @@
 from datetime import timedelta, datetime
 
-from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import DataEngineMongo
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
 class DataFeed:
@@ -29,21 +29,22 @@ class DataFeed:
         self.date_start = kwargs.get('date_start', datetime(1900, 1, 1))
 
         # Cache setup
-        self.ainfo_cache = {}
+        self.instrument_info_cache = {}
+        self.contract_info_cache = {}
         self.futchain_cache = {}
 
-    def get_asset_info(self, instrument):
+    def get_instrument_info(self, instrument):
         """
         Returns instance of instrument AssetInfo class
         :param instrument: full qualified instrument name
         :return: AssetInfo class instance
         """
-        if instrument in self.ainfo_cache:
+        if instrument in self.instrument_info_cache:
             # Use caching
-            return self.ainfo_cache[instrument]
+            return self.instrument_info_cache[instrument]
         else:
-            ainfo = AssetInfo(self.data_engine.get_asset_info(instrument))
-            self.ainfo_cache[instrument] = ainfo
+            ainfo = InstrumentInfo(self.data_engine.get_instrument_info(instrument))
+            self.instrument_info_cache[instrument] = ainfo
             return ainfo
 
     def get_fut_chain(self, instrument, **kwargs):
@@ -56,7 +57,7 @@ class DataFeed:
                                                         self.date_start - timedelta(days=180))
         tickers_list = [FutureContract(x['tckr'], datafeed=self) for x in chain_dict]
         return FutureChain(tickers_list,
-                           self.get_asset_info(instrument),
+                           self.get_instrument_info(instrument),
                            **kwargs)
 
     def get_contract_info(self, tckr):
@@ -65,4 +66,10 @@ class DataFeed:
         :param tckr: full qualified ticker
         :return: ContractInfo class instance
         """
-        return ContractInfo(self.data_engine.get_contract_info(tckr))
+
+        if tckr not in self.contract_info_cache:
+            # Populate cache if contract info not set
+            cinfo = ContractInfo(self.data_engine.get_contract_info(tckr))
+            self.contract_info_cache[tckr] = cinfo
+
+        return self.contract_info_cache[tckr]

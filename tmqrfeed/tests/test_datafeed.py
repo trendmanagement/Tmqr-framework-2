@@ -2,11 +2,11 @@ import unittest
 from datetime import datetime
 from unittest import mock
 
-from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
 class DataFeedTestCase(unittest.TestCase):
@@ -15,7 +15,7 @@ class DataFeedTestCase(unittest.TestCase):
         self.assertEqual(True, isinstance(dfeed.data_engine, DataEngineMongo))
         self.assertEqual(dfeed.data_engine_settings, {})
         self.assertEqual(dfeed.date_start, datetime(1900, 1, 1))
-        self.assertEqual(dfeed.ainfo_cache, {})
+        self.assertEqual(dfeed.instrument_info_cache, {})
 
     def test_init_kwargs(self):
         dfeed = DataFeed(data_engine_settings={'test': 'ok'},
@@ -27,11 +27,11 @@ class DataFeedTestCase(unittest.TestCase):
 
     def test_get_asset_info(self):
         dfeed = DataFeed()
-        self.assertRaises(ValueError, dfeed.get_asset_info, 'CL')
-        self.assertRaises(ValueError, dfeed.get_asset_info, '')
-        self.assertRaises(ValueError, dfeed.get_asset_info, 'CL.US.S')
+        self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL')
+        self.assertRaises(ValueError, dfeed.get_instrument_info, '')
+        self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL.US.S')
 
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_asset_info') as eng_ainfo:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_instrument_info') as eng_ainfo:
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
                 'instrument': 'US.ES',
@@ -45,15 +45,15 @@ class DataFeedTestCase(unittest.TestCase):
                     'dt': datetime(1900, 1, 1, 0, 0),
                     'execution': '10:45',
                     'start': '00:32'}]}
-            ainfo = dfeed.get_asset_info("US.ES")
-            self.assertEqual(AssetInfo, type(ainfo))
+            ainfo = dfeed.get_instrument_info("US.ES")
+            self.assertEqual(InstrumentInfo, type(ainfo))
             self.assertEqual('US.ES', ainfo.instrument)
             self.assertEqual('US', ainfo.market)
             self.assertEqual(True, eng_ainfo.called)
 
             # Check that asset info requested only once (i.e. cached)
             eng_ainfo.reset_mock()
-            ainfo = dfeed.get_asset_info("US.ES")
+            ainfo = dfeed.get_instrument_info("US.ES")
             self.assertEqual(False, eng_ainfo.called)
 
     def test_get_fut_chain_no_data(self):
@@ -88,3 +88,7 @@ class DataFeedTestCase(unittest.TestCase):
             ci = dfeed.get_contract_info("US.F.CL.Q83.830720")
             self.assertEqual(ContractInfo, type(ci))
             self.assertEqual(ci.ticker, "US.F.CL.Q83.830720")
+            mock_contr_info.reset_mock()
+
+            ci = dfeed.get_contract_info("US.F.CL.Q83.830720")
+            self.assertEqual(False, mock_contr_info.called)

@@ -127,9 +127,9 @@ class ContractsTestCase(unittest.TestCase):
                 "opttype": "C"
             }
 
-            self.assertEqual(1.0, contract.info.extra('sqlid'))
+            self.assertEqual(1.0, contract.contract_info.extra('sqlid'))
 
             # Check that asset info requested only once (i.e. cached)
             eng_ainfo.reset_mock()
-            self.assertEqual(1.0, contract.info.extra('sqlid'))
+            self.assertEqual(1.0, contract.contract_info.extra('sqlid'))
             self.assertEqual(False, eng_ainfo.called)

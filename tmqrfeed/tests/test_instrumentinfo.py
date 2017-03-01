@@ -3,11 +3,11 @@ import unittest
 
 import pytz
 
-from tmqrfeed.assetinfo import AssetInfo
 from tmqrfeed.assetsession import AssetSession
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
-class AssetInfoTestCase(unittest.TestCase):
+class InstrumentInfoTestCase(unittest.TestCase):
     def setUp(self):
         self.info_dic = {
             'futures_months': [3, 6, 9, 12],
@@ -24,7 +24,7 @@ class AssetInfoTestCase(unittest.TestCase):
                                     'start': '00:32'}]}
 
     def test_init(self):
-        ai = AssetInfo(self.info_dic)
+        ai = InstrumentInfo(self.info_dic)
 
         self.assertEqual(ai.instrument, 'US.ES')
         self.assertEqual(ai.market, 'US')
@@ -38,11 +38,11 @@ class AssetInfoTestCase(unittest.TestCase):
         self.assertEqual(True, isinstance(ai.session, AssetSession))
 
     def test_dynamic_params_getting(self):
-        ai = AssetInfo(self.info_dic)
+        ai = InstrumentInfo(self.info_dic)
         self.assertEqual(ai.rollover_days_before, 2)
         self.assertRaises(KeyError, ai.__getattr__, 'nonexistingkey')
 
     def test_dynamic_get_with_default(self):
-        ai = AssetInfo(self.info_dic)
+        ai = InstrumentInfo(self.info_dic)
         self.assertEqual(1.0, ai.get('nonexistingkey', 1.0))
         self.assertEqual(None, ai.get('nonexistingkey'))

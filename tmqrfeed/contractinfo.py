@@ -75,7 +75,7 @@ class ContractInfo:
         Strike of the option contract
         :return:
         """
-        if self._info_dic['type'] == "C" or self._info_dic['type'] == 'P':
+        if self.ctype == "C" or self.ctype == 'P':
             return self._info_dic['strike']
         else:
             raise ContractInfoNotApplicable("'strike' field of contract info only applicable to options contracts")
@@ -86,7 +86,7 @@ class ContractInfo:
         Type of option contract
         :return:
         """
-        if self._info_dic['type'] == "C" or self._info_dic['type'] == 'P':
+        if self.ctype == "C" or self.ctype == 'P':
             return self._info_dic['opttype']
         else:
             raise ContractInfoNotApplicable("'opttype' field of contract info only applicable to options contracts")
@@ -118,22 +118,22 @@ class ContractInfo:
         :param contract:
         :return:
         """
-        if contract.ticker != self._info_dic['tckr']:
+        if contract.ticker != self.ticker:
             raise ContractInfoIntegrityError(str(contract) + " Ticker full qualified names mismatch")
 
-        if self._info_dic['type'] != contract.ctype:
+        if self.ctype != contract.ctype:
             raise ContractInfoIntegrityError(str(contract) + " Contract type mismatch")
 
-        if contract.instrument != self._info_dic['instr']:
+        if contract.instrument != self.instrument:
             raise ContractInfoIntegrityError(str(contract) + " Instrument names mismatch")
 
-        if self._info_dic['type'] == 'F':
-            if contract.exp_date != self._info_dic['exp']:
+        if self.ctype == 'F':
+            if contract.exp_date != self.exp_date:
                 raise ContractInfoIntegrityError(str(contract) + " Expiration dates mismatch")
-        elif self._info_dic['type'] in ["C", "P"]:
-            if contract.exp_date != self._info_dic['exp']:
+        elif self.ctype in ["C", "P"]:
+            if contract.exp_date != self.exp_date:
                 raise ContractInfoIntegrityError(str(contract) + " Expiration dates mismatch")
-            if contract.strike != self._info_dic['strike']:
-                raise ContractInfoIntegrityError(str(contract) + " Strike dates mismatch")
+            if contract.strike != self.strike:
+                raise ContractInfoIntegrityError(str(contract) + " Strike mismatch")
 
         return True

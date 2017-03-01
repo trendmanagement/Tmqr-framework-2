@@ -54,7 +54,7 @@ class DataEngineMongo(DataEngineBase):
 
         return list(self.db[COLLECTION_ASSET_INDEX].find(req, projection=['tckr']).sort('exp', 1))
 
-    def get_asset_info(self, instrument):
+    def get_instrument_info(self, instrument):
         """
         Fetch asset info
         :param instrument:
