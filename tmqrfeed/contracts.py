@@ -69,7 +69,7 @@ class ContractBase:
         return self.datafeed.get_contract_info(self.ticker)
 
     @property
-    def asset_info(self):
+    def instrument_info(self):
         """
         Return underlying instrument info
         :return:

@@ -129,7 +129,24 @@ class ContractsTestCase(unittest.TestCase):
 
             self.assertEqual(1.0, contract.contract_info.extra('sqlid'))
 
-            # Check that asset info requested only once (i.e. cached)
-            eng_ainfo.reset_mock()
-            self.assertEqual(1.0, contract.contract_info.extra('sqlid'))
-            self.assertEqual(False, eng_ainfo.called)
+    def test_instrument_info(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_instrument_info') as eng_ainfo:
+            feed = DataFeed()
+            eng_ainfo.return_value = {
+                'futures_months': [3, 6, 9, 12],
+                'instrument': 'US.ES',
+                'market': 'US',
+                'rollover_days_before': 2,
+                'ticksize': 0.25,
+                'tickvalue': 12.5,
+                'timezone': 'US/Pacific',
+                'trading_session': [{
+                    'decision': '10:40',
+                    'dt': datetime(1900, 1, 1, 0, 0),
+                    'execution': '10:45',
+                    'start': '00:32'}]}
+
+            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+
+            self.assertEqual(feed.get_instrument_info('US.ES'), contract.instrument_info)
+            self.assertEqual(12.5, contract.instrument_info.tickvalue)
