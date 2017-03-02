@@ -37,25 +37,6 @@ class AssetSessionTestCase(unittest.TestCase):
             ]
         }
 
-    def test_session_is_insession(self):
-        tz = pytz.timezone(self.info_dic['timezone'])
-        sess = AssetSession(self.info_dic['trading_session'], tz)
-
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2005, 2, 5, 12, 45, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2005, 2, 5, 8, 45, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2005, 2, 5, 0, 32, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2005, 2, 5, 10, 40, tzinfo=tz)))
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2005, 2, 5, 10, 41, tzinfo=tz)))
-
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2010, 12, 31, 1, 31, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2010, 12, 31, 1, 33, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2010, 12, 31, 11, 40, tzinfo=tz)))
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2010, 12, 31, 11, 41, tzinfo=tz)))
-
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2015, 12, 31, 2, 31, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2015, 12, 31, 2, 33, tzinfo=tz)))
-        self.assertEqual(True, sess.date_is_insession(datetime.datetime(2015, 12, 31, 12, 40, tzinfo=tz)))
-        self.assertEqual(False, sess.date_is_insession(datetime.datetime(2015, 12, 31, 12, 41, tzinfo=tz)))
 
     def test_session_init(self):
         tz = pytz.timezone(self.info_dic['timezone'])

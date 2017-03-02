@@ -97,7 +97,8 @@ class DataFeed:
                 dfseries.tz_convert(tz, copy=False)
             if session is not None:
                 if isinstance(session, AssetSession):
-                    pass
+                    # Filtering dataframe keep only requires session
+                    dfseries = session.filter_dataframe(dfseries)
                 elif type(session) == tuple and len(session) == 2:
                     dfseries = dfseries.between_time(start_time=session[0],
                                                      end_time=session[1],

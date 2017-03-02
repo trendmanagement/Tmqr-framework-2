@@ -1,10 +1,9 @@
 import re
 from datetime import datetime, time
 
-import numpy as np
 import pandas as pd
 
-from tmqr.errors import SettingsError
+from tmqr.errors import SettingsError, ArgumentError
 
 
 class AssetSession:
@@ -83,7 +82,6 @@ class AssetSession:
     def _time_parse(self, str_time):
         """
         Produce datetime instance from source_date and str_time ('HH:MM' pattern) + adds timezone info
-        :param source_date: Base date
         :param str_time: Session time string pattern 'HH:MM'
         :return:
         """
@@ -115,48 +113,31 @@ class AssetSession:
         raise SettingsError("Trading sessions information doesn't contain records for so early date, "
                             "try to add '1900-01-01' record to implement default session")
 
-    def date_is_insession(self, date):
-        t = date.time()
-        for i, sess in enumerate(reversed(self.sessions)):
-            if date >= sess['dt']:
-                return t >= sess['start'] and t <= sess['decision']
-
-        return False
-
-    def filter_index(self, dataframe_index):
+    def filter_dataframe(self, dataframe):
         """
-        Creates boolean filter array used to filter dataframe from out-of-session datapoints
-        :param dataframe_index:
+        Creates filtered dataframe and removes out-of-session datapoints
+        :param dataframe:
         :return:
         """
+        if dataframe.index.tz != self.tz:
+            raise ArgumentError("DataFrame timezone info mismatch. DataFrame TZ: {0} Session TZ: {1}".format(
+                dataframe.index.tz, self.tz
+            ))
 
-        def datetime64_to_time_of_day(datetime64_array):
-            """
-            Return a new array. For every element in datetime64_array return the time of day (since midnight).
-            """
-            day = datetime64_array.astype('datetime64[D]').astype(datetime64_array.dtype)
-            time_of_day = datetime64_array - day
-            return time_of_day
+        df_list = []
+        for i in range(1, len(self.sessions)):
+            if i < len(self.sessions) - 1:
+                date_start = self.sessions[i - 1]['dt']
+                date_end = self.sessions[i]['dt']
+                time_start = self.sessions[i - 1]['start']
+                time_end = self.sessions[i - 1]['decision']
+            else:
+                date_start = self.sessions[i - 1]['dt']
+                date_end = datetime(2100, 1, 1)
+                time_start = self.sessions[i - 1]['start']
+                time_end = self.sessions[i - 1]['decision']
 
-        flt = np.empty(len(dataframe_index))
-        flt.fill(False)
-        start_time = None
-        end_time = None
-        next_sess_date = None
+            tmp_df = dataframe.ix[date_start:date_end]
+            df_list.append(tmp_df.between_time(time_start, time_end))
 
-        time_array = datetime64_to_time_of_day(dataframe_index.values)
-        for i in range(len(dataframe_index)):
-            dt = dataframe_index.values[i]
-            t = time_array[i]
-
-            if (next_sess_date is not None and dt >= next_sess_date) or (i == 0):
-                start, decision, execution, next_sess_date = self._get_sess_params(pd.Timestamp(dt, tz=self.tz))
-                start_time = datetime64_to_time_of_day(np.datetime64(start))
-                end_time = datetime64_to_time_of_day(np.datetime64(decision))
-                if next_sess_date is not None:
-                    next_sess_date = np.datetime64(next_sess_date)
-
-            if t >= start_time and t <= end_time:
-                flt[i] = 1
-
-        return flt
+        return pd.concat(df_list)
