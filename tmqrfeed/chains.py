@@ -77,7 +77,7 @@ class FutureChain:
 
         return df
 
-    def get(self, date, offset=0):
+    def get_contract(self, date, offset=0):
         """
         Returns future contract for particular date
         :param date: actual date
@@ -87,6 +87,5 @@ class FutureChain:
         df = self.get_list(date, offset, limit=1)
         return df.iloc[0].name
 
-    @property
-    def futures(self):
+    def get_all(self):
         return self._futchain.index

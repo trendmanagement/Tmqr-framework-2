@@ -62,7 +62,7 @@ class FutChainTestCase(unittest.TestCase):
 
     def test_futures(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
-        self.assertEqual(len(chain._futchain), len(chain.futures))
+        self.assertEqual(len(chain._futchain), len(chain.get_all()))
 
 
     def test_init_kwargs(self):
@@ -218,6 +218,6 @@ class FutChainTestCase(unittest.TestCase):
     def test_get(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
 
-        self.assertEqual(True, isinstance(chain.get(datetime(2012, 5, 1)), FutureContract))
-        self.assertEqual('US.F.CL.M12.120522', chain.get(datetime(2012, 5, 1)).ticker)
-        self.assertEqual('US.F.CL.U12.120822', chain.get(datetime(2012, 5, 1), offset=1).ticker)
+        self.assertEqual(True, isinstance(chain.get_contract(datetime(2012, 5, 1)), FutureContract))
+        self.assertEqual('US.F.CL.M12.120522', chain.get_contract(datetime(2012, 5, 1)).ticker)
+        self.assertEqual('US.F.CL.U12.120822', chain.get_contract(datetime(2012, 5, 1), offset=1).ticker)

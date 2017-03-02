@@ -150,3 +150,8 @@ class ContractsTestCase(unittest.TestCase):
 
             self.assertEqual(feed.get_instrument_info('US.ES'), contract.instrument_info)
             self.assertEqual(12.5, contract.instrument_info.tickvalue)
+
+    def test__str__repr__(self):
+        contract = FutureContract('US.F.ES.M83.830520')
+        self.assertEqual('US.F.ES.M83.830520', str(contract))
+        self.assertEqual('US.F.ES.M83.830520', repr(contract))
