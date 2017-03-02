@@ -17,7 +17,7 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(str(contract), contract.ticker)
 
     def test_contractbase_toshort_contract(self):
-        self.assertRaises(ValueError, ContractBase, 'US.AAPL')
+        self.assertRaises(ArgumentError, ContractBase, 'US.AAPL')
 
     def test_contractbase_parse_ticker(self):
         contract = ContractBase('US.S.AAPL')
@@ -70,18 +70,19 @@ class ContractsTestCase(unittest.TestCase):
         self.assertRaises(KeyError, contract._get_month_by_code, 'A')
 
     def test_futurecontract_wrong_ctype_or_tockens_count(self):
-        self.assertRaises(ValueError, FutureContract, 'US.S.AAPL')
-        self.assertRaises(ValueError, FutureContract, 'US.F.CLM83.830520')
+        self.assertRaises(ArgumentError, FutureContract, 'US.S.AAPL')
+        self.assertRaises(ArgumentError, FutureContract, 'US.F.CLM83.830520')
 
     def test_futurecontract_parse_expiration(self):
-        self.assertRaises(ValueError, FutureContract._parse_expiration, 'xxx')
-        self.assertRaises(ValueError, FutureContract._parse_expiration, '59032x')
-        self.assertRaises(ValueError, FutureContract._parse_expiration, '592320')
+        contract = FutureContract('US.F.CL.M83.830520')
+        self.assertRaises(ArgumentError, contract._parse_expiration, 'xxx')
+        self.assertRaises(ArgumentError, contract._parse_expiration, '59032x')
+        self.assertRaises(ArgumentError, contract._parse_expiration, '592320')
 
-        self.assertEquals(datetime(1983, 5, 20), FutureContract._parse_expiration('830520'))
-        self.assertEquals(datetime(2013, 5, 20), FutureContract._parse_expiration('130520'))
-        self.assertEquals(datetime(2049, 5, 20), FutureContract._parse_expiration('490520'))
-        self.assertEquals(datetime(1950, 5, 20), FutureContract._parse_expiration('500520'))
+        self.assertEquals(datetime(1983, 5, 20), contract._parse_expiration('830520'))
+        self.assertEquals(datetime(2013, 5, 20), contract._parse_expiration('130520'))
+        self.assertEquals(datetime(2049, 5, 20), contract._parse_expiration('490520'))
+        self.assertEquals(datetime(1950, 5, 20), contract._parse_expiration('500520'))
 
     def test_optioncontract_init(self):
         contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0')
@@ -92,8 +93,8 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.exp_date, datetime(2011, 1, 21))
         self.assertEqual(contract.strike, 89.0)
 
-        self.assertRaises(ValueError, OptionContract, 'US.C.F-ZB-H11-110322.XX.110121@89.0')
-        self.assertRaises(ValueError, OptionContract, 'US.F.F-ZB-H11-110322.110121@89.0')
+        self.assertRaises(ArgumentError, OptionContract, 'US.C.F-ZB-H11-110322.XX.110121@89.0')
+        self.assertRaises(ArgumentError, OptionContract, 'US.F.F-ZB-H11-110322.110121@89.0')
 
     def test_optioncontract_underlying(self):
         contract = OptionContract('US.C.S-AAPL.110121@89.0')

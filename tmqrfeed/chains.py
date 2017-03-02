@@ -3,6 +3,8 @@ from datetime import datetime
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
+from tmqr.errors import ArgumentError
+
 
 class FutureChain:
     """
@@ -12,7 +14,7 @@ class FutureChain:
     def __init__(self, fut_tckr_list, asset_info, **kwargs):
 
         if fut_tckr_list is None or len(fut_tckr_list) == 0:
-            raise ValueError("Failed to initiate futures chain empty tickers list")
+            raise ArgumentError("Failed to initiate futures chain empty tickers list")
 
         self.ainfo = asset_info
         self.rollover_days_before = kwargs.get('rollover_days_before', self.ainfo.rollover_days_before)
@@ -62,18 +64,18 @@ class FutureChain:
         df = self._futchain[self._futchain.date_end > date]
 
         if offset < 0:
-            raise ValueError("'offset' argument must be >= 0")
+            raise ArgumentError("'offset' argument must be >= 0")
         elif offset > 0:
             df = df.shift(offset).dropna()
 
         if limit < 0:
-            raise ValueError("'limit' argument must be >= 0")
+            raise ArgumentError("'limit' argument must be >= 0")
         elif limit > 0:
             df = df.head(limit)
 
         if len(df) == 0:
-            raise ValueError("Can't get futures chain at {0} limit: {1} offset: {2}. "
-                             "Too strict request or not enough data".format(date, limit, offset))
+            raise ArgumentError("Can't get futures chain at {0} limit: {1} offset: {2}. "
+                                "Too strict request or not enough data".format(date, limit, offset))
 
         return df
 

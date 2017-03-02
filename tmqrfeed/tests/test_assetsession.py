@@ -3,6 +3,7 @@ import unittest
 
 import pytz
 
+from tmqr.errors import SettingsError
 from tmqrfeed.assetsession import AssetSession
 
 
@@ -48,11 +49,11 @@ class AssetSessionTestCase(unittest.TestCase):
 
     def test_session_init_integritychecks_none(self):
         tz = pytz.timezone(self.info_dic['timezone'])
-        self.assertRaises(ValueError, AssetSession, None, tz)
+        self.assertRaises(SettingsError, AssetSession, None, tz)
 
     def test_session_init_integritychecks_zero_len(self):
         tz = pytz.timezone(self.info_dic['timezone'])
-        self.assertRaises(ValueError, AssetSession, [], tz)
+        self.assertRaises(SettingsError, AssetSession, [], tz)
 
     def test_session_init_integritychecks_names_in_dict(self):
         tz = pytz.timezone(self.info_dic['timezone'])
@@ -69,7 +70,7 @@ class AssetSessionTestCase(unittest.TestCase):
             'execution': '10:45',
             'start': '00:32'},
         ]
-        self.assertRaises(ValueError, AssetSession, s_wrong1, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong1, tz)
 
         s_wrong1 = [{
                         'decision': '10:40',
@@ -77,7 +78,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         'execution': '10:45',
                         'start': '00:32'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong1, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong1, tz)
 
         s_wrong1 = [{
                         'decision': '10:40',
@@ -85,7 +86,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         # 'execution': '10:45',
                         'start': '00:32'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong1, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong1, tz)
 
         s_wrong1 = [{
                         'decision': '10:40',
@@ -94,7 +95,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         # 'start': '00:32'},
                         }
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong1, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong1, tz)
 
         s_wrong2 = [{
                         'decision': '1040',
@@ -102,7 +103,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         'execution': '10:45',
                         'start': '00:32'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong2, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong2, tz)
 
         s_wrong2 = [{
                         'decision': '10:40',
@@ -110,7 +111,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         'execution': '1045',
                         'start': '00:32'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong2, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong2, tz)
 
         s_wrong2 = [{
                         'decision': '10:40',
@@ -118,7 +119,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         'execution': '10:45',
                         'start': '0032'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong2, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong2, tz)
 
         s_wrong3 = [{
                         'decision': '10:40',
@@ -126,7 +127,7 @@ class AssetSessionTestCase(unittest.TestCase):
                         'execution': '10:45',
                         'start': '00:32'},
                     ]
-        self.assertRaises(ValueError, AssetSession, s_wrong3, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong3, tz)
 
         s_wrong_order = [{
                              'decision': '10:40',
@@ -140,7 +141,7 @@ class AssetSessionTestCase(unittest.TestCase):
                              'execution': '10:45',
                              'start': '00:32'},
                          ]
-        self.assertRaises(ValueError, AssetSession, s_wrong_order, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong_order, tz)
 
         s_wrong_dt_dupe = [{
                                'decision': '10:40',
@@ -154,7 +155,7 @@ class AssetSessionTestCase(unittest.TestCase):
                                'execution': '10:45',
                                'start': '00:32'},
                            ]
-        self.assertRaises(ValueError, AssetSession, s_wrong_dt_dupe, tz)
+        self.assertRaises(SettingsError, AssetSession, s_wrong_dt_dupe, tz)
 
     def test_session_get_item(self):
         tz = pytz.timezone(self.info_dic['timezone'])
@@ -182,4 +183,4 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        self.assertRaises(ValueError, sess.get, datetime.datetime(1800, 12, 30, 12, 45))
+        self.assertRaises(SettingsError, sess.get, datetime.datetime(1800, 12, 30, 12, 45))

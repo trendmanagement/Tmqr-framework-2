@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime
 
+from tmqr.errors import ArgumentError
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.instrumentinfo import InstrumentInfo
@@ -90,8 +91,8 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual('US.F.CL.H12.120222', chain._futchain.iloc[0].name.ticker)
 
     def test_init_empty_or_none_tickers_list(self):
-        self.assertRaises(ValueError, FutureChain, None, self.ainfo)
-        self.assertRaises(ValueError, FutureChain, [], self.ainfo)
+        self.assertRaises(ArgumentError, FutureChain, None, self.ainfo)
+        self.assertRaises(ArgumentError, FutureChain, [], self.ainfo)
 
     def test_get_list(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)
@@ -155,7 +156,7 @@ class FutChainTestCase(unittest.TestCase):
         chain = FutureChain(self.chain_tickers, self.ainfo)
 
         df = chain.get_list(datetime(2012, 5, 1), limit=2)
-        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), limit=-2)
+        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), limit=-2)
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -183,7 +184,7 @@ class FutChainTestCase(unittest.TestCase):
 
         df = chain.get_list(datetime(2012, 5, 1), offset=1)
 
-        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), offset=-1)
+        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), offset=-1)
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -213,7 +214,7 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
         self.assertEqual(datetime(2012, 2, 21), df.iloc[0].date_start)
 
-        self.assertRaises(ValueError, chain.get_list, datetime(2012, 5, 1), offset=3)
+        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), offset=3)
 
     def test_get(self):
         chain = FutureChain(self.chain_tickers, self.ainfo)

@@ -1,19 +1,12 @@
 from pymongo import MongoClient
 
+from tmqr.errors import DataEngineNotFoundError
 from tmqr.settings import *
-
 #
 # Collection names constants
 #
 COLLECTION_ASSET_INDEX = 'asset_index'
 COLLECTION_ASSET_INFO = 'asset_info'
-
-
-#
-# Custom exceptions classes
-#
-class DataEngineNotFoundError(Exception):
-    pass
 
 
 class DataEngineBase:

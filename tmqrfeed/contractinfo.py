@@ -1,14 +1,4 @@
-class ContractInfoNotFound(Exception):
-    pass
-
-
-class ContractInfoNotApplicable(Exception):
-    pass
-
-
-class ContractInfoIntegrityError(Exception):
-    pass
-
+from tmqr.errors import ContractInfoIntegrityError, ContractInfoNotApplicable, ContractInfoNotFound
 
 class ContractInfo:
     """

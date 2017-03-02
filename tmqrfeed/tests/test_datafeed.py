@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime
 from unittest import mock
 
+from tmqr.errors import *
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
@@ -85,7 +86,7 @@ class DataFeedTestCase(unittest.TestCase):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_futures_chain') as mock_eng_chain:
             mock_eng_chain.return_value = []
             dfeed = DataFeed()
-            self.assertRaises(ValueError, dfeed.get_fut_chain, 'US.NONEXISTING')
+            self.assertRaises(ArgumentError, dfeed.get_fut_chain, 'US.NONEXISTING')
 
     def test_get_fut_chain_success(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_futures_chain') as mock_eng_chain:

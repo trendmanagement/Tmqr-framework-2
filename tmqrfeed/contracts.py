@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from tmqr.errors import ArgumentError
+
 
 class ContractBase:
     """
@@ -23,7 +25,7 @@ class ContractBase:
 
         self._toks = self._parse(self.ticker)
         if len(self._toks) < 3:
-            raise ValueError("Contract ticker must contain at least 3 parts <Market>.<ContrType>.<Name>")
+            raise ArgumentError("Contract ticker must contain at least 3 parts <Market>.<ContrType>.<Name>")
 
         #: Contract type, most common:
         #: 'F' - Future contract
@@ -90,23 +92,26 @@ class ContractBase:
             return res
         return ticker.split('.')
 
-    @staticmethod
-    def _parse_expiration(exp_string):
+    def _parse_expiration(self, exp_string):
         """
         Expiration token parsing YYMMDD, if YY < 50 returns 2000s, otherwise 1900s
         :param exp_string: expiration strning YYMMDD
         :return: expiration datetime
         """
         if len(exp_string) != 6:
-            raise ValueError("Expiration string must be 6 chars length: YYMMDD")
+            raise ArgumentError("Expiration string must be 6 chars length: YYMMDD")
         y = int(exp_string[:2])
         if y < 50:
             y += 2000
         else:
             y += 1900
-        m = int(exp_string[2:4])
-        d = int(exp_string[-2:])
-        return datetime(y, m, d)
+        try:
+            m = int(exp_string[2:4])
+            d = int(exp_string[-2:])
+            return datetime(y, m, d)
+        except ValueError:
+            raise ArgumentError("Bad expiration sting for {0}".format(self.ticker))
+
 
     def __str__(self):
         return self.ticker
@@ -128,9 +133,9 @@ class FutureContract(ContractBase):
         """
         super().__init__(tckr, datafeed)
         if self.ctype != 'F':
-            raise ValueError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
+            raise ArgumentError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
-            raise ValueError("Future contract must have 5 tokens in ticker, like: US.F.CL.M83.830520")
+            raise ArgumentError("Future contract must have 5 tokens in ticker, like: US.F.CL.M83.830520")
         self.exp_date = self._parse_expiration(self._toks[4])
         self.exp_month = self._get_month_by_code(self._toks[3][0])
 
@@ -195,9 +200,9 @@ class OptionContract(ContractBase):
         """
         super().__init__(tckr, datafeed)
         if self.ctype != 'P' and self.ctype != 'C':
-            raise ValueError("Contract type 'C' or 'P' expected, but '{0}' given".format(self.ctype))
+            raise ArgumentError("Contract type 'C' or 'P' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
-            raise ValueError("Option contract must have 5 tokens in ticker, like: US.C.F-ZB-H11-110322.110121@89.0")
+            raise ArgumentError("Option contract must have 5 tokens in ticker, like: US.C.F-ZB-H11-110322.110121@89.0")
 
         self.exp_date = self._parse_expiration(self._toks[3])
         self.strike = float(self._toks[4])
