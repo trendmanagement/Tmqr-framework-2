@@ -43,7 +43,7 @@ class DataFeed:
             # Use caching
             return self.instrument_info_cache[instrument]
         else:
-            ainfo = InstrumentInfo(self.data_engine.get_instrument_info(instrument))
+            ainfo = InstrumentInfo(self.data_engine.db_get_instrument_info(instrument))
             self.instrument_info_cache[instrument] = ainfo
             return ainfo
 
@@ -53,8 +53,8 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        chain_dict = self.data_engine.get_futures_chain(instrument,
-                                                        self.date_start - timedelta(days=180))
+        chain_dict = self.data_engine.db_get_futures_chain(instrument,
+                                                           self.date_start - timedelta(days=180))
         tickers_list = [FutureContract(x['tckr'], datafeed=self) for x in chain_dict]
         return FutureChain(tickers_list,
                            self.get_instrument_info(instrument),
@@ -69,7 +69,7 @@ class DataFeed:
 
         if tckr not in self.contract_info_cache:
             # Populate cache if contract info not set
-            cinfo = ContractInfo(self.data_engine.get_contract_info(tckr))
+            cinfo = ContractInfo(self.data_engine.db_get_contract_info(tckr))
             self.contract_info_cache[tckr] = cinfo
 
         return self.contract_info_cache[tckr]

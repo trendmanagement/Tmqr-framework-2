@@ -40,7 +40,7 @@ class DataEngineMongo(DataEngineBase):
         self.db = self.client[mongo_db]
         self.cursors = {}
 
-    def get_futures_chain(self, instrument, date_start=None):
+    def db_get_futures_chain(self, instrument, date_start=None):
         """
         Fetch futures chain for particular instrument
         :param instrument: Full-qualified instrument name <Market>.<Name>
@@ -54,7 +54,7 @@ class DataEngineMongo(DataEngineBase):
 
         return list(self.db[COLLECTION_ASSET_INDEX].find(req, projection=['tckr']).sort('exp', 1))
 
-    def get_instrument_info(self, instrument):
+    def db_get_instrument_info(self, instrument):
         """
         Fetch asset info
         :param instrument:
@@ -79,7 +79,7 @@ class DataEngineMongo(DataEngineBase):
 
         return ainfo_default
 
-    def get_contract_info(self, tckr):
+    def db_get_contract_info(self, tckr):
         """
         Fetch contract information by full qualified ticker
         :param tckr: full qualified ticker

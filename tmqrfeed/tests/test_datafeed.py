@@ -31,7 +31,7 @@ class DataFeedTestCase(unittest.TestCase):
         self.assertRaises(ValueError, dfeed.get_instrument_info, '')
         self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL.US.S')
 
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_instrument_info') as eng_ainfo:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
                 'instrument': 'US.ES',
@@ -59,7 +59,7 @@ class DataFeedTestCase(unittest.TestCase):
     def test_get_instrument_info_caching(self):
         dfeed = DataFeed()
 
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_instrument_info') as eng_ainfo:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
                 'instrument': 'US.ES',
@@ -82,13 +82,13 @@ class DataFeedTestCase(unittest.TestCase):
             self.assertEqual(False, eng_ainfo.called)
 
     def test_get_fut_chain_no_data(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_futures_chain') as mock_eng_chain:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_futures_chain') as mock_eng_chain:
             mock_eng_chain.return_value = []
             dfeed = DataFeed()
             self.assertRaises(ValueError, dfeed.get_fut_chain, 'US.NONEXISTING')
 
     def test_get_fut_chain_success(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_futures_chain') as mock_eng_chain:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_futures_chain') as mock_eng_chain:
             mock_eng_chain.return_value = [{'tckr': 'US.F.CL.G11.110120'},
                                            {'tckr': 'US.F.CL.H11.110222'},
                                            {'tckr': 'US.F.CL.J11.110322'},
@@ -98,7 +98,7 @@ class DataFeedTestCase(unittest.TestCase):
             self.assertEqual(FutureChain, type(chain))
 
     def test_get_contract_info(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_contract_info') as mock_contr_info:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_contract_info') as mock_contr_info:
             mock_contr_info.return_value = {
 
                 "underlying": "US.CL",
@@ -119,7 +119,7 @@ class DataFeedTestCase(unittest.TestCase):
             self.assertEqual(False, mock_contr_info.called)
 
     def test_get_contract_info_caching(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_contract_info') as mock_contr_info:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_contract_info') as mock_contr_info:
             mock_contr_info.return_value = {
 
                 "underlying": "US.CL",

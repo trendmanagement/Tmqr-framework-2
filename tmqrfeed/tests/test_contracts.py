@@ -104,7 +104,7 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(True, isinstance(contract.underlying, ContractBase))
 
     def test_contract_info(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_contract_info') as eng_ainfo:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_contract_info') as eng_ainfo:
             feed = DataFeed()
             contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datafeed=feed)
 
@@ -130,7 +130,7 @@ class ContractsTestCase(unittest.TestCase):
             self.assertEqual(1.0, contract.contract_info.extra('sqlid'))
 
     def test_instrument_info(self):
-        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.get_instrument_info') as eng_ainfo:
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             feed = DataFeed()
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
