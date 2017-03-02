@@ -61,3 +61,23 @@ class DataEngineTestCase(unittest.TestCase):
         self.assertEqual(ci['tckr'], 'US.C.F-ZB-H11-110322.110121@89.0')
 
         self.assertRaises(DataEngineNotFoundError, deng.db_get_contract_info, 'NON_EXISTING_TICKER')
+
+    def test_get_raw_series_intraday(self):
+        deng = DataEngineMongo()
+
+        df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_INTRADAY)
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual(qtype, QTYPE_INTRADAY)
+        self.assertEqual(True, len(df) > 0)
+
+        df2, qtype2 = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_INTRADAY,
+                                             date_start=datetime(2011, 8, 1),
+                                             date_end=datetime(2012, 7, 19))
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual(qtype, QTYPE_INTRADAY)
+        self.assertEqual(True, len(df) > 0)
+        self.assertEqual(True, len(df) > len(df2))
+        self.assertEqual(datetime(2011, 8, 1).date(), df2.index[0].date())
+        self.assertEqual(datetime(2012, 7, 19).date(), df2.index[-1].date())
+
+        self.assertRaises(DataSourceNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', "NON_EXISTING_SOURCE")

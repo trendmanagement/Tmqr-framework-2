@@ -26,6 +26,7 @@ class NotFoundError(TMQRError):
     pass
 
 
+
 class ContractInfoNotFound(NotFoundError):
     pass
 
@@ -43,4 +44,11 @@ class ContractInfoIntegrityError(TMQRError):
 
 
 class DataEngineNotFoundError(NotFoundError):
+    pass
+
+
+class DataSourceNotFoundError(NotFoundError):
+    """
+    Raised when datasource type is not found
+    """
     pass

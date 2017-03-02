@@ -1,5 +1,8 @@
 from datetime import timedelta, datetime
 
+from tmqr.errors import ArgumentError
+from tmqr.settings import *
+from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.contracts import FutureContract
@@ -73,3 +76,36 @@ class DataFeed:
             self.contract_info_cache[tckr] = cinfo
 
         return self.contract_info_cache[tckr]
+
+    def get_raw_series(self, tckr, source_type, **kwargs):
+        """
+        Fetch raw series for asset from the datasource
+        :param tckr:
+        :param kwargs:
+        :return:
+        """
+        date_start = kwargs.get('date_start', datetime(1900, 1, 1))
+        date_end = kwargs.get('date_end', datetime(2100, 1, 1))
+        tz = kwargs.get('timezone', None)
+        session = kwargs.get('session', None)
+
+        dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
+
+        if qtype == QTYPE_INTRADAY:
+            if tz is not None:
+                # Convert timezone of the dataframe (in place)
+                dfseries.tz_convert(tz, copy=False)
+            if session is not None:
+                if isinstance(session, AssetSession):
+                    pass
+                elif type(session) == tuple and len(session) == 2:
+                    dfseries = dfseries.between_time(start_time=session[0],
+                                                     end_time=session[1],
+                                                     include_start=True,
+                                                     include_end=True)
+                else:
+                    raise ArgumentError("Session must be AssetSession or tuple of ('HH:MM', 'HH:MM')")
+
+            return dfseries
+        else:
+            raise NotImplementedError("Quote type is not implemented yet.")

@@ -1,7 +1,11 @@
+import pickle
+
+import pandas as pd
 from pymongo import MongoClient
 
-from tmqr.errors import DataEngineNotFoundError
+from tmqr.errors import DataEngineNotFoundError, DataSourceNotFoundError
 from tmqr.settings import *
+
 #
 # Collection names constants
 #
@@ -84,3 +88,36 @@ class DataEngineMongo(DataEngineBase):
             raise DataEngineNotFoundError("Contract info for {0} not found".format(tckr))
 
         return result
+
+    def db_get_raw_series(self, tckr, source_type, **kwargs):
+        if source_type == SRC_INTRADAY:
+            return self._source_intraday_get_series(tckr, **kwargs)
+        else:
+            raise DataSourceNotFoundError("Unknown 'datasource' type")
+
+    def _source_intraday_get_series(self, tckr, **kwargs):
+        """
+        Returns raw series dataframe from intraday mongo data base
+        :param tckr: full qualified ticker name
+        :param kwargs: db_get_raw_series kwargs
+        :return: pandas DataFrame
+        """
+        date_start = kwargs.get('date_start', None)
+        date_end = kwargs.get('date_end', None)
+
+        dt_filter = {}
+        if date_start is not None:
+            dt_filter['$gte'] = date_start
+        if date_end is not None:
+            dt_filter['$lte'] = date_end
+
+        request = {'tckr': tckr}
+        if len(dt_filter) > 0:
+            request['dt'] = dt_filter
+
+        dframes_list = []
+        for data in self.db[SRC_INTRADAY].find(request):
+            df = pickle.loads(data['ohlc'])
+            dframes_list.append(df)
+
+        return pd.concat(dframes_list), QTYPE_INTRADAY
