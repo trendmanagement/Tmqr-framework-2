@@ -1,14 +1,14 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
+
+import pytz
 
 from tmqr.errors import ArgumentError
 from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
-from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.instrumentinfo import InstrumentInfo
-
 
 class DataFeed:
     """
@@ -29,7 +29,7 @@ class DataFeed:
         self.data_engine = data_engine_cls(**self.data_engine_settings)
 
         # Initializing common datafeed settings
-        self.date_start = kwargs.get('date_start', datetime(1900, 1, 1))
+        self.date_start = kwargs.get('date_start', QDATE_MIN)
 
         # Cache setup
         self.instrument_info_cache = {}
@@ -58,9 +58,10 @@ class DataFeed:
         """
         chain_dict = self.data_engine.db_get_futures_chain(instrument,
                                                            self.date_start - timedelta(days=180))
-        tickers_list = [FutureContract(x['tckr'], datafeed=self) for x in chain_dict]
-        return FutureChain(tickers_list,
-                           self.get_instrument_info(instrument),
+
+        return FutureChain([x['tckr'] for x in chain_dict],
+                           asset_info=self.get_instrument_info(instrument),
+                           datafeed=self,
                            **kwargs)
 
     def get_contract_info(self, tckr):
@@ -84,9 +85,11 @@ class DataFeed:
         :param kwargs:
         :return:
         """
-        date_start = kwargs.get('date_start', datetime(1900, 1, 1))
-        date_end = kwargs.get('date_end', datetime(2100, 1, 1))
+        date_start = kwargs.get('date_start', QDATE_MIN)
+        date_end = kwargs.get('date_end', QDATE_MAX)
         tz = kwargs.get('timezone', None)
+        if type(tz) == str:
+            tz = pytz.timezone(tz)
         session = kwargs.get('session', None)
 
         dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)

@@ -120,4 +120,7 @@ class DataEngineMongo(DataEngineBase):
             df = pickle.loads(data['ohlc'])
             dframes_list.append(df)
 
+        if len(dframes_list) == 0:
+            raise DataEngineNotFoundError("No data found for {0}".format(tckr))
+
         return pd.concat(dframes_list), QTYPE_INTRADAY

@@ -1,9 +1,10 @@
 import re
-from datetime import datetime, time
+from datetime import time
 
 import pandas as pd
 
 from tmqr.errors import SettingsError, ArgumentError
+from tmqr.settings import *
 
 
 class AssetSession:
@@ -133,7 +134,7 @@ class AssetSession:
                 time_end = self.sessions[i - 1]['decision']
             else:
                 date_start = self.sessions[i - 1]['dt']
-                date_end = datetime(2100, 1, 1)
+                date_end = QDATE_MAX
                 time_start = self.sessions[i - 1]['start']
                 time_end = self.sessions[i - 1]['decision']
 

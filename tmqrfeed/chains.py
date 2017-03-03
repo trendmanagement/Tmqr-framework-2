@@ -1,9 +1,9 @@
-from datetime import datetime
-
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
 from tmqr.errors import ArgumentError
+from tmqr.settings import *
+from tmqrfeed.contracts import FutureContract
 
 
 class FutureChain:
@@ -11,7 +11,7 @@ class FutureChain:
     Futures chain class
     """
 
-    def __init__(self, fut_tckr_list, asset_info, **kwargs):
+    def __init__(self, fut_tckr_list, asset_info, datafeed, **kwargs):
 
         if fut_tckr_list is None or len(fut_tckr_list) == 0:
             raise ArgumentError("Failed to initiate futures chain empty tickers list")
@@ -21,6 +21,7 @@ class FutureChain:
         default_fut_months = self.ainfo.get('futures_months', range(1, 12))
         self.futures_months = kwargs.get('futures_months', default_fut_months)
         self.date_start = kwargs.get('date_start', None)
+        self.datafeed = datafeed
 
         self._futchain = self._generate_chains(fut_tckr_list)
 
@@ -31,11 +32,12 @@ class FutureChain:
         :return:
         """
         prev_fut = None
-        date_start = datetime(1900, 1, 1) if self.date_start is None else self.date_start
+        date_start = QDATE_MIN if self.date_start is None else self.date_start
 
         chain = []
 
-        for i, fut in enumerate(raw_futures):
+        for i, tckr in enumerate(raw_futures):
+            fut = FutureContract(tckr, self.datafeed)
             if fut.exp_month not in self.futures_months:
                 continue
 
@@ -43,10 +45,14 @@ class FutureChain:
                 prev_fut = fut
                 continue
             else:
+                series_date_start = prev_fut.exp_date - BDay(self.rollover_days_before - 1)
+                series_date_end = fut.exp_date - BDay(self.rollover_days_before)
+                fut.series_date_start = series_date_start
+                fut.series_date_end = series_date_end
                 chain.append({
                     'ticker': fut,
-                    'date_start': prev_fut.exp_date - BDay(self.rollover_days_before - 1),
-                    'date_end': fut.exp_date - BDay(self.rollover_days_before),
+                    'date_start': series_date_start,
+                    'date_end': series_date_end,
                 })
                 prev_fut = fut
 

@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from tmqr.errors import ArgumentError
+from tmqr.settings import *
 
 
 class ContractBase:
@@ -8,7 +7,7 @@ class ContractBase:
     Base class for generic asset
     """
 
-    def __init__(self, tckr, datafeed=None):
+    def __init__(self, tckr, datafeed=None, **kwargs):
         """
         Init generic contract from special `tckr` code
         :param tckr: Ticker code
@@ -37,6 +36,9 @@ class ContractBase:
 
         self.datafeed = datafeed
         """Global DataFeed class instance"""
+
+        self.series_date_start = kwargs.get('date_start', QDATE_MIN)
+        self.series_date_end = kwargs.get('date_end', QDATE_MAX)
 
     @property
     def instrument(self):
@@ -112,12 +114,31 @@ class ContractBase:
         except ValueError:
             raise ArgumentError("Bad expiration sting for {0}".format(self.ticker))
 
+    @property
+    def data_source(self):
+        raise NotImplementedError()
 
     def __str__(self):
         return self.ticker
 
     def __repr__(self):
         return self.ticker
+
+    def get_series(self, **kwargs):
+        iinfo = self.instrument_info
+        kw_source_type = kwargs.get('source_type', self.data_source)
+        kw_timezone = kwargs.get('timezone', iinfo.timezone)
+        kw_session = kwargs.get('session', iinfo.session)
+        kw_date_start = kwargs.get('date_start', self.series_date_start)
+        kw_date_end = kwargs.get('date_end', self.series_date_end)
+
+        return self.datafeed.get_raw_series(self.ticker,
+                                            source_type=kw_source_type,
+                                            session=kw_session,
+                                            timezone=kw_timezone,
+                                            date_start=kw_date_start,
+                                            date_end=kw_date_end
+                                            )
 
 
 class FutureContract(ContractBase):
@@ -186,6 +207,9 @@ class FutureContract(ContractBase):
             'F': 1, 'G': 2, 'H': 3, 'J': 4, 'K': 5, 'M': 6, 'N': 7, 'Q': 8, 'U': 9, 'V': 10, 'X': 11, 'Z': 12}
         return month_letters[month_letter.upper()]
 
+    @property
+    def data_source(self):
+        return self.instrument_info.data_futures_src
 
 class OptionContract(ContractBase):
     """
@@ -240,3 +264,7 @@ class OptionContract(ContractBase):
             else:
                 self._underlying = ContractBase(underlying_name)
         return self._underlying
+
+    @property
+    def data_source(self):
+        return self.instrument_info.data_options_src
