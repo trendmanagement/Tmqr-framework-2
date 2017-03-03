@@ -1,8 +1,13 @@
 import unittest
+from datetime import time
 from unittest import mock
+
+import pandas as pd
+import pytz
 
 from tmqr.errors import *
 from tmqr.settings import *
+from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
@@ -142,3 +147,85 @@ class DataFeedTestCase(unittest.TestCase):
 
             ci = dfeed.get_contract_info("US.F.CL.Q83.830720")
             self.assertEqual(False, mock_contr_info.called)
+
+    def test_get_raw_series(self):
+        info_dic = {
+            'futures_months': [3, 6, 9, 12],
+            'instrument': 'US.ES',
+            'market': 'US',
+            'rollover_days_before': 2,
+            'ticksize': 0.25,
+            'tickvalue': 12.5,
+            'timezone': 'US/Pacific',
+            'trading_session': [{
+                'decision': '10:40',
+                'dt': datetime(1900, 1, 1),
+                'execution': '10:45',
+                'start': '00:30'},
+
+                {
+                    'decision': '11:40',
+                    'dt': datetime(2009, 12, 31),
+                    'execution': '11:45',
+                    'start': '01:30'},
+
+                {
+                    'decision': '12:40',
+                    'dt': datetime(2011, 1, 1),
+                    'execution': '12:45',
+                    'start': '02:30'},
+            ]
+        }
+        tz = pytz.timezone(info_dic['timezone'])
+        sess = AssetSession(info_dic['trading_session'], tz)
+
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
+
+            base_date = datetime(2008, 10, 10)
+            data = [
+                {'dt': datetime.combine(base_date, time(0, 29)), 'v': 0},
+                {'dt': datetime.combine(base_date, time(0, 30)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(0, 31)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 39)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 40)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 41)), 'v': 0},
+            ]
+            source_df = pd.DataFrame(data).set_index('dt').tz_localize('US/Pacific').tz_convert("UTC")
+            mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
+            dfeed = DataFeed()
+
+            result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY)
+            for d in source_df.index:
+                self.assertTrue(d in result.index)
+            #
+            # Test timezone
+            #
+            result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
+                                          timezone=pytz.timezone('US/Pacific'))
+            self.assertEqual(pytz.timezone('US/Pacific'), result.index.tz)
+
+            result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
+                                          timezone='US/Pacific')
+            self.assertEqual(pytz.timezone('US/Pacific'), result.index.tz)
+
+            #
+            # Test session
+            #
+            with mock.patch('tmqrfeed.assetsession.AssetSession.filter_dataframe') as mock_session:
+                result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
+                                              session=sess)
+                self.assertEqual(True, mock_session.called)
+
+            # Test session tuple
+            result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
+                                          session=('00:30', '10:40'), timezone=pytz.timezone('US/Pacific'))
+            for d in result.index:
+                self.assertEqual(1, result.loc[d].v)
+
+            # Test unexpected session values
+            self.assertRaises(ArgumentError, dfeed.get_raw_series, 'US.F.CL.Q83.830720',
+                              SRC_INTRADAY, session='unexpected_stuff')
+
+            # Test not implemented stuff
+            mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
+            self.assertRaises(NotImplementedError, dfeed.get_raw_series, 'US.F.CL.Q83.830720', SRC_INTRADAY)

@@ -136,7 +136,9 @@ class AssetSession:
             time_start = self.sessions[i]['start']
             time_end = self.sessions[i]['decision']
 
-            tmp_df = dataframe.ix[date_start:date_end].between_time(time_start, time_end)
+            tmp_df = dataframe.ix[date_start:date_end].between_time(time_start, time_end,
+                                                                    include_start=True,
+                                                                    include_end=True)
             if len(tmp_df) > 0:
                 df_list.append(tmp_df)
 
