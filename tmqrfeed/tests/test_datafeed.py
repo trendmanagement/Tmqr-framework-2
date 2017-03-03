@@ -1,8 +1,8 @@
 import unittest
-from datetime import datetime
 from unittest import mock
 
 from tmqr.errors import *
+from tmqr.settings import *
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
@@ -41,6 +41,8 @@ class DataFeedTestCase(unittest.TestCase):
                 'ticksize': 0.25,
                 'tickvalue': 12.5,
                 'timezone': 'US/Pacific',
+                'data_futures_src': SRC_INTRADAY,
+                'data_options_src': SRC_OPTIONS,
                 'trading_session': [{
                     'decision': '10:40',
                     'dt': datetime(1900, 1, 1, 0, 0),
@@ -69,6 +71,8 @@ class DataFeedTestCase(unittest.TestCase):
                 'ticksize': 0.25,
                 'tickvalue': 12.5,
                 'timezone': 'US/Pacific',
+                'data_futures_src': SRC_INTRADAY,
+                'data_options_src': SRC_OPTIONS,
                 'trading_session': [{
                     'decision': '10:40',
                     'dt': datetime(1900, 1, 1, 0, 0),

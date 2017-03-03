@@ -4,6 +4,7 @@ import unittest
 import pytz
 
 from tmqr.errors import InstrumentInfoNotFound
+from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.instrumentinfo import InstrumentInfo
 
@@ -18,9 +19,11 @@ class InstrumentInfoTestCase(unittest.TestCase):
             'ticksize': 0.25,
             'tickvalue': 12.5,
             'timezone': 'US/Pacific',
+            'data_futures_src': SRC_INTRADAY,
+            'data_options_src': SRC_OPTIONS,
             'trading_session': [{
                                     'decision': '10:40',
-                                    'dt': datetime.datetime(1900, 1, 1, 0, 0),
+                'dt': datetime(1900, 1, 1, 0, 0),
                                     'execution': '10:45',
                                     'start': '00:32'}]}
 
