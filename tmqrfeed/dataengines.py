@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 from pymongo import MongoClient
 
-from tmqr.errors import DataEngineNotFoundError, DataSourceNotFoundError
+from tmqr.errors import *
 from tmqr.settings import *
 
 #
@@ -121,6 +121,6 @@ class DataEngineMongo(DataEngineBase):
             dframes_list.append(df)
 
         if len(dframes_list) == 0:
-            raise DataEngineNotFoundError("No data found for {0}".format(tckr))
+            raise IntradayQuotesNotFoundError("No data found for {0}".format(tckr))
 
         return pd.concat(dframes_list), QTYPE_INTRADAY

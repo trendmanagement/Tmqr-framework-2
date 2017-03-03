@@ -1,6 +1,6 @@
 import unittest
-from datetime import datetime
 
+from tmqr.errors import *
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import *
 
@@ -81,3 +81,5 @@ class DataEngineTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 7, 19).date(), df2.index[-1].date())
 
         self.assertRaises(DataSourceNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', "NON_EXISTING_SOURCE")
+
+        self.assertRaises(IntradayQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.N83.830622', SRC_INTRADAY)

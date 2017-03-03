@@ -52,3 +52,10 @@ class DataSourceNotFoundError(NotFoundError):
     Raised when datasource type is not found
     """
     pass
+
+
+class IntradayQuotesNotFoundError(NotFoundError):
+    """
+    Raised when quotes not found in intraday source
+    """
+    pass

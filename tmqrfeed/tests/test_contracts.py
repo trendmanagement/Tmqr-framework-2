@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 
+from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.contracts import *
 from tmqrfeed.datafeed import DataFeed
 
@@ -15,6 +16,11 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.instrument, 'US.AAPL')
         self.assertEqual(contract.name, 'AAPL')
         self.assertEqual(str(contract), contract.ticker)
+
+        def _get_source():
+            return contract.data_source
+
+        self.assertRaises(NotImplementedError, _get_source)
 
     def test_contractbase_toshort_contract(self):
         self.assertRaises(ArgumentError, ContractBase, 'US.AAPL')
@@ -158,3 +164,66 @@ class ContractsTestCase(unittest.TestCase):
         contract = FutureContract('US.F.ES.M83.830520')
         self.assertEqual('US.F.ES.M83.830520', str(contract))
         self.assertEqual('US.F.ES.M83.830520', repr(contract))
+
+    def test_quotes_source(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
+            feed = DataFeed()
+            eng_ainfo.return_value = {
+                'futures_months': [3, 6, 9, 12],
+                'instrument': 'US.ES',
+                'market': 'US',
+                'rollover_days_before': 2,
+                'ticksize': 0.25,
+                'tickvalue': 12.5,
+                'timezone': 'US/Pacific',
+                'data_futures_src': SRC_INTRADAY,
+                'data_options_src': SRC_OPTIONS,
+                'trading_session': [{
+                    'decision': '10:40',
+                    'dt': datetime(1900, 1, 1, 0, 0),
+                    'execution': '10:45',
+                    'start': '00:32'}]}
+
+            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+            self.assertEqual(SRC_INTRADAY, contract.data_source)
+
+            option = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datafeed=feed)
+            self.assertEqual(SRC_OPTIONS, option.data_source)
+
+    def test_get_series(self):
+        with mock.patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
+            feed = DataFeed()
+            mock_get_raw_series.return_value = True
+
+            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+            self.assertEqual(True, contract.get_series())
+            self.assertEqual(True, mock_get_raw_series.called)
+            self.assertEqual('US.F.ES.M83.830520', mock_get_raw_series.call_args[0][0])
+            kwargs = mock_get_raw_series.call_args[1]
+            self.assertEqual(kwargs['source_type'], SRC_INTRADAY)
+            self.assertEqual(kwargs['date_start'], QDATE_MIN)
+            self.assertEqual(kwargs['date_end'], QDATE_MAX)
+            self.assertTrue(isinstance(kwargs['session'], AssetSession))
+            self.assertEqual('US/Pacific', str(kwargs['timezone']))
+
+    def test_get_series_with_kwargs(self):
+        with mock.patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
+            feed = DataFeed()
+            mock_get_raw_series.return_value = True
+
+            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+            self.assertEqual(True, contract.get_series(date_start=QDATE_MAX,
+                                                       date_end=QDATE_MIN,
+                                                       session='sess',
+                                                       timezone='another',
+                                                       source_type='another_source'
+                                                       ))
+            self.assertEqual(True, mock_get_raw_series.called)
+
+            self.assertEqual('US.F.ES.M83.830520', mock_get_raw_series.call_args[0][0])
+            kwargs = mock_get_raw_series.call_args[1]
+            self.assertEqual(kwargs['source_type'], 'another_source')
+            self.assertEqual(kwargs['date_start'], QDATE_MAX)
+            self.assertEqual(kwargs['date_end'], QDATE_MIN)
+            self.assertEqual(kwargs['session'], 'sess')
+            self.assertEqual('another', str(kwargs['timezone']))

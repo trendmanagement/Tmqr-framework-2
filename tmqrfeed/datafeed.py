@@ -85,8 +85,6 @@ class DataFeed:
         :param kwargs:
         :return:
         """
-        date_start = kwargs.get('date_start', QDATE_MIN)
-        date_end = kwargs.get('date_end', QDATE_MAX)
         tz = kwargs.get('timezone', None)
         if type(tz) == str:
             tz = pytz.timezone(tz)
