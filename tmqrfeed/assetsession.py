@@ -120,25 +120,28 @@ class AssetSession:
         :param dataframe:
         :return:
         """
+        if dataframe is None or len(dataframe) == 0:
+            raise ArgumentError("None or empty dataframe")
+
         if dataframe.index.tz != self.tz:
             raise ArgumentError("DataFrame timezone info mismatch. DataFrame TZ: {0} Session TZ: {1}".format(
                 dataframe.index.tz, self.tz
             ))
 
         df_list = []
-        for i in range(1, len(self.sessions)):
-            if i < len(self.sessions) - 1:
-                date_start = self.sessions[i - 1]['dt']
-                date_end = self.sessions[i]['dt']
-                time_start = self.sessions[i - 1]['start']
-                time_end = self.sessions[i - 1]['decision']
-            else:
-                date_start = self.sessions[i - 1]['dt']
-                date_end = QDATE_MAX
-                time_start = self.sessions[i - 1]['start']
-                time_end = self.sessions[i - 1]['decision']
+        for i in range(len(self.sessions)):
+            date_start = self.sessions[i]['dt']
+            date_end = self.sessions[i + 1]['dt'] if i < len(self.sessions) - 1 else QDATE_MAX
 
-            tmp_df = dataframe.ix[date_start:date_end]
-            df_list.append(tmp_df.between_time(time_start, time_end))
+            time_start = self.sessions[i]['start']
+            time_end = self.sessions[i]['decision']
+
+            tmp_df = dataframe.ix[date_start:date_end].between_time(time_start, time_end)
+            if len(tmp_df) > 0:
+                df_list.append(tmp_df)
+
+        if len(df_list) == 0:
+            raise ArgumentError(
+                "No datapoints left after trading session filtration. Too strict rules or not enough data.")
 
         return pd.concat(df_list)
