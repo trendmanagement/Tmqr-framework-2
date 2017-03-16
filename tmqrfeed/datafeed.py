@@ -82,6 +82,7 @@ class DataFeed:
         """
         Fetch raw series for asset from the datasource
         :param tckr:
+        :param source_type:
         :param kwargs:
         :return:
         """

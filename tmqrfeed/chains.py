@@ -45,7 +45,7 @@ class FutureChain:
                 prev_fut = fut
                 continue
             else:
-                series_date_start = prev_fut.exp_date - BDay(self.rollover_days_before - 1)
+                series_date_start = prev_fut.exp_date - BDay(self.rollover_days_before)
                 series_date_end = fut.exp_date - BDay(self.rollover_days_before)
                 fut.series_date_start = series_date_start
                 fut.series_date_end = series_date_end
@@ -75,7 +75,7 @@ class FutureChain:
             df = df.shift(offset).dropna()
 
         if limit < 0:
-            raise ArgumentError("'limit' argument must be >= 0")
+            raise ArgumentError("'limit' argument must be > 0")
         elif limit > 0:
             df = df.head(limit)
 

@@ -8,10 +8,14 @@ class QuoteManager:
     * Data access interface and container - stores all data requested by algorithm and provides interface for data management
     """
 
-    def get_primary_data(self, quote_engine):
+    def __init__(self):
+        self.primary_quote_data = None
+        """Quote* class instance for managing primary quote data"""
+
+    def get_primary_data(self, quote_engine_cls, *args, **kwargs):
         """
         Fetch main ohlcv series used for algorithm and strategy calculations
-        :param quote_engine: Quote* class instance
+        :param quote_engine_cls: Quote* class
         :return: dataframe for primary data
         """
         pass
