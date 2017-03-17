@@ -1,7 +1,9 @@
 import re
 from datetime import time
 
+import numpy as np
 import pandas as pd
+import pytz
 
 from tmqr.errors import SettingsError, ArgumentError
 from tmqr.settings import *
@@ -26,7 +28,7 @@ class AssetSession:
         result = []
         for sess in session_list:
             result.append({
-                'dt': sess['dt'].replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=self.tz),
+                'dt': self.tz.localize(sess['dt'].replace(hour=0, minute=0, second=0, microsecond=0)),
                 'decision': self._time_parse(sess['decision']),
                 'start': self._time_parse(sess['start']),
                 'execution': self._time_parse(sess['execution']),
@@ -88,23 +90,55 @@ class AssetSession:
         """
         hh = int(str_time[:2])
         mm = int(str_time[3:])
-        return time(hh, mm, tzinfo=self.tz)
+        return time(hh, mm)
 
-    def get(self, date):
+    def get(self, date, numpy_dtype=False):
         """
         Get trading session params for particular date
         :param date: datetime like object
-        :return: tuple of (start, decision, execution) tz-aware dates for particular date
+        :return: tuple of (start, decision, execution, next_sess_date) tz-aware dates for particular date
         """
-        start, decision, execution, next_sess_date = self._get_sess_params(date)
-        return start, decision, execution
+
+        assert date.tzinfo is not None
+
+        if not numpy_dtype:
+            start, decision, execution, next_sess_date = self._get_sess_params(date)
+            assert start < decision
+            assert start < execution
+            assert decision < execution
+
+            return start, decision, execution, next_sess_date
+        else:
+            start, decision, execution, next_sess_date = self._get_sess_params(date.astimezone(pytz.utc))
+
+            assert start < decision
+            assert start < execution
+            assert decision < execution
+
+            # Converting tz-aware time to UTC
+            np_start_time = np.datetime64(start.astimezone(pytz.utc).replace(tzinfo=None)).astype('datetime64[s]').view(
+                np.uint64)
+            np_decision_time = np.datetime64(decision.astimezone(pytz.utc).replace(tzinfo=None)).astype(
+                'datetime64[s]').view(np.uint64)
+            np_execution_time = np.datetime64(execution.astimezone(pytz.utc).replace(tzinfo=None)).astype(
+                'datetime64[s]').view(np.uint64)
+
+            if next_sess_date is not None:
+                np_next_sess_date = np.datetime64(next_sess_date.astimezone(pytz.utc).replace(tzinfo=None)).astype(
+                    'datetime64[s]').view(np.uint64)
+            else:
+                np_next_sess_date = np.datetime64(QDATE_MAX.replace(tzinfo=None)).astype('datetime64[s]').view(
+                    np.uint64)
+            return np_start_time, np_decision_time, np_execution_time, np_next_sess_date
+
+
 
     def _get_sess_params(self, date):
         for i, sess in enumerate(reversed(self.sessions)):
             if date >= sess['dt']:
-                start = datetime.combine(date, sess['start'])
-                decision = datetime.combine(date, sess['decision'])
-                execution = datetime.combine(date, sess['execution'])
+                start = self.tz.localize(datetime.combine(date, sess['start']))
+                decision = self.tz.localize(datetime.combine(date, sess['decision']))
+                execution = self.tz.localize(datetime.combine(date, sess['execution']))
                 if i > 0:
                     next_sess_date = self.sessions[len(self.sessions) - i]['dt']
                 else:

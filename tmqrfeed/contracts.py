@@ -124,6 +124,18 @@ class ContractBase:
     def __repr__(self):
         return self.ticker
 
+    def __lt__(self, other):
+        return self.ticker < other.ticker
+
+    def __gt__(self, other):
+        return self.ticker > other.ticker
+
+    def __eq__(self, other):
+        return self.ticker == self.ticker
+
+    def __hash__(self):
+        return self.ticker.__hash__()
+
     def get_series(self, **kwargs):
         iinfo = self.instrument_info
         kw_source_type = kwargs.get('source_type', self.data_source)

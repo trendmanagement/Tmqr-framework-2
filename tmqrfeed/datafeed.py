@@ -2,9 +2,7 @@ from datetime import timedelta
 
 import pytz
 
-from tmqr.errors import ArgumentError
 from tmqr.settings import *
-from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
@@ -97,18 +95,6 @@ class DataFeed:
             if tz is not None:
                 # Convert timezone of the dataframe (in place)
                 dfseries.tz_convert(tz, copy=False)
-            if session is not None:
-                if isinstance(session, AssetSession):
-                    # Filtering dataframe keep only requires session
-                    dfseries = session.filter_dataframe(dfseries)
-                elif type(session) == tuple and len(session) == 2:
-                    dfseries = dfseries.between_time(start_time=session[0],
-                                                     end_time=session[1],
-                                                     include_start=True,
-                                                     include_end=True)
-                else:
-                    raise ArgumentError("Session must be AssetSession or tuple of ('HH:MM', 'HH:MM')")
-
             return dfseries
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
