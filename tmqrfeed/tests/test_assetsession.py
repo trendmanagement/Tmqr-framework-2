@@ -6,6 +6,7 @@ import pandas as pd
 import pytz
 
 from tmqr.errors import *
+from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 
 
@@ -36,6 +37,22 @@ class AssetSessionTestCase(unittest.TestCase):
                     'dt': datetime.datetime(2011, 1, 1),
                     'execution': '12:45',
                     'start': '02:32'},
+            ]
+        }
+
+        self.info_dic_single_session = {
+            'futures_months': [3, 6, 9, 12],
+            'instrument': 'US.ES',
+            'market': 'US',
+            'rollover_days_before': 2,
+            'ticksize': 0.25,
+            'tickvalue': 12.5,
+            'timezone': 'US/Pacific',
+            'trading_session': [{
+                'decision': '10:40',
+                'dt': datetime.datetime(1900, 1, 1),
+                'execution': '10:45',
+                'start': '00:32'},
             ]
         }
 
@@ -205,6 +222,33 @@ class AssetSessionTestCase(unittest.TestCase):
                          np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
         self.assertEqual(execution,
                          np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
+
+    def test_session_get_numpy_single(self):
+        tz = pytz.timezone(self.info_dic_single_session['timezone'])
+        sess = AssetSession(self.info_dic_single_session['trading_session'], tz)
+
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)),
+                                                         numpy_dtype=True)
+
+        self.assertEqual(start,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
+        self.assertEqual(decision,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
+        self.assertEqual(execution,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
+
+        dt = pd.Timestamp(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)))
+        start, decision, execution, next_sess = sess.get(dt, numpy_dtype=True)
+
+        self.assertEqual(start,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
+        self.assertEqual(decision,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
+        self.assertEqual(execution,
+                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
+        self.assertEqual(next_sess,
+                         np.datetime64(tz.localize(QDATE_MAX)).view(np.uint64) / 1000000)
+
 
 
 

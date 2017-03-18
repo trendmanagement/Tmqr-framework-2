@@ -126,7 +126,8 @@ class AssetSession:
                 np_next_sess_date = np.datetime64(next_sess_date.astimezone(pytz.utc).replace(tzinfo=None)).astype(
                     'datetime64[s]').view(np.uint64)
             else:
-                np_next_sess_date = np.datetime64(QDATE_MAX.replace(tzinfo=None)).astype('datetime64[s]').view(
+                np_next_sess_date = np.datetime64(
+                    self.tz.localize(QDATE_MAX).astimezone(pytz.utc).replace(tzinfo=None)).astype('datetime64[s]').view(
                     np.uint64)
             return np_start_time, np_decision_time, np_execution_time, np_next_sess_date
 

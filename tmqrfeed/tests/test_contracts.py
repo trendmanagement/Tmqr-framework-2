@@ -22,6 +22,18 @@ class ContractsTestCase(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, _get_source)
 
+    def test_contractbase_magic_funcs(self):
+        contract = ContractBase('US.S.AAPL')
+        contract3 = ContractBase('US.S.AAPL')
+        contract2 = ContractBase('US.S.BBPL')
+
+        self.assertEqual(contract.__hash__(), contract.ticker.__hash__())
+        self.assertEqual(contract.__eq__(contract3), True)
+        self.assertEqual(contract.__gt__(contract2), False)
+        self.assertEqual(contract.__lt__(contract2), True)
+        self.assertEqual(contract.__str__(), contract.ticker)
+        self.assertEqual(contract.__repr__(), contract.ticker)
+
     def test_contractbase_toshort_contract(self):
         self.assertRaises(ArgumentError, ContractBase, 'US.AAPL')
 
