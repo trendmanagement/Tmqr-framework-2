@@ -101,3 +101,39 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row['l'], 94.75)
         self.assertEqual(row['c'], 97.48)
         self.assertEqual(row['v'], 151103)
+
+    def test_compress_2days_holdings(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series_2days.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+        asset_mock = MagicMock()
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock)
+
+        self.assertTrue(type(comp_df) == pd.DataFrame)
+        self.assertTrue(type(holdings) == pd.DataFrame)
+
+        self.assertEqual(2, len(holdings))
+
+        row = holdings.iloc[0]
+        dt = row.name[0]
+        asset = row.name[1]
+        self.assertEqual(dt, self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)))
+        self.assertEqual("TestAsset", str(asset))
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['exec_time'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 44, 00)), row['quote_time'])
+        self.assertEqual(97.45, row['px'])
+        self.assertEqual(1, row['qty'])
+
+        row = holdings.iloc[1]
+        dt = row.name[0]
+        asset = row.name[1]
+        self.assertEqual(dt, self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)))
+        self.assertEqual("TestAsset", str(asset))
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['exec_time'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 44, 00)), row['quote_time'])
+        self.assertEqual(97.45, row['px'])
+        self.assertEqual(1, row['qty'])

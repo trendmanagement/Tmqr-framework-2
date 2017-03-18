@@ -72,10 +72,10 @@ def compress_daily(dfg, asset):
                 exec_values.append({
                     'date': dt_sess_decision,
                     'exec_time': dt_sess_exec,
-                        'quote_time': dfg.index[exec_i],
-                        'px': _exec_px,
-                        'qty': 1,
-                        'asset': asset,
+                    'quote_time': asset_session.tz.localize(dfg.index[exec_i]),
+                    'px': _exec_px,
+                    'qty': 1,
+                    'asset': asset,
                     }
                 )
 
@@ -113,7 +113,7 @@ def compress_daily(dfg, asset):
                 _exec_px = _c
                 exec_i = i
             else:
-                _exec_px = _c
+                _exec_px = data[ic, i]
                 exec_i = i
 
     if not is_newday:
@@ -130,7 +130,7 @@ def compress_daily(dfg, asset):
         # Store exec values
         exec_values.append({
             'date': dt_sess_decision,
-            'quote_time': dfg.index[exec_i],
+            'quote_time': asset_session.tz.localize(dfg.index[exec_i]),
             'exec_time': dt_sess_exec,
             'px': _exec_px,
             'qty': 1,
