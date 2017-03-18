@@ -2,10 +2,9 @@ import re
 from datetime import time
 
 import numpy as np
-import pandas as pd
 import pytz
 
-from tmqr.errors import SettingsError, ArgumentError
+from tmqr.errors import SettingsError
 from tmqr.settings import *
 
 
@@ -147,37 +146,3 @@ class AssetSession:
 
         raise SettingsError("Trading sessions information doesn't contain records for so early date, "
                             "try to add '1900-01-01' record to implement default session")
-
-    def filter_dataframe(self, dataframe):
-        """
-        Creates filtered dataframe and removes out-of-session datapoints
-        :param dataframe:
-        :return:
-        """
-        if dataframe is None or len(dataframe) == 0:
-            raise ArgumentError("None or empty dataframe")
-
-        if dataframe.index.tz != self.tz:
-            raise ArgumentError("DataFrame timezone info mismatch. DataFrame TZ: {0} Session TZ: {1}".format(
-                dataframe.index.tz, self.tz
-            ))
-
-        df_list = []
-        for i in range(len(self.sessions)):
-            date_start = self.sessions[i]['dt']
-            date_end = self.sessions[i + 1]['dt'] if i < len(self.sessions) - 1 else QDATE_MAX
-
-            time_start = self.sessions[i]['start']
-            time_end = self.sessions[i]['decision']
-
-            tmp_df = dataframe.ix[date_start:date_end].between_time(time_start, time_end,
-                                                                    include_start=True,
-                                                                    include_end=True)
-            if len(tmp_df) > 0:
-                df_list.append(tmp_df)
-
-        if len(df_list) == 0:
-            raise ArgumentError(
-                "No datapoints left after trading session filtration. Too strict rules or not enough data.")
-
-        return pd.concat(df_list)

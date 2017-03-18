@@ -128,6 +128,7 @@ def compress_daily(dfg, asset):
             'asset': asset,
         }
     )
+    # TODO: need to use DATE + decision time as DF timestamps
     values_index.append(npdate_buf[last_date_idx])
     df_result = pd.DataFrame(values, index=values_index)
     df_result.index.rename('dt', inplace=True)

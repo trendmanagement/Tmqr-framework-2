@@ -63,6 +63,7 @@ class QuoteContFut(QuoteBase):
                 # 3. Do resampling (timeframe compression)
                 # 4. Append compressed series to continuous futures series
                 df_data.append(series.resample('D').apply(self.ohlc_resampler).dropna())
+                # TODO: Implement cont fut data and execution information merging
             except IntradayQuotesNotFoundError:
                 continue
 

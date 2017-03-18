@@ -208,24 +208,6 @@ class DataFeedTestCase(unittest.TestCase):
                                           timezone='US/Pacific')
             self.assertEqual(pytz.timezone('US/Pacific'), result.index.tz)
 
-            #
-            # Test session
-            #
-            with mock.patch('tmqrfeed.assetsession.AssetSession.filter_dataframe') as mock_session:
-                result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
-                                              session=sess)
-                self.assertEqual(True, mock_session.called)
-
-            # Test session tuple
-            result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY,
-                                          session=('00:30', '10:40'), timezone=pytz.timezone('US/Pacific'))
-            for d in result.index:
-                self.assertEqual(1, result.loc[d].v)
-
-            # Test unexpected session values
-            self.assertRaises(ArgumentError, dfeed.get_raw_series, 'US.F.CL.Q83.830720',
-                              SRC_INTRADAY, session='unexpected_stuff')
-
             # Test not implemented stuff
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_series, 'US.F.CL.Q83.830720', SRC_INTRADAY)
