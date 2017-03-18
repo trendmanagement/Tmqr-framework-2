@@ -1,5 +1,8 @@
+
 cimport numpy as np
+import cython
 import numpy as np
+
 DTYPE = np.float
 ctypedef np.float64_t DTYPE_t
 import pandas as pd
@@ -45,13 +48,14 @@ def compress_daily(dfg, asset):
     cdef np.uint64_t sess_decision = -1
     cdef np.uint64_t sess_execution = -1
     cdef np.uint64_t sess_next_date = -1
+    dt_sess_start = dt_sess_decision = dt_sess_exec = dt_sess_next = None
 
     cdef int is_newday = 1 #
 
     for i in range(count):
         # If new day occurred
         if last_date != npdate[i]:
-            if last_date_idx >= 0:
+            if not is_newday:
                 # Store previous OHLCV values
                 values.append(
                     {
@@ -62,11 +66,12 @@ def compress_daily(dfg, asset):
                         'v': _v,
                     }
                 )
-                values_index.append(npdate_buf[last_date_idx])
+                values_index.append(dt_sess_decision)
 
                 # Store exec values
                 exec_values.append({
-                        'date': npdate_buf[last_date_idx],
+                    'date': dt_sess_decision,
+                    'exec_time': dt_sess_exec,
                         'quote_time': dfg.index[exec_i],
                         'px': _exec_px,
                         'qty': 1,
@@ -75,8 +80,11 @@ def compress_daily(dfg, asset):
                 )
 
             # Calculate trading session params
-            sess_start, sess_decision, sess_execution, sess_next_date = asset_session.get(dfg.index[i],
-                                                                                          numpy_dtype=True)
+            dt_sess_start, dt_sess_decision, dt_sess_exec, dt_sess_next = asset_session.get(dfg.index[i])
+            sess_start = np.datetime64(dt_sess_start.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)
+            sess_decision = np.datetime64(dt_sess_decision.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)
+            sess_execution = np.datetime64(dt_sess_exec.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)
+
             last_date = npdate[i]
             last_date_idx = i
             is_newday = 1
@@ -108,28 +116,29 @@ def compress_daily(dfg, asset):
                 _exec_px = _c
                 exec_i = i
 
-
-    # Process last values
-    values.append(
-                    {
-                        'o': _o,
-                        'h': _h,
-                        'l': _l,
-                        'c': _c,
-                        'v': _v,
-                    }
-                )
-    # Store exec values
-    exec_values.append({
-            'date': npdate_buf[last_date_idx],
+    if not is_newday:
+        # Process last values
+        values.append(
+            {
+                'o': _o,
+                'h': _h,
+                'l': _l,
+                'c': _c,
+                'v': _v,
+            }
+        )
+        # Store exec values
+        exec_values.append({
+            'date': dt_sess_decision,
             'quote_time': dfg.index[exec_i],
+            'exec_time': dt_sess_exec,
             'px': _exec_px,
             'qty': 1,
             'asset': asset,
         }
-    )
-    # TODO: need to use DATE + decision time as DF timestamps
-    values_index.append(npdate_buf[last_date_idx])
+        )
+        values_index.append(dt_sess_decision)
+
     df_result = pd.DataFrame(values, index=values_index)
     df_result.index.rename('dt', inplace=True)
     return df_result, pd.DataFrame(exec_values).set_index(['date', 'asset'])

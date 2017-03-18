@@ -12,7 +12,11 @@ class DataFrameGetter:
         """
         # Transpose dataframe data to make it column oriented
         self.data = df.values.T
-        self.index = df.index
+
+        assert df.index.tzinfo is not None
+        self.tz = df.index.tzinfo
+        self.index = df.index.tz_localize(None)
+
 
         self.cols = {}
         for i, col_name in enumerate(df.columns):

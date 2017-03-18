@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytz
 
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
 
@@ -12,12 +13,17 @@ class DataFrameGetterTestCase(unittest.TestCase):
         print(os.getcwd())
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
                          index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(pytz.timezone('US/Pacific'))
         dfg = DataFrameGetter(df)
 
         self.assertTrue(type(dfg.data) == np.ndarray)
         self.assertTrue(type(dfg.index) == pd.DatetimeIndex)
         self.assertTrue(type(dfg.cols) == dict)
         self.assertEqual(5, len(dfg.cols))
+
+        self.assertEqual(None, dfg.index.tzinfo)
+        self.assertEqual(pytz.timezone('US/Pacific'), dfg.tz)
+
         self.assertTrue('o' in dfg.cols)
         self.assertTrue('h' in dfg.cols)
         self.assertTrue('l' in dfg.cols)

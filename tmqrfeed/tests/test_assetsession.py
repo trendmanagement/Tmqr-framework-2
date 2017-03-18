@@ -1,8 +1,6 @@
 import datetime
 import unittest
 
-import numpy as np
-import pandas as pd
 import pytz
 
 from tmqr.errors import *
@@ -199,57 +197,6 @@ class AssetSessionTestCase(unittest.TestCase):
         self.assertEqual(decision, tz.localize(datetime.datetime(2011, 1, 1, 12, 40)))
         self.assertEqual(execution, tz.localize(datetime.datetime(2011, 1, 1, 12, 45)))
 
-    def test_session_get_numpy(self):
-        tz = pytz.timezone(self.info_dic['timezone'])
-        sess = AssetSession(self.info_dic['trading_session'], tz)
-
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)),
-                                                         numpy_dtype=True)
-
-        self.assertEqual(start,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
-        self.assertEqual(decision,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
-        self.assertEqual(execution,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
-
-        dt = pd.Timestamp(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)))
-        start, decision, execution, next_sess = sess.get(dt, numpy_dtype=True)
-
-        self.assertEqual(start,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
-        self.assertEqual(decision,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
-        self.assertEqual(execution,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
-
-    def test_session_get_numpy_single(self):
-        tz = pytz.timezone(self.info_dic_single_session['timezone'])
-        sess = AssetSession(self.info_dic_single_session['trading_session'], tz)
-
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)),
-                                                         numpy_dtype=True)
-
-        self.assertEqual(start,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
-        self.assertEqual(decision,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
-        self.assertEqual(execution,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
-
-        dt = pd.Timestamp(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)))
-        start, decision, execution, next_sess = sess.get(dt, numpy_dtype=True)
-
-        self.assertEqual(start,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 0, 32))).view(np.uint64) / 1000000)
-        self.assertEqual(decision,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 40))).view(np.uint64) / 1000000)
-        self.assertEqual(execution,
-                         np.datetime64(tz.localize(datetime.datetime(2010, 12, 30, 10, 45))).view(np.uint64) / 1000000)
-        self.assertEqual(next_sess,
-                         np.datetime64(tz.localize(QDATE_MAX)).view(np.uint64) / 1000000)
-
-
 
 
     def test_session_get_item_too_early(self):
@@ -262,7 +209,7 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution, next = sess._get_sess_params(tz.localize(datetime.datetime(2001, 12, 30, 12, 45)))
+        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2001, 12, 30, 12, 45))
         self.assertEqual(start, tz.localize(datetime.datetime(2001, 12, 30, 0, 32)))
         self.assertEqual(decision, tz.localize(datetime.datetime(2001, 12, 30, 10, 40)))
         self.assertEqual(execution, tz.localize(datetime.datetime(2001, 12, 30, 10, 45)))
@@ -273,10 +220,10 @@ class AssetSessionTestCase(unittest.TestCase):
                     'dt': datetime.datetime(2010, 12, 31),
                     'dt': datetime.datetime(2011, 1, 1),
         """
-        start, decision, execution, next = sess._get_sess_params(tz.localize(datetime.datetime(2010, 12, 31, 12, 45)))
+        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2010, 12, 31, 12, 45))
         self.assertEqual(next, tz.localize(datetime.datetime(2011, 1, 1)))
 
-        start, decision, execution, next = sess._get_sess_params(tz.localize(datetime.datetime(2012, 12, 31, 12, 45)))
+        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2012, 12, 31, 12, 45))
         self.assertEqual(next, None)
 
 
