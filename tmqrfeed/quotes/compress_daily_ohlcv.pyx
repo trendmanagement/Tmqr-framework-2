@@ -64,6 +64,7 @@ def compress_daily(dfg, asset):
                         'l': _l,
                         'c': _c,
                         'v': _v,
+                        'exec': _exec_px,
                     }
                 )
                 values_index.append(dt_sess_decision)
@@ -125,6 +126,7 @@ def compress_daily(dfg, asset):
                 'l': _l,
                 'c': _c,
                 'v': _v,
+                'exec': _exec_px,
             }
         )
         # Store exec values

@@ -89,6 +89,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row['l'], 94.75)
         self.assertEqual(row['c'], 97.48)
         self.assertEqual(row['v'], 151103)
+        self.assertEqual(row['exec'], 97.45)
 
         row = comp_df.iloc[1]
         self.assertEqual(row.name.date(), datetime(2011, 12, 21).date())
@@ -101,6 +102,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row['l'], 94.75)
         self.assertEqual(row['c'], 97.48)
         self.assertEqual(row['v'], 151103)
+        self.assertEqual(row['exec'], 97.45)
 
     def test_compress_2days_holdings(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series_2days.csv')), parse_dates=True,
