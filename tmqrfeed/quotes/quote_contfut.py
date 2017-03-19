@@ -1,9 +1,14 @@
 import numpy as np
+import pandas as pd
+import pyximport
 
 from tmqr.errors import *
 from tmqrfeed.quotes.quote_base import QuoteBase
 
-FNAN = float('nan')
+pyximport.install(setup_args={"include_dirs": np.get_include()})
+from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
+from tmqrfeed.quotes.dataframegetter import DataFrameGetter
+
 
 class QuoteContFut(QuoteBase):
     """
@@ -22,28 +27,28 @@ class QuoteContFut(QuoteBase):
 
         if self.timeframe is None:
             raise ArgumentError("'timeframe' kwarg is not set")
+        if self.timeframe != 'D':
+            raise ArgumentError("Only 'D' timeframe supported")
 
         self.instrument = instrument
 
-    def ohlc_resampler(self, x):
-        if x.name == 'o':
-            if len(x) == 0:
-                return FNAN
-            else:
-                return x[0]
-        if x.name == 'h':
-            return np.max(x)
-        if x.name == 'l':
-            return np.min(x)
-        if x.name == 'c':
-            if len(x) == 0:
-                return FNAN
-            else:
-                return x[-1]
-        if x.name == 'v':
-            return np.sum(x)
+    def merge_series(self, prev_series, new_series):
+        try:
+            prev_prices = prev_series.loc[prev_series.index[-1]]
+            new_prices = new_series.loc[prev_series.index[-1]]
+            # Calculating futures rollover factor
+            fut_offset = new_prices['exec'] - prev_prices['exec']
+        except KeyError:
+            fut_offset = 0.0
 
-        return FNAN
+        new_series[['o', 'h', 'l', 'c', 'exec']] -= fut_offset
+        new_series = new_series[new_series.index > prev_series.index[-1]]
+        return pd.concat([prev_series, new_series])
+
+    def merge_positions(self, prev_position, new_position):
+        return pd.merge(prev_position.reset_index(), new_position.reset_index(), how='outer').sort_values(
+            'date').set_index(
+            ['date', 'asset'])
 
     def build(self):
         # Get futures chain
@@ -54,20 +59,26 @@ class QuoteContFut(QuoteBase):
 
         # Build price series
         # 1. Iterate chains
-        df_data = []
+        df_data = None
+        df_positions = None
         for row in chain_values.iterrows():
             fut_contract, fut_range = row
             try:
                 # 2. Get futures raw series
                 series = fut_contract.get_series()
                 # 3. Do resampling (timeframe compression)
+                series, positions = compress_daily(DataFrameGetter(series), fut_contract)
+
                 # 4. Append compressed series to continuous futures series
-                df_data.append(series.resample('D').apply(self.ohlc_resampler).dropna())
+                if df_data is None:
+                    df_data = series
+                    df_positions = positions
+                else:
+                    df_data = self.merge_series(df_data, series)
+                    # df_positions = self.merge_positions(df_positions, positions)
+
                 # TODO: Implement cont fut data and execution information merging
             except IntradayQuotesNotFoundError:
                 continue
 
-        # 5. Store compressed series for future in buffer(for future quick price fetching)
-
-        # Build transactions list
-        pass
+        return df_data, df_positions
