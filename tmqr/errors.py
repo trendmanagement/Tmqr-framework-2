@@ -54,6 +54,13 @@ class DataSourceNotFoundError(NotFoundError):
     pass
 
 
+class QuoteEngineEmptyQuotes(NotFoundError):
+    """
+    Raised when quotes algo unable to create quote series
+    """
+    pass
+
+
 class IntradayQuotesNotFoundError(NotFoundError):
     """
     Raised when quotes not found in intraday source

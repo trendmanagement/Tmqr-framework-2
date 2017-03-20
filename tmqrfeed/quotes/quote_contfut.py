@@ -44,11 +44,7 @@ class QuoteContFut(QuoteBase):
         new_series = new_series[new_series.index > prev_series.index[-1]]
         return new_series
 
-    def merge_series(self, df_data):
-        pass
 
-    def merge_positions(self, df_positions):
-        pass
 
     def build(self):
         # Get futures chain

@@ -18,6 +18,7 @@ import pytz
 from datetime import datetime
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
+from tmqr.errors import *
 
 import pyximport
 
@@ -63,6 +64,43 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.fut2 = MagicMock()
         self.fut2.__str__.return_value = "TestAsset2"
         self.fut2.instrument_info.session = self.sess
+
+    def test_init_defaults(self):
+        datafeed = MagicMock()
+        datafeed.date_start = datetime(2012, 1, 1)
+
+        qcf = QuoteContFut('US.CL', datafeed=datafeed, timeframe='D')
+        self.assertEqual('US.CL', qcf.instrument)
+        self.assertEqual(datafeed, qcf.datafeed)
+        self.assertEqual('D', qcf.timeframe)
+        self.assertEqual(0, qcf.fut_offset)
+        self.assertEqual(datafeed.date_start, qcf.date_start)
+        self.assertEqual(None, qcf.date_end)
+
+    def test_init_errors(self):
+        datafeed = MagicMock()
+        datafeed.date_start = datetime(2012, 1, 1)
+
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL')
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datafeed=datafeed)
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datafeed=datafeed, timeframe='1M')
+
+    def test_init_kwargs(self):
+        datafeed = MagicMock()
+        datafeed.date_start = datetime(2012, 1, 1)
+        qcf = QuoteContFut('US.CL',
+                           datafeed=datafeed,
+                           timeframe='D',
+                           fut_offset=1,
+                           date_start=datetime(2013, 1, 1),
+                           date_end=datetime(2014, 1, 1)
+                           )
+        self.assertEqual('US.CL', qcf.instrument)
+        self.assertEqual(datafeed, qcf.datafeed)
+        self.assertEqual('D', qcf.timeframe)
+        self.assertEqual(1, qcf.fut_offset)
+        self.assertEqual(datetime(2013, 1, 1), qcf.date_start)
+        self.assertEqual(datetime(2014, 1, 1), qcf.date_end)
 
     def test_calculate_fut_offset_series(self):
         # Do quick sanity checks for input data
@@ -112,6 +150,29 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertEqual(0, offset_df['exec'].mean())
         # Volume should be kept the same
         self.assertEqual(0, offset_df['v'].mean())
+
+    def test_merge_series(self):
+        # Do quick sanity checks for input data
+        self.assertEqual(2769134.1100000003, self.series1.c.sum())
+        self.assertEqual(3145255.6600000001, self.series2.c.sum())
+
+        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
+        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
+        # Check compressed output validity
+        self.assertEqual(2105.0499999999997, prev_df.c.sum())
+        self.assertEqual(2392.73, new_df.c.sum())
+
+        self.assertTrue(prev_df.index[-1] in new_df.index)
+
+        feed = DataFeed()
+        qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
+
+        merged_df = qcont_fut.merge_series([prev_df, new_df])
+        target_df = pd.concat([prev_df, new_df])
+        self.assertEqual(len(merged_df), len(target_df))
+        for i in range(len(merged_df)):
+            self.assertTrue(np.all(merged_df.iloc[i] == target_df.iloc[i]))
+
 
 
 

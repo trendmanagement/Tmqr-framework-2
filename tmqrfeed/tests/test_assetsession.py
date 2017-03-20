@@ -7,7 +7,6 @@ from tmqr.errors import *
 from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 
-
 class AssetSessionTestCase(unittest.TestCase):
     def setUp(self):
         self.info_dic = {

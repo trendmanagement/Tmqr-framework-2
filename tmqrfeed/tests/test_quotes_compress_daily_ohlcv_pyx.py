@@ -135,3 +135,23 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 44, 00)), row['quote_time'])
         self.assertEqual(97.45, row['px'])
         self.assertEqual(1, row['qty'])
+
+    def test_compress_invalid_series(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+
+        df = df.between_time('11:00', '14:00')
+
+        asset_mock = MagicMock()
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock)
+
+        self.assertTrue(type(comp_df) == pd.DataFrame)
+        self.assertTrue(type(holdings) == pd.DataFrame)
+
+        self.assertEqual(0, len(comp_df))
+        self.assertEqual(0, len(holdings))
