@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import pyximport
 
 from tmqr.errors import *
@@ -32,7 +31,7 @@ class QuoteContFut(QuoteBase):
 
         self.instrument = instrument
 
-    def merge_series(self, prev_series, new_series):
+    def calculate_fut_offset_series(self, prev_series, new_series):
         try:
             prev_prices = prev_series.loc[prev_series.index[-1]]
             new_prices = new_series.loc[prev_series.index[-1]]
@@ -43,12 +42,13 @@ class QuoteContFut(QuoteBase):
 
         new_series[['o', 'h', 'l', 'c', 'exec']] -= fut_offset
         new_series = new_series[new_series.index > prev_series.index[-1]]
-        return pd.concat([prev_series, new_series])
+        return new_series
 
-    def merge_positions(self, prev_position, new_position):
-        return pd.merge(prev_position.reset_index(), new_position.reset_index(), how='outer').sort_values(
-            'date').set_index(
-            ['date', 'asset'])
+    def merge_series(self, df_data):
+        pass
+
+    def merge_positions(self, df_positions):
+        pass
 
     def build(self):
         # Get futures chain
@@ -59,8 +59,8 @@ class QuoteContFut(QuoteBase):
 
         # Build price series
         # 1. Iterate chains
-        df_data = None
-        df_positions = None
+        df_data = []
+        df_positions = []
         for row in chain_values.iterrows():
             fut_contract, fut_range = row
             try:
@@ -69,16 +69,15 @@ class QuoteContFut(QuoteBase):
                 # 3. Do resampling (timeframe compression)
                 series, positions = compress_daily(DataFrameGetter(series), fut_contract)
 
-                # 4. Append compressed series to continuous futures series
-                if df_data is None:
-                    df_data = series
-                    df_positions = positions
-                else:
-                    df_data = self.merge_series(df_data, series)
-                    # df_positions = self.merge_positions(df_positions, positions)
 
-                # TODO: Implement cont fut data and execution information merging
+                # 4. Append compressed series to continuous futures series
+                if len(df_data) == 0:
+                    df_data.append(series)
+                else:
+                    df_data.append(self.calculate_fut_offset_series(df_data[-1], series))
+                df_positions.append(positions)
+
             except IntradayQuotesNotFoundError:
                 continue
 
-        return df_data, df_positions
+        return self.merge_series(df_data), self.merge_positions(df_positions)

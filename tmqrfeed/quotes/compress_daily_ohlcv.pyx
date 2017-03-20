@@ -143,4 +143,4 @@ def compress_daily(dfg, asset):
 
     df_result = pd.DataFrame(values, index=values_index)
     df_result.index.rename('dt', inplace=True)
-    return df_result, pd.DataFrame(exec_values).set_index(['date', 'asset'])
+    return df_result, pd.DataFrame(exec_values)
