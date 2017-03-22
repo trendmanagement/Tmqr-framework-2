@@ -1,3 +1,7 @@
+from collections import OrderedDict
+from datetime import date
+
+import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
@@ -23,9 +27,9 @@ class FutureChain:
         self.date_start = kwargs.get('date_start', None)
         self.datafeed = datafeed
 
-        self._futchain = self._generate_chains(fut_tckr_list)
+        self._futchain = self._generatechain_list(fut_tckr_list)
 
-    def _generate_chains(self, raw_futures):
+    def _generatechain_list(self, raw_futures):
         """
         Creates historical chains
         :param raw_futures:
@@ -97,3 +101,69 @@ class FutureChain:
 
     def get_all(self):
         return self._futchain.index
+
+
+class OptionChainList:
+    """
+    This class stores list of options chains with many expiration dates
+    """
+
+    def __init__(self, chain_list):
+        if chain_list is None or len(chain_list) == 0:
+            raise ArgumentError("Empty 'chain_list' argument")
+
+        self.chain_list = OrderedDict()
+        for c in chain_list:
+            self.chain_list[c['_id']['date']] = OptionChain(c)
+
+        self._expirations = sorted(list(self.chain_list.keys()))
+
+    def __len__(self):
+        return len(self.chain_list)
+
+    @property
+    def expirations(self):
+        return self._expirations
+
+    def __iter__(self):
+        for k, v in self.chain_list.items():
+            yield v
+
+    def items(self):
+        for k, v in self.chain_list.items():
+            yield k, v
+
+    def __setitem__(self, key, value):
+        raise AssertionError("Options chain collection is read only")
+
+    def __getitem__(self, item):
+        if isinstance(item, datetime):
+            return self.chain_list[item]
+        elif isinstance(item, date):
+            dt = datetime.combine(item, datetime.min.time())
+            return self.chain_list[dt]
+        elif isinstance(item, (int, np.int32, np.int64)):
+            expiration = self._expirations[item]
+            return self.chain_list[expiration]
+        else:
+            raise ValueError('Unexpected item type, must be float or int')
+
+    def __repr__(self):
+        exp_str = ""
+
+        for i, exp in enumerate(self.expirations):
+            exp_str += '{0}: {1}\n'.format(i, exp.date())
+        return exp_str
+
+
+class OptionChain:
+    """
+    Main class for option chains data management.
+    """
+
+    def __init__(self, option_chain_record):
+        self._expiration = option_chain_record['_id']['date']
+
+    @property
+    def expiration(self):
+        return self._expiration

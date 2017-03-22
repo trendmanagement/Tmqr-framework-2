@@ -66,3 +66,10 @@ class IntradayQuotesNotFoundError(NotFoundError):
     Raised when quotes not found in intraday source
     """
     pass
+
+
+class ChainNotFoundError(NotFoundError):
+    """
+    Raised when futures or options chains data not found
+    """
+    pass

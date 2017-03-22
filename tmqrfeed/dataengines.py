@@ -51,6 +51,28 @@ class DataEngineMongo(DataEngineBase):
 
         return list(self.db[COLLECTION_ASSET_INDEX].find(req, projection=['tckr']).sort('exp', 1))
 
+    def db_get_option_chains(self, underlying_tckr):
+        """
+        Fetch options chains (all expirations and strikes) for given underlying_tckr
+        :param underlying_tckr: option's underlying contract tckr code (for example: future tckr code)
+        :return: list of options aggregated chains
+        """
+        cursor = self.db['asset_index'].aggregate([
+            {'$match': {
+                'underlying': underlying_tckr,
+                'type': {'$in': ['P', 'C']},
+            }},
+            {'$sort': {'strike': 1}},
+            {'$project': {'tckr': 1, 'exp': 1, 'strike': 1}},
+            {'$group': {
+                '_id': {'date': '$exp'},
+                'chain': {'$push': '$$ROOT'},
+            }
+            },
+            {'$sort': {"_id.date": 1}}
+        ])
+        return list(cursor)
+
     def db_get_instrument_info(self, instrument):
         """
         Fetch asset info

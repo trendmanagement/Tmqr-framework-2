@@ -33,6 +33,7 @@ class DataFeed:
         self.instrument_info_cache = {}
         self.contract_info_cache = {}
         self.futchain_cache = {}
+        self.opt_chain_cache = {}
 
     def get_instrument_info(self, instrument):
         """
@@ -62,6 +63,15 @@ class DataFeed:
                            datafeed=self,
                            **kwargs)
 
+    def get_option_chains(self, underlying_tckr, **kwargs):
+        """
+        Fetch OptionChain object for particular underlying ticker
+        :param underlying_tckr: Full-qualified underlying ticker
+        :param kwargs:
+        :return: OptionChain object
+        """
+        pass
+
     def get_contract_info(self, tckr):
         """
         Fetch contract info for full qualified ticker name
@@ -87,7 +97,6 @@ class DataFeed:
         tz = kwargs.get('timezone', None)
         if type(tz) == str:
             tz = pytz.timezone(tz)
-        session = kwargs.get('session', None)
 
         dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
 

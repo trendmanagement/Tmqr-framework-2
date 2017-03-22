@@ -1,4 +1,3 @@
-import datetime
 import unittest
 
 import pytz
@@ -19,19 +18,19 @@ class AssetSessionTestCase(unittest.TestCase):
             'timezone': 'US/Pacific',
             'trading_session': [{
                 'decision': '10:40',
-                'dt': datetime.datetime(1900, 1, 1),
+                'dt': datetime(1900, 1, 1),
                 'execution': '10:45',
                 'start': '00:32'},
 
                 {
                     'decision': '11:40',
-                    'dt': datetime.datetime(2010, 12, 31),
+                    'dt': datetime(2010, 12, 31),
                     'execution': '11:45',
                     'start': '01:32'},
 
                 {
                     'decision': '12:40',
-                    'dt': datetime.datetime(2011, 1, 1),
+                    'dt': datetime(2011, 1, 1),
                     'execution': '12:45',
                     'start': '02:32'},
             ]
@@ -47,7 +46,7 @@ class AssetSessionTestCase(unittest.TestCase):
             'timezone': 'US/Pacific',
             'trading_session': [{
                 'decision': '10:40',
-                'dt': datetime.datetime(1900, 1, 1),
+                'dt': datetime(1900, 1, 1),
                 'execution': '10:45',
                 'start': '00:32'},
             ]
@@ -58,11 +57,11 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2005, 2, 5, 12, 45)))
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime(2005, 2, 5, 12, 45)))
 
-        self.assertEqual(start, tz.localize(datetime.datetime(2005, 2, 5, 0, 32)))
-        self.assertEqual(decision, tz.localize(datetime.datetime(2005, 2, 5, 10, 40)))
-        self.assertEqual(execution, tz.localize(datetime.datetime(2005, 2, 5, 10, 45)))
+        self.assertEqual(start, tz.localize(datetime(2005, 2, 5, 0, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2005, 2, 5, 10, 40)))
+        self.assertEqual(execution, tz.localize(datetime(2005, 2, 5, 10, 45)))
 
     def test_session_init_integritychecks_none(self):
         tz = pytz.timezone(self.info_dic['timezone'])
@@ -76,14 +75,14 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         s_correct = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
         ]
         AssetSession(s_correct, tz)
 
         s_wrong1 = [{  # 'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
         ]
@@ -91,7 +90,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong1 = [{
             'decision': '10:40',
-            # 'dt': datetime.datetime(1900, 1, 1),
+            # 'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
         ]
@@ -99,7 +98,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong1 = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             # 'execution': '10:45',
             'start': '00:32'},
         ]
@@ -107,7 +106,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong1 = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             # 'start': '00:32'},
         }
@@ -116,7 +115,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong2 = [{
             'decision': '1040',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
         ]
@@ -124,7 +123,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong2 = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '1045',
             'start': '00:32'},
         ]
@@ -132,7 +131,7 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong2 = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '0032'},
         ]
@@ -148,13 +147,13 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong_order = [{
             'decision': '10:40',
-            'dt': datetime.datetime(2000, 1, 1),
+            'dt': datetime(2000, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
 
             {
                 'decision': '10:40',
-                'dt': datetime.datetime(1900, 1, 1),
+                'dt': datetime(1900, 1, 1),
                 'execution': '10:45',
                 'start': '00:32'},
         ]
@@ -162,13 +161,13 @@ class AssetSessionTestCase(unittest.TestCase):
 
         s_wrong_dt_dupe = [{
             'decision': '10:40',
-            'dt': datetime.datetime(1900, 1, 1),
+            'dt': datetime(1900, 1, 1),
             'execution': '10:45',
             'start': '00:32'},
 
             {
                 'decision': '10:40',
-                'dt': datetime.datetime(1900, 1, 1, 12, 1),
+                'dt': datetime(1900, 1, 1, 12, 1),
                 'execution': '10:45',
                 'start': '00:32'},
         ]
@@ -178,23 +177,23 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2010, 12, 30, 12, 45)))
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime(2010, 12, 30, 12, 45)))
 
-        self.assertEqual(start, tz.localize(datetime.datetime(2010, 12, 30, 0, 32)))
-        self.assertEqual(decision, tz.localize(datetime.datetime(2010, 12, 30, 10, 40)))
-        self.assertEqual(execution, tz.localize(datetime.datetime(2010, 12, 30, 10, 45)))
+        self.assertEqual(start, tz.localize(datetime(2010, 12, 30, 0, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2010, 12, 30, 10, 40)))
+        self.assertEqual(execution, tz.localize(datetime(2010, 12, 30, 10, 45)))
 
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2010, 12, 31, 12, 45)))
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime(2010, 12, 31, 12, 45)))
 
-        self.assertEqual(start, tz.localize(datetime.datetime(2010, 12, 31, 1, 32)))
-        self.assertEqual(decision, tz.localize(datetime.datetime(2010, 12, 31, 11, 40)))
-        self.assertEqual(execution, tz.localize(datetime.datetime(2010, 12, 31, 11, 45)))
+        self.assertEqual(start, tz.localize(datetime(2010, 12, 31, 1, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2010, 12, 31, 11, 40)))
+        self.assertEqual(execution, tz.localize(datetime(2010, 12, 31, 11, 45)))
 
-        start, decision, execution, next_sess = sess.get(tz.localize(datetime.datetime(2011, 1, 1, 12, 45)))
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime(2011, 1, 1, 12, 45)))
 
-        self.assertEqual(start, tz.localize(datetime.datetime(2011, 1, 1, 2, 32)))
-        self.assertEqual(decision, tz.localize(datetime.datetime(2011, 1, 1, 12, 40)))
-        self.assertEqual(execution, tz.localize(datetime.datetime(2011, 1, 1, 12, 45)))
+        self.assertEqual(start, tz.localize(datetime(2011, 1, 1, 2, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2011, 1, 1, 12, 40)))
+        self.assertEqual(execution, tz.localize(datetime(2011, 1, 1, 12, 45)))
 
 
 
@@ -202,27 +201,27 @@ class AssetSessionTestCase(unittest.TestCase):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        self.assertRaises(SettingsError, sess.get, datetime.datetime(1800, 12, 30, 12, 45, tzinfo=tz))
+        self.assertRaises(SettingsError, sess.get, datetime(1800, 12, 30, 12, 45, tzinfo=tz))
 
     def test_session_get_sess_params(self):
         tz = pytz.timezone(self.info_dic['timezone'])
         sess = AssetSession(self.info_dic['trading_session'], tz)
 
-        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2001, 12, 30, 12, 45))
-        self.assertEqual(start, tz.localize(datetime.datetime(2001, 12, 30, 0, 32)))
-        self.assertEqual(decision, tz.localize(datetime.datetime(2001, 12, 30, 10, 40)))
-        self.assertEqual(execution, tz.localize(datetime.datetime(2001, 12, 30, 10, 45)))
-        self.assertEqual(next, tz.localize(datetime.datetime(2010, 12, 31)))
+        start, decision, execution, next = sess._get_sess_params(datetime(2001, 12, 30, 12, 45))
+        self.assertEqual(start, tz.localize(datetime(2001, 12, 30, 0, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2001, 12, 30, 10, 40)))
+        self.assertEqual(execution, tz.localize(datetime(2001, 12, 30, 10, 45)))
+        self.assertEqual(next, tz.localize(datetime(2010, 12, 31)))
 
         """
-                    'dt': datetime.datetime(1900, 1, 1),
-                    'dt': datetime.datetime(2010, 12, 31),
-                    'dt': datetime.datetime(2011, 1, 1),
+                    'dt': datetime(1900, 1, 1),
+                    'dt': datetime(2010, 12, 31),
+                    'dt': datetime(2011, 1, 1),
         """
-        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2010, 12, 31, 12, 45))
-        self.assertEqual(next, tz.localize(datetime.datetime(2011, 1, 1)))
+        start, decision, execution, next = sess._get_sess_params(datetime(2010, 12, 31, 12, 45))
+        self.assertEqual(next, tz.localize(datetime(2011, 1, 1)))
 
-        start, decision, execution, next = sess._get_sess_params(datetime.datetime(2012, 12, 31, 12, 45))
+        start, decision, execution, next = sess._get_sess_params(datetime(2012, 12, 31, 12, 45))
         self.assertEqual(next, None)
 
 
