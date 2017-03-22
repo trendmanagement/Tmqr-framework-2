@@ -133,20 +133,28 @@ class OptionChainList:
         for k, v in self.chain_list.items():
             yield k, v
 
-    def __setitem__(self, key, value):
-        raise AssertionError("Options chain collection is read only")
-
-    def __getitem__(self, item):
-        if isinstance(item, datetime):
-            return self.chain_list[item]
-        elif isinstance(item, date):
-            dt = datetime.combine(item, datetime.min.time())
-            return self.chain_list[dt]
-        elif isinstance(item, (int, np.int32, np.int64)):
-            expiration = self._expirations[item]
-            return self.chain_list[expiration]
-        else:
-            raise ValueError('Unexpected item type, must be float or int')
+    def find(self, by, **kwargs):
+        """
+        Find option chain by datetime, date, or offset
+        If no **kwargs are set, performs exact match by datetime, date, or offset
+        Otherwise if **kwargs are set, performs SMART search where 'by' must be current datetime
+        :param by: lookup criteria
+        :param kwargs:
+            Keywords for SMART chains search:
+            - min_days - ignore chains with days to expiration <= min_days
+        :return:
+        """
+        if len(kwargs) == 0:
+            if isinstance(by, datetime):
+                return self.chain_list[by]
+            elif isinstance(by, date):
+                dt = datetime.combine(by, datetime.min.time())
+                return self.chain_list[dt]
+            elif isinstance(by, (int, np.int32, np.int64)):
+                expiration = self._expirations[by]
+                return self.chain_list[expiration]
+            else:
+                raise ValueError('Unexpected item type, must be float or int')
 
     def __repr__(self):
         exp_str = ""

@@ -21,5 +21,3 @@ class OptionChainTestCase(unittest.TestCase):
         self.assertEqual(self.opt_chain.expiration, datetime.datetime(2011, 1, 21, 0, 0))
 
 
-if __name__ == '__main__':
-    unittest.main()

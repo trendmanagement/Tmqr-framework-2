@@ -4,6 +4,7 @@ import pickle
 import unittest
 from collections import OrderedDict
 
+from tmqr.errors import *
 from tmqrfeed.chains import OptionChainList, OptionChain
 
 
@@ -22,6 +23,9 @@ class ChainListTestCase(unittest.TestCase):
         chainlst = OptionChainList(self.chain_list)
         self.assertEqual(type(chainlst.chain_list), OrderedDict)
         self.assertEqual(len(chainlst.chain_list), 3)
+
+        self.assertRaises(ArgumentError, OptionChainList, None)
+        self.assertRaises(ArgumentError, OptionChainList, [])
 
     def test_has_len(self):
         chainlst = OptionChainList(self.chain_list)
@@ -43,23 +47,21 @@ class ChainListTestCase(unittest.TestCase):
             self.assertEqual(type(expiration), datetime.datetime)
             self.assertEqual(type(chain), OptionChain)
 
-    def test_chain_has_set_item_error(self):
-        self.assertRaises(AssertionError, self.opt_chain.__setitem__, 0, None)
 
     def test_chain_get_item_by_date(self):
         expiry = datetime.datetime(2011, 2, 18, 0, 0)
-        self.assertEqual(self.opt_chain[expiry.date()].expiration, expiry)
+        self.assertEqual(self.opt_chain.find(expiry.date()).expiration, expiry)
 
     def test_chain_get_item_by_date_time(self):
         expiry = datetime.datetime(2011, 2, 18, 0, 0)
-        self.assertEqual(self.opt_chain[expiry].expiration, expiry)
+        self.assertEqual(self.opt_chain.find(expiry).expiration, expiry)
 
     def test_chain_has_get_item_error_unexpected_item_type(self):
-        self.assertRaises(ValueError, self.opt_chain.__getitem__, 'wrong type')
+        self.assertRaises(ValueError, self.opt_chain.find, 'wrong type')
 
     def test_chain_get_item_by_offset(self):
         expiry = datetime.datetime(2011, 1, 21, 0, 0)
-        self.assertEqual(self.opt_chain[0].expiration, expiry)
+        self.assertEqual(self.opt_chain.find(0).expiration, expiry)
 
     def test_chain_repr(self):
         exp_str = ""
@@ -68,7 +70,3 @@ class ChainListTestCase(unittest.TestCase):
             exp_str += '{0}: {1}\n'.format(i, exp.date())
 
         self.assertEqual(self.opt_chain.__repr__(), exp_str)
-
-
-if __name__ == '__main__':
-    unittest.main()
