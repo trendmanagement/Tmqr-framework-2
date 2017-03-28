@@ -1,7 +1,6 @@
 import unittest
 from unittest import mock
 
-from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.contracts import *
 from tmqrfeed.datafeed import DataFeed
 
@@ -215,7 +214,6 @@ class ContractsTestCase(unittest.TestCase):
             self.assertEqual(kwargs['source_type'], SRC_INTRADAY)
             self.assertEqual(kwargs['date_start'], QDATE_MIN)
             self.assertEqual(kwargs['date_end'], QDATE_MAX)
-            self.assertTrue(isinstance(kwargs['session'], AssetSession))
             self.assertEqual('US/Pacific', str(kwargs['timezone']))
 
     def test_get_series_with_kwargs(self):
@@ -237,5 +235,3 @@ class ContractsTestCase(unittest.TestCase):
             self.assertEqual(kwargs['source_type'], 'another_source')
             self.assertEqual(kwargs['date_start'], QDATE_MAX)
             self.assertEqual(kwargs['date_end'], QDATE_MIN)
-            self.assertEqual(kwargs['session'], 'sess')
-            self.assertEqual('another', str(kwargs['timezone']))

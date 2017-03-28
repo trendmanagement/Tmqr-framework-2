@@ -89,9 +89,11 @@ class DataFeed:
     def get_raw_series(self, tckr, source_type, **kwargs):
         """
         Fetch raw series for asset from the datasource
-        :param tckr:
-        :param source_type:
+        :param tckr: full qualified ticker
+        :param source_type: datasource type
         :param kwargs:
+            - 'timezone' - pytz.timezone instance or (str) pytz timezone name
+            - Also dataengine.db_get_raw_series() **kwargs
         :return:
         """
         tz = kwargs.get('timezone', None)

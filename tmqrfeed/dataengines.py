@@ -117,12 +117,13 @@ class DataEngineMongo(DataEngineBase):
         else:
             raise DataSourceNotFoundError("Unknown 'datasource' type")
 
+
     def _source_intraday_get_series(self, tckr, **kwargs):
         """
         Returns raw series dataframe from intraday mongo data base
         :param tckr: full qualified ticker name
         :param kwargs: db_get_raw_series kwargs
-        :return: pandas DataFrame
+        :return: (tuple) pandas DataFrame, QTYPE
         """
         date_start = kwargs.get('date_start', None)
         date_end = kwargs.get('date_end', None)

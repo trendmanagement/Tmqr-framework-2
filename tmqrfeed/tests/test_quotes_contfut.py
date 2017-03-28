@@ -104,14 +104,14 @@ class QuoteContFutTestCase(unittest.TestCase):
 
     def test_calculate_fut_offset_series(self):
         # Do quick sanity checks for input data
-        self.assertEqual(2769134.1100000003, self.series1.c.sum())
-        self.assertEqual(3145255.6600000001, self.series2.c.sum())
+        self.assertAlmostEqual(2769134.1100000003, self.series1.c.sum(), 4)
+        self.assertAlmostEqual(3145255.6600000001, self.series2.c.sum(), 4)
 
         prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
         new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
         # Check compressed output validity
-        self.assertEqual(2105.0499999999997, prev_df.c.sum())
-        self.assertEqual(2392.73, new_df.c.sum())
+        self.assertAlmostEqual(2105.0499999999997, prev_df.c.sum(), 4)
+        self.assertAlmostEqual(2392.73, new_df.c.sum(), 4)
 
         self.assertTrue(prev_df.index[-1] in new_df.index)
 
@@ -134,8 +134,8 @@ class QuoteContFutTestCase(unittest.TestCase):
         prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
         new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
         # Check compressed output validity
-        self.assertEqual(2105.0499999999997, prev_df.c.sum())
-        self.assertEqual(2392.73, new_df.c.sum())
+        self.assertAlmostEqual(2105.0499999999997, prev_df.c.sum(), 4)
+        self.assertAlmostEqual(2392.73, new_df.c.sum(), 4)
 
         feed = DataFeed()
         qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
@@ -153,14 +153,14 @@ class QuoteContFutTestCase(unittest.TestCase):
 
     def test_merge_series(self):
         # Do quick sanity checks for input data
-        self.assertEqual(2769134.1100000003, self.series1.c.sum())
-        self.assertEqual(3145255.6600000001, self.series2.c.sum())
+        self.assertAlmostEqual(2769134.1100000003, self.series1.c.sum(), 4)
+        self.assertAlmostEqual(3145255.6600000001, self.series2.c.sum(), 4)
 
         prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
         new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
         # Check compressed output validity
-        self.assertEqual(2105.0499999999997, prev_df.c.sum())
-        self.assertEqual(2392.73, new_df.c.sum())
+        self.assertAlmostEqual(2105.0499999999997, prev_df.c.sum(), 4)
+        self.assertAlmostEqual(2392.73, new_df.c.sum(), 4)
 
         self.assertTrue(prev_df.index[-1] in new_df.index)
 

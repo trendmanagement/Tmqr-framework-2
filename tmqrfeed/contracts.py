@@ -140,17 +140,24 @@ class ContractBase:
         iinfo = self.instrument_info
         kw_source_type = kwargs.get('source_type', self.data_source)
         kw_timezone = kwargs.get('timezone', iinfo.timezone)
-        kw_session = kwargs.get('session', iinfo.session)
         kw_date_start = kwargs.get('date_start', self.series_date_start)
         kw_date_end = kwargs.get('date_end', self.series_date_end)
 
         return self.datafeed.get_raw_series(self.ticker,
                                             source_type=kw_source_type,
-                                            session=kw_session,
                                             timezone=kw_timezone,
                                             date_start=kw_date_start,
                                             date_end=kw_date_end
                                             )
+
+    def get_prices(self, timestamp_list):
+        """
+        Returns prices list for given timestamp list
+        :param timestamp_list: 
+        :return: 
+        """
+        pass
+
 
 
 class FutureContract(ContractBase):
@@ -242,6 +249,7 @@ class OptionContract(ContractBase):
 
         self.exp_date = self._parse_expiration(self._toks[3])
         self.strike = float(self._toks[4])
+        # TODO: Implement underlying init argument
         self._underlying = None
 
     @property
@@ -272,9 +280,9 @@ class OptionContract(ContractBase):
         if self._underlying is None:
             underlying_name = '{0}.{1}'.format(self._toks[0], self._toks[2].replace('-', '.'))
             if self._toks[2].startswith('F-'):
-                self._underlying = FutureContract(underlying_name)
+                self._underlying = FutureContract(underlying_name, self.datafeed)
             else:
-                self._underlying = ContractBase(underlying_name)
+                self._underlying = ContractBase(underlying_name, self.datafeed)
         return self._underlying
 
     @property
