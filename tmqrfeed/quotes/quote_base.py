@@ -8,6 +8,9 @@ class QuoteBase:
     Quotes making base class. Creates different kinds of quotes based on processing raw quotes.
     """
 
+    def __init__(self, *args, **kwargs):
+        pass
+
     @staticmethod
     def merge_series(series_df_list):
         objs = [obj for obj in series_df_list if obj is not None]
@@ -46,10 +49,9 @@ class QuoteBase:
         else:
             return pd.concat(positions_df_list).set_index(['date'])
 
-    def do_futref_checks(self):
+    def build(self):
         """
-        Do extra sanity checks to make sure that old quotes are not changing when new data arrives, could be useful
-        for some smart quotes algorithms.
-        :return:
+        Execute quotes building
+        :return: tuple pd.DataFrame Quotes, pd.Panel Positions
         """
-        pass
+        raise NotImplementedError("You must define this method in child class")

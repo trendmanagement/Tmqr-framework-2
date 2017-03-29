@@ -73,3 +73,10 @@ class ChainNotFoundError(NotFoundError):
     Raised when futures or options chains data not found
     """
     pass
+
+
+class DataManagerError(TMQRError):
+    """
+    Raised when generic DataManager error occurred
+    """
+    pass
