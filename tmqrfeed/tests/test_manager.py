@@ -120,3 +120,9 @@ class DataManagerTestCase(unittest.TestCase):
         # Just mock for 100% coverage
         # TODO: implement check test
         self.assertEqual(True, dm.series_check(None))
+
+    def test__price_get_from_datafeed(self):
+        dm = DataManager()
+        fut = FutureContract('US.F.CL.G12.120120', datamanager=dm)
+
+        dm._price_get_from_datafeed(fut, datetime(2012, 1, 9))

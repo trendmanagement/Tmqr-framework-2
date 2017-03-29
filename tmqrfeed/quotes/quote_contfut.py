@@ -3,7 +3,6 @@ import pyximport
 
 from tmqr.errors import *
 from tmqrfeed.quotes.quote_base import QuoteBase
-
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter

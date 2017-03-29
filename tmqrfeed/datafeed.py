@@ -1,12 +1,18 @@
 from datetime import timedelta
 
+import numpy as np
 import pytz
+import pyximport
 
 from tmqr.settings import *
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.instrumentinfo import InstrumentInfo
+
+pyximport.install(setup_args={"include_dirs": np.get_include()})
+from tmqrfeed.fast_data_handling import find_time_indexes
+
 
 class DataFeed:
     """
@@ -108,5 +114,24 @@ class DataFeed:
                 # Convert timezone of the dataframe (in place)
                 dfseries.tz_convert(tz, copy=False)
             return dfseries
+        else:
+            raise NotImplementedError("Quote type is not implemented yet.")
+
+    def get_raw_prices(self, tckr, source_type, at_date, dt_list, **kwargs):
+        tz = kwargs.get('timezone', None)
+        if type(tz) == str:
+            tz = pytz.timezone(tz)
+
+        dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
+
+        if qtype == QTYPE_INTRADAY:
+            if tz is not None:
+                # Convert timezone of the dataframe (in place)
+                dfseries.tz_convert(tz, copy=False)
+
+            indexes = find_time_indexes(dfseries, dt_list)
+            # TODO: check for errors
+            # TODO: save prices to cache
+            return [dfseries.iloc[i]['c'] for i in indexes]
         else:
             raise NotImplementedError("Quote type is not implemented yet.")

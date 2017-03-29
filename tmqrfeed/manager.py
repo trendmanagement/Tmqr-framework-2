@@ -112,10 +112,42 @@ class DataManager:
                                             date_end=kw_date_end
                                             )
 
-    def price_get(self, asset, date):
+    def price_get(self, asset, date, **kwargs):
         """
         Get price at decision and execution time for given asset
         :param asset: Contract class instance
+        :param date: timestamp for price
+        :return: 
+        """
+        pass
+
+    def _price_get_cached(self, asset, date):
+        """
+        Check internal price cache for asset's price
+        :param asset: 
         :param date: 
         :return: 
         """
+        return None
+
+    def _price_get_from_datafeed(self, asset, date, **kwargs):
+        """
+        Fetch asset price directly from datafeed
+        :return: 
+        """
+        iinfo = asset.instrument_info
+        kw_source_type = kwargs.get('source_type', asset.data_source)
+        kw_timezone = kwargs.get('timezone', iinfo.timezone)
+
+        start, decision, execution, next_sess_date = iinfo.session.get(date)
+
+        decision_px, exec_px = self.datafeed.get_raw_prices(asset.ticker,
+                                                            source_type=kw_source_type,
+                                                            at_date=date,
+                                                            dt_list=[decision, execution],
+                                                            timezone=kw_timezone,
+                                                            date_start=decision,
+                                                            date_end=execution
+                                                            )
+
+        return decision_px, exec_px
