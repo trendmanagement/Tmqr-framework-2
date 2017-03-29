@@ -21,8 +21,10 @@ class DataManager:
         Init DataManager class
         :param kwargs: 
         """
+        # Initiate low-level datafeed
         datafeed_cls = kwargs.get('datafeed_cls', DataFeed)
         self.feed = datafeed_cls(**kwargs)
+        """DataFeed instance for low-level data fetching"""
 
         # Quotes dataframe for primary series
         self._primary_quotes = None
