@@ -10,9 +10,11 @@ from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
+from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.instrumentinfo import InstrumentInfo
+from tmqrfeed.manager import DataManager
 
 
 class DataFeedTestCase(unittest.TestCase):
@@ -103,9 +105,13 @@ class DataFeedTestCase(unittest.TestCase):
                                            {'tckr': 'US.F.CL.H11.110222'},
                                            {'tckr': 'US.F.CL.J11.110322'},
                                            {'tckr': 'US.F.CL.K11.110419'}, ]
-            dfeed = DataFeed()
-            chain = dfeed.get_fut_chain('US.CL')
+            dm = DataManager()
+            chain = dm.datafeed.get_fut_chain('US.CL')
             self.assertEqual(FutureChain, type(chain))
+            for c in chain.get_all():
+                self.assertEqual(FutureContract, type(c))
+                self.assertTrue(c.dm is not None)
+                self.assertEqual(DataManager, type(c.dm))
 
     def test_get_contract_info(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_contract_info') as mock_contr_info:

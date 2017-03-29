@@ -34,6 +34,9 @@ class QuoteBaseTestCase(unittest.TestCase):
                                         } for x in range(10)
                                         ]).set_index('dt')
 
+    def test_init(self):
+        self.assertRaises(ArgumentError, QuoteBase)
+
     def test_merge_series(self):
         merged_df = QuoteBase.merge_series([self.series1, self.series2])
         target_df = pd.concat([self.series1, self.series2])
@@ -140,3 +143,7 @@ class QuoteBaseTestCase(unittest.TestCase):
     def test_merge_positions_none(self):
         merged_pos = QuoteBase.merge_positions([None, None])
         self.assertEqual(merged_pos, None)
+
+    def test_build(self):
+        qb = QuoteBase(datamanager='test')
+        self.assertRaises(NotImplementedError, qb.build)

@@ -1,4 +1,5 @@
 import pickle
+from datetime import datetime, time
 
 import pandas as pd
 from pymongo import MongoClient
@@ -130,9 +131,9 @@ class DataEngineMongo(DataEngineBase):
 
         dt_filter = {}
         if date_start is not None:
-            dt_filter['$gte'] = date_start
+            dt_filter['$gte'] = datetime.combine(date_start.date(), time(0, 0, 0))
         if date_end is not None:
-            dt_filter['$lte'] = date_end
+            dt_filter['$lte'] = datetime.combine(date_end.date(), time(0, 0, 0))
 
         request = {'tckr': tckr}
         if len(dt_filter) > 0:

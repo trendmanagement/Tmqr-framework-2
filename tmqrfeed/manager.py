@@ -22,8 +22,12 @@ class DataManager:
         :param kwargs: 
         """
         # Initiate low-level datafeed
-        datafeed_cls = kwargs.get('datafeed_cls', DataFeed)
-        self.feed = datafeed_cls(**kwargs)
+        feed = kwargs.get('datafeed', None)
+        if feed is None:
+            datafeed_cls = kwargs.pop('datafeed_cls', DataFeed)
+            feed = datafeed_cls(**kwargs, datamanager=self)
+
+        self.datafeed = feed
         """DataFeed instance for low-level data fetching"""
 
         # Quotes dataframe for primary series
@@ -88,21 +92,30 @@ class DataManager:
         # TODO: implement series checks
         return True
 
+    def series_get(self, asset, **kwargs):
+        """
+        Get asset's raw series from the DB
+        :param asset: asset instance
+        :param kwargs: DataFeed get_raw_series() **kwargs
+        :return: series DataFrame
+        """
+        iinfo = asset.instrument_info
+        kw_source_type = kwargs.get('source_type', asset.data_source)
+        kw_timezone = kwargs.get('timezone', iinfo.timezone)
+        kw_date_start = kwargs.get('date_start', asset.series_date_start)
+        kw_date_end = kwargs.get('date_end', asset.series_date_end)
 
+        return self.datafeed.get_raw_series(asset.ticker,
+                                            source_type=kw_source_type,
+                                            timezone=kw_timezone,
+                                            date_start=kw_date_start,
+                                            date_end=kw_date_end
+                                            )
 
-    def get_extra_data(self, quote_engine, data_name):
+    def price_get(self, asset, date):
         """
-        Fetch secondary data which could be used as additional information for decision making process of the algorithm
-        :param quote_engine: Quote* class instance
-        :param data_name: key for accessing primary data
-        :return: extradata class instance
+        Get price at decision and execution time for given asset
+        :param asset: Contract class instance
+        :param date: 
+        :return: 
         """
-        pass
-
-    def __getitem__(self, item):
-        """
-        Fetch secondary data by name (data_name parameter in get_extra_data request)
-        :param item: data_name parameter in get_extra_data request
-        :return: extradata class instance
-        """
-        pass

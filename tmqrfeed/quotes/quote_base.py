@@ -1,5 +1,6 @@
 import pandas as pd
 
+from tmqr.errors import ArgumentError
 from tmqr.errors import QuoteEngineEmptyQuotes
 
 
@@ -9,7 +10,9 @@ class QuoteBase:
     """
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.dm = kwargs.get('datamanager', None)
+        if self.dm is None:
+            raise ArgumentError("'datamanager' kwarg is not set")
 
     @staticmethod
     def merge_series(series_df_list):

@@ -15,13 +15,11 @@ class QuoteContFut(QuoteBase):
     """
 
     def __init__(self, instrument, **kwargs):
-        self.datafeed = kwargs.get('datafeed', None)
-        if self.datafeed is None:
-            raise ArgumentError("'datafeed' kwarg is not set")
+        super().__init__(**kwargs)
 
         self.timeframe = kwargs.get('timeframe', None)
         self.fut_offset = kwargs.get('fut_offset', 0)
-        self.date_start = kwargs.get('date_start', self.datafeed.date_start)
+        self.date_start = kwargs.get('date_start', self.dm.datafeed.date_start)
         self.date_end = kwargs.get('date_end', None)
 
         if self.timeframe is None:
@@ -48,7 +46,7 @@ class QuoteContFut(QuoteBase):
 
     def build(self):
         # Get futures chain
-        fut_chain = self.datafeed.get_fut_chain(self.instrument)
+        fut_chain = self.dm.datafeed.get_fut_chain(self.instrument)
 
         # Create contracts list
         chain_values = fut_chain.get_list(self.date_start, offset=self.fut_offset)
@@ -61,7 +59,7 @@ class QuoteContFut(QuoteBase):
             fut_contract, fut_range = row
             try:
                 # 2. Get futures raw series
-                series = fut_contract.get_series()
+                series = self.dm.series_get(fut_contract)
                 # 3. Do resampling (timeframe compression)
                 series, positions = compress_daily(DataFrameGetter(series), fut_contract)
 

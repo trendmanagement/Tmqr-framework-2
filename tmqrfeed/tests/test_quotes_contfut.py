@@ -8,7 +8,6 @@ import pyximport
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 
-from tmqrfeed.datafeed import DataFeed
 import unittest
 from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from unittest.mock import MagicMock
@@ -24,6 +23,7 @@ import pyximport
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
+from tmqrfeed.manager import DataManager
 
 
 class QuoteContFutTestCase(unittest.TestCase):
@@ -68,14 +68,18 @@ class QuoteContFutTestCase(unittest.TestCase):
     def test_init_defaults(self):
         datafeed = MagicMock()
         datafeed.date_start = datetime(2012, 1, 1)
+        dm = DataManager(datafeed=datafeed)
 
-        qcf = QuoteContFut('US.CL', datafeed=datafeed, timeframe='D')
+        qcf = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
         self.assertEqual('US.CL', qcf.instrument)
-        self.assertEqual(datafeed, qcf.datafeed)
+        self.assertEqual(datafeed, qcf.dm.datafeed)
         self.assertEqual('D', qcf.timeframe)
         self.assertEqual(0, qcf.fut_offset)
         self.assertEqual(datafeed.date_start, qcf.date_start)
         self.assertEqual(None, qcf.date_end)
+
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe=None)
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe="1M")
 
     def test_init_errors(self):
         datafeed = MagicMock()
@@ -88,15 +92,17 @@ class QuoteContFutTestCase(unittest.TestCase):
     def test_init_kwargs(self):
         datafeed = MagicMock()
         datafeed.date_start = datetime(2012, 1, 1)
+        dm = DataManager(datafeed=datafeed)
         qcf = QuoteContFut('US.CL',
-                           datafeed=datafeed,
+                           datamanager=dm,
                            timeframe='D',
                            fut_offset=1,
                            date_start=datetime(2013, 1, 1),
                            date_end=datetime(2014, 1, 1)
                            )
         self.assertEqual('US.CL', qcf.instrument)
-        self.assertEqual(datafeed, qcf.datafeed)
+        self.assertEqual(datafeed, qcf.dm.datafeed)
+        self.assertEqual(dm, qcf.dm)
         self.assertEqual('D', qcf.timeframe)
         self.assertEqual(1, qcf.fut_offset)
         self.assertEqual(datetime(2013, 1, 1), qcf.date_start)
@@ -115,8 +121,8 @@ class QuoteContFutTestCase(unittest.TestCase):
 
         self.assertTrue(prev_df.index[-1] in new_df.index)
 
-        feed = DataFeed()
-        qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
+        dm = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
 
         new_series_with_offset = qcont_fut.calculate_fut_offset_series(prev_df, new_df.copy())
         offset_df = new_df - new_series_with_offset
@@ -137,8 +143,8 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertAlmostEqual(2105.0499999999997, prev_df.c.sum(), 4)
         self.assertAlmostEqual(2392.73, new_df.c.sum(), 4)
 
-        feed = DataFeed()
-        qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
+        feed = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=feed, timeframe='D')
 
         new_exclude = new_df[new_df.index > prev_df.index[-1]].copy()
         new_series_with_offset = qcont_fut.calculate_fut_offset_series(prev_df, new_exclude)
@@ -164,8 +170,8 @@ class QuoteContFutTestCase(unittest.TestCase):
 
         self.assertTrue(prev_df.index[-1] in new_df.index)
 
-        feed = DataFeed()
-        qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
+        dm = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
 
         merged_df = qcont_fut.merge_series([prev_df, new_df])
         target_df = pd.concat([prev_df, new_df])
@@ -177,6 +183,6 @@ class QuoteContFutTestCase(unittest.TestCase):
 
 
     def test_build(self):
-        feed = DataFeed()
-        qcont_fut = QuoteContFut('US.CL', datafeed=feed, timeframe='D')
+        dm = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
         qcont_fut.build()

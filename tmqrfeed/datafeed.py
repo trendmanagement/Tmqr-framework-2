@@ -21,6 +21,7 @@ class DataFeed:
             - 'data_engine_settings' - kwargs passed to low-level data engine
             - 'date_start' - starting date of all quotes requests
         """
+        self.dm = kwargs.get('datamanager', None)
         # Initiating low-level data engine
         self.data_engine_settings = kwargs.get('data_engine_settings', {})
         data_engine_cls = kwargs.get('data_engine_cls', DataEngineMongo)
@@ -60,7 +61,7 @@ class DataFeed:
 
         return FutureChain([x['tckr'] for x in chain_dict],
                            asset_info=self.get_instrument_info(instrument),
-                           datafeed=self,
+                           datamanager=self.dm,
                            **kwargs)
 
     def get_option_chains(self, underlying_tckr, **kwargs):

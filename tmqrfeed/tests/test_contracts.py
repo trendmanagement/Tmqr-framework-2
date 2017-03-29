@@ -2,7 +2,7 @@ import unittest
 from unittest import mock
 
 from tmqrfeed.contracts import *
-from tmqrfeed.datafeed import DataFeed
+from tmqrfeed.manager import DataManager
 
 
 class ContractsTestCase(unittest.TestCase):
@@ -123,8 +123,8 @@ class ContractsTestCase(unittest.TestCase):
 
     def test_contract_info(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_contract_info') as eng_ainfo:
-            feed = DataFeed()
-            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datafeed=feed)
+            dm = DataManager()
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
 
             eng_ainfo.return_value = {
                 "extra_data": {
@@ -149,7 +149,7 @@ class ContractsTestCase(unittest.TestCase):
 
     def test_instrument_info(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
-            feed = DataFeed()
+            dm = DataManager()
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
                 'instrument': 'US.ES',
@@ -166,9 +166,9 @@ class ContractsTestCase(unittest.TestCase):
                     'execution': '10:45',
                     'start': '00:32'}]}
 
-            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+            contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
 
-            self.assertEqual(feed.get_instrument_info('US.ES'), contract.instrument_info)
+            self.assertEqual(dm.datafeed.get_instrument_info('US.ES'), contract.instrument_info)
             self.assertEqual(12.5, contract.instrument_info.tickvalue)
 
     def test__str__repr__(self):
@@ -178,7 +178,7 @@ class ContractsTestCase(unittest.TestCase):
 
     def test_quotes_source(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
-            feed = DataFeed()
+            dm = DataManager()
             eng_ainfo.return_value = {
                 'futures_months': [3, 6, 9, 12],
                 'instrument': 'US.ES',
@@ -195,43 +195,10 @@ class ContractsTestCase(unittest.TestCase):
                     'execution': '10:45',
                     'start': '00:32'}]}
 
-            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
+            contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
             self.assertEqual(SRC_INTRADAY, contract.data_source)
 
-            option = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datafeed=feed)
+            option = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
             self.assertEqual(SRC_OPTIONS, option.data_source)
 
-    def test_get_series(self):
-        with mock.patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
-            feed = DataFeed()
-            mock_get_raw_series.return_value = True
 
-            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
-            self.assertEqual(True, contract.get_series())
-            self.assertEqual(True, mock_get_raw_series.called)
-            self.assertEqual('US.F.ES.M83.830520', mock_get_raw_series.call_args[0][0])
-            kwargs = mock_get_raw_series.call_args[1]
-            self.assertEqual(kwargs['source_type'], SRC_INTRADAY)
-            self.assertEqual(kwargs['date_start'], QDATE_MIN)
-            self.assertEqual(kwargs['date_end'], QDATE_MAX)
-            self.assertEqual('US/Pacific', str(kwargs['timezone']))
-
-    def test_get_series_with_kwargs(self):
-        with mock.patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
-            feed = DataFeed()
-            mock_get_raw_series.return_value = True
-
-            contract = FutureContract('US.F.ES.M83.830520', datafeed=feed)
-            self.assertEqual(True, contract.get_series(date_start=QDATE_MAX,
-                                                       date_end=QDATE_MIN,
-                                                       session='sess',
-                                                       timezone='another',
-                                                       source_type='another_source'
-                                                       ))
-            self.assertEqual(True, mock_get_raw_series.called)
-
-            self.assertEqual('US.F.ES.M83.830520', mock_get_raw_series.call_args[0][0])
-            kwargs = mock_get_raw_series.call_args[1]
-            self.assertEqual(kwargs['source_type'], 'another_source')
-            self.assertEqual(kwargs['date_start'], QDATE_MAX)
-            self.assertEqual(kwargs['date_end'], QDATE_MIN)

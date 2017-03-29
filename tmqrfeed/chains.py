@@ -15,7 +15,7 @@ class FutureChain:
     Futures chain class
     """
 
-    def __init__(self, fut_tckr_list, asset_info, datafeed, **kwargs):
+    def __init__(self, fut_tckr_list, asset_info, datamanager, **kwargs):
 
         if fut_tckr_list is None or len(fut_tckr_list) == 0:
             raise ArgumentError("Failed to initiate futures chain empty tickers list")
@@ -25,7 +25,7 @@ class FutureChain:
         default_fut_months = self.ainfo.get('futures_months', range(1, 12))
         self.futures_months = kwargs.get('futures_months', default_fut_months)
         self.date_start = kwargs.get('date_start', None)
-        self.datafeed = datafeed
+        self.datamanager = datamanager
 
         self._futchain = self._generatechain_list(fut_tckr_list)
 
@@ -41,7 +41,7 @@ class FutureChain:
         chain = []
 
         for i, tckr in enumerate(raw_futures):
-            fut = FutureContract(tckr, self.datafeed)
+            fut = FutureContract(tckr, self.datamanager)
             if fut.exp_month not in self.futures_months:
                 continue
 

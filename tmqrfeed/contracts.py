@@ -7,11 +7,11 @@ class ContractBase:
     Base class for generic asset
     """
 
-    def __init__(self, tckr, datafeed=None, **kwargs):
+    def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init generic contract from special `tckr` code
         :param tckr: Ticker code
-        :param datafeed: DataFeed instance
+        :param datamanager: DataManager instance
         """
 
         #: Full-qualified ticker name
@@ -34,8 +34,8 @@ class ContractBase:
         self.ctype = self._toks[1]
         """Contract type"""
 
-        self.datafeed = datafeed
-        """Global DataFeed class instance"""
+        self.dm = datamanager
+        """Global DataManager class instance"""
 
         self.series_date_start = kwargs.get('date_start', QDATE_MIN)
         self.series_date_end = kwargs.get('date_end', QDATE_MAX)
@@ -70,7 +70,7 @@ class ContractBase:
         Return ContractInfo class values
         :return: ContractInfo class instance
         """
-        return self.datafeed.get_contract_info(self.ticker)
+        return self.dm.datafeed.get_contract_info(self.ticker)
 
     @property
     def instrument_info(self):
@@ -78,7 +78,7 @@ class ContractBase:
         Return underlying instrument info
         :return:
         """
-        return self.datafeed.get_instrument_info(self.instrument)
+        return self.dm.datafeed.get_instrument_info(self.instrument)
 
     @staticmethod
     def _parse(ticker):
@@ -136,27 +136,7 @@ class ContractBase:
     def __hash__(self):
         return self.ticker.__hash__()
 
-    def get_series(self, **kwargs):
-        iinfo = self.instrument_info
-        kw_source_type = kwargs.get('source_type', self.data_source)
-        kw_timezone = kwargs.get('timezone', iinfo.timezone)
-        kw_date_start = kwargs.get('date_start', self.series_date_start)
-        kw_date_end = kwargs.get('date_end', self.series_date_end)
 
-        return self.datafeed.get_raw_series(self.ticker,
-                                            source_type=kw_source_type,
-                                            timezone=kw_timezone,
-                                            date_start=kw_date_start,
-                                            date_end=kw_date_end
-                                            )
-
-    def get_prices(self, timestamp_list):
-        """
-        Returns prices list for given timestamp list
-        :param timestamp_list: 
-        :return: 
-        """
-        pass
 
 
 
@@ -165,13 +145,13 @@ class FutureContract(ContractBase):
     Future contract asset class
     """
 
-    def __init__(self, tckr, datafeed=None):
+    def __init__(self, tckr, datamanager=None):
         """
         Init future contract from special `tckr` code
         :param tckr: Ticker code
-        :param datafeed: DataFeed instance
+        :param datamanager: DataManager instance
         """
-        super().__init__(tckr, datafeed)
+        super().__init__(tckr, datamanager)
         if self.ctype != 'F':
             raise ArgumentError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
@@ -235,13 +215,13 @@ class OptionContract(ContractBase):
     Option contract asset class
     """
 
-    def __init__(self, tckr, datafeed=None):
+    def __init__(self, tckr, datamanager=None):
         """
         Init option contract from special `tckr` code
         :param tckr: Ticker code
-        :param datafeed: DataFeed instance
+        :param datamanager: DataManager instance
         """
-        super().__init__(tckr, datafeed)
+        super().__init__(tckr, datamanager)
         if self.ctype != 'P' and self.ctype != 'C':
             raise ArgumentError("Contract type 'C' or 'P' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
@@ -280,9 +260,9 @@ class OptionContract(ContractBase):
         if self._underlying is None:
             underlying_name = '{0}.{1}'.format(self._toks[0], self._toks[2].replace('-', '.'))
             if self._toks[2].startswith('F-'):
-                self._underlying = FutureContract(underlying_name, self.datafeed)
+                self._underlying = FutureContract(underlying_name, self.dm)
             else:
-                self._underlying = ContractBase(underlying_name, self.datafeed)
+                self._underlying = ContractBase(underlying_name, self.dm)
         return self._underlying
 
     @property
