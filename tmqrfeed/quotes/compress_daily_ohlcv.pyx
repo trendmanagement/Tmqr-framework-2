@@ -1,5 +1,3 @@
-
-cimport numpy as np
 import cython
 import numpy as np
 
@@ -72,9 +70,10 @@ def compress_daily(dfg, asset):
                 # Store exec values
                 exec_values.append({
                     'date': dt_sess_decision,
+                    'decision_px': _c,
                     'exec_time': dt_sess_exec,
                     'quote_time': asset_session.tz.localize(dfg.index[exec_i]),
-                    'px': _exec_px,
+                    'exec_px': _exec_px,
                     'qty': 1,
                     'asset': asset,
                     }
@@ -90,8 +89,7 @@ def compress_daily(dfg, asset):
             last_date_idx = i
             is_newday = 1
 
-
-        if npdatetime[i] < sess_start or npdatetime[i] >= sess_execution:
+        if npdatetime[i] < sess_start or npdatetime[i] > sess_execution:
             continue
 
 
@@ -106,7 +104,7 @@ def compress_daily(dfg, asset):
             exec_i = i
             is_newday = 0
         else:
-            if npdatetime[i] < sess_decision:
+            if npdatetime[i] <= sess_decision:
                 _h = max(_h, data[ih, i])
                 _l = min(_l, data[il, i])
                 _c = data[ic, i]
@@ -132,9 +130,10 @@ def compress_daily(dfg, asset):
         # Store exec values
         exec_values.append({
             'date': dt_sess_decision,
+            'decision_px': _c,
             'quote_time': asset_session.tz.localize(dfg.index[exec_i]),
             'exec_time': dt_sess_exec,
-            'px': _exec_px,
+            'exec_px': _exec_px,
             'qty': 1,
             'asset': asset,
         }

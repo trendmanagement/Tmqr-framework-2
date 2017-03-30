@@ -1,9 +1,9 @@
-cimport
-numpy as np
+
 import cython
 import numpy as np
 
 from tmqr.errors import ArgumentError
+
 
 
 DTYPE = np.float

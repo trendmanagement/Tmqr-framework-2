@@ -58,8 +58,9 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row_1['o'], 94.77)
         self.assertEqual(row_1['h'], 97.61)
         self.assertEqual(row_1['l'], 94.75)
-        self.assertEqual(row_1['c'], 97.48)
-        self.assertEqual(row_1['v'], 151103)
+        self.assertEqual(row_1['c'], 97.47)
+        self.assertEqual(row_1['v'], 151103 + 141)
+        self.assertEqual(row_1['exec'], 97.39)
         self.assertEqual(1, len(comp_df))
 
     def test_compress_valid_series_2days(self):
@@ -87,9 +88,9 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row['o'], 94.77)
         self.assertEqual(row['h'], 97.61)
         self.assertEqual(row['l'], 94.75)
-        self.assertEqual(row['c'], 97.48)
-        self.assertEqual(row['v'], 151103)
-        self.assertEqual(row['exec'], 97.45)
+        self.assertEqual(row['c'], 97.47)
+        self.assertEqual(row['v'], 151103 + 141)
+        self.assertEqual(row['exec'], 97.39)
 
         row = comp_df.iloc[1]
         self.assertEqual(row.name.date(), datetime(2011, 12, 21).date())
@@ -100,9 +101,9 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(row['o'], 94.77)
         self.assertEqual(row['h'], 97.61)
         self.assertEqual(row['l'], 94.75)
-        self.assertEqual(row['c'], 97.48)
-        self.assertEqual(row['v'], 151103)
-        self.assertEqual(row['exec'], 97.45)
+        self.assertEqual(row['c'], 97.47)
+        self.assertEqual(row['v'], 151103 + 141)
+        self.assertEqual(row['exec'], 97.39)
 
     def test_compress_2days_holdings(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series_2days.csv')), parse_dates=True,
@@ -124,16 +125,18 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)), row['date'])
         self.assertEqual("TestAsset", str(row['asset']))
         self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['exec_time'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 44, 00)), row['quote_time'])
-        self.assertEqual(97.45, row['px'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['quote_time'])
+        self.assertEqual(97.39, row['exec_px'])
+        self.assertEqual(97.47, row['decision_px'])
         self.assertEqual(1, row['qty'])
 
         row = holdings.iloc[1]
         self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)), row['date'])
         self.assertEqual("TestAsset", str(row['asset']))
         self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['exec_time'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 44, 00)), row['quote_time'])
-        self.assertEqual(97.45, row['px'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['quote_time'])
+        self.assertEqual(97.39, row['exec_px'])
+        self.assertEqual(97.47, row['decision_px'])
         self.assertEqual(1, row['qty'])
 
     def test_compress_invalid_series(self):
