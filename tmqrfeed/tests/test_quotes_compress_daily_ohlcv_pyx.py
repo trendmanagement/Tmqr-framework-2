@@ -124,8 +124,8 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         row = holdings.iloc[0]
         self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)), row['date'])
         self.assertEqual("TestAsset", str(row['asset']))
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['exec_time'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['quote_time'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['exec_dt'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['quote_dt'])
         self.assertEqual(97.39, row['exec_px'])
         self.assertEqual(97.47, row['decision_px'])
         self.assertEqual(1, row['qty'])
@@ -133,8 +133,8 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         row = holdings.iloc[1]
         self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)), row['date'])
         self.assertEqual("TestAsset", str(row['asset']))
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['exec_time'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['quote_time'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['exec_dt'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['quote_dt'])
         self.assertEqual(97.39, row['exec_px'])
         self.assertEqual(97.47, row['decision_px'])
         self.assertEqual(1, row['qty'])

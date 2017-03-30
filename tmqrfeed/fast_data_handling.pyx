@@ -6,6 +6,7 @@ from tmqr.errors import ArgumentError
 
 
 
+
 DTYPE = np.float
 ctypedef np.float64_t DTYPE_t
 
