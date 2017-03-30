@@ -135,7 +135,3 @@ class FastDataHandlingTestCase(unittest.TestCase):
 
         self.assertEqual(holdings[0][3], idx_list[1][1])
 
-
-
-if __name__ == '__main__':
-    unittest.main()

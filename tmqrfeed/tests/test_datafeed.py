@@ -186,7 +186,6 @@ class DataFeedTestCase(unittest.TestCase):
         sess = AssetSession(info_dic['trading_session'], tz)
 
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
-
             base_date = datetime(2008, 10, 10)
             data = [
                 {'dt': datetime.combine(base_date, time(0, 29)), 'v': 0},
@@ -217,3 +216,71 @@ class DataFeedTestCase(unittest.TestCase):
             # Test not implemented stuff
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_series, 'US.F.CL.Q83.830720', SRC_INTRADAY)
+
+    def test_get_raw_price(self):
+        info_dic = {
+            'futures_months': [3, 6, 9, 12],
+            'instrument': 'US.ES',
+            'market': 'US',
+            'rollover_days_before': 2,
+            'ticksize': 0.25,
+            'tickvalue': 12.5,
+            'timezone': 'US/Pacific',
+            'trading_session': [{
+                'decision': '10:40',
+                'dt': datetime(1900, 1, 1),
+                'execution': '10:45',
+                'start': '00:30'},
+
+                {
+                    'decision': '11:40',
+                    'dt': datetime(2009, 12, 31),
+                    'execution': '11:45',
+                    'start': '01:30'},
+
+                {
+                    'decision': '12:40',
+                    'dt': datetime(2011, 1, 1),
+                    'execution': '12:45',
+                    'start': '02:30'},
+            ]
+        }
+        tz = pytz.timezone(info_dic['timezone'])
+        sess = AssetSession(info_dic['trading_session'], tz)
+
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
+            base_date = datetime(2008, 10, 10)
+            data = [
+                {'dt': tz.localize(datetime.combine(base_date, time(0, 29))), 'c': 0},
+                {'dt': tz.localize(datetime.combine(base_date, time(0, 30))), 'c': 1},
+                {'dt': tz.localize(datetime.combine(base_date, time(0, 31))), 'c': 1},
+                {'dt': tz.localize(datetime.combine(base_date, time(10, 39))), 'c': 100},
+                {'dt': tz.localize(datetime.combine(base_date, time(10, 40))), 'c': 1},
+                {'dt': tz.localize(datetime.combine(base_date, time(10, 41))), 'c': 0},
+            ]
+            source_df = pd.DataFrame(data).set_index('dt')
+            mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
+            dfeed = DataFeed()
+
+            result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
+                                          SRC_INTRADAY,
+                                          [tz.localize(datetime(2008, 10, 10, 10, 39))],
+                                          timezone=tz)
+            self.assertEqual(1, len(result))
+            self.assertEqual(result[0], 100)
+
+            #
+            # Test timezone
+            #
+            result = dfeed.get_raw_prices('US.F.CL.Q83.830720', SRC_INTRADAY,
+                                          [tz.localize(datetime(2008, 10, 10, 10, 39))],
+                                          timezone='US/Pacific')
+            self.assertEqual(result[0], 100)
+
+            self.assertRaises(ArgumentError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720', SRC_INTRADAY,
+                              [tz.localize(datetime(2008, 10, 10, 10, 39))])
+
+            # Test not implemented stuff
+            mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
+            self.assertRaises(NotImplementedError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720', SRC_INTRADAY,
+                              [tz.localize(datetime(2008, 10, 10, 10, 39))], timezone='US/Pacific')

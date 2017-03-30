@@ -12,6 +12,7 @@ from tmqrfeed.instrumentinfo import InstrumentInfo
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.fast_data_handling import find_quotes
+from tmqr.errors import ArgumentError
 
 
 class DataFeed:
@@ -117,21 +118,21 @@ class DataFeed:
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
 
-    def get_raw_prices(self, tckr, source_type, at_date, dt_list, **kwargs):
+    def get_raw_prices(self, tckr, source_type, dt_list, **kwargs):
         tz = kwargs.get('timezone', None)
+        if tz is None:
+            raise ArgumentError("'timezone' kwarg must be set")
+
         if type(tz) == str:
             tz = pytz.timezone(tz)
 
         dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
 
         if qtype == QTYPE_INTRADAY:
-            if tz is not None:
-                # Convert timezone of the dataframe (in place)
-                dfseries.tz_convert(tz, copy=False)
+            # Convert timezone of the dataframe (in place)
+            dfseries.tz_convert(tz, copy=False)
 
             quotes_tuple_arr = find_quotes(dfseries, dt_list)
-            # TODO: check for errors
-            # TODO: save prices to cache
             return [px for dt, px in quotes_tuple_arr]
         else:
             raise NotImplementedError("Quote type is not implemented yet.")

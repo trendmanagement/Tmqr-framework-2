@@ -26,6 +26,8 @@ def find_quotes(df, timestamps_list):
     dates = []
     for t in timestamps_list:
         # Make sure that timezones are equal
+        if t.tzinfo is None:
+            raise ArgumentError("timestamps_list's dates must be timezone aware")
         if t.tzinfo.zone != df.index.tzinfo.zone:
             raise ArgumentError("timestamps_list's and quotes dataframe timezones are not equal")
 
