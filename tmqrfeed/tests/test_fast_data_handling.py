@@ -48,6 +48,8 @@ class FastDataHandlingTestCase(unittest.TestCase):
         dfg = DataFrameGetter(df)
 
         comp_df, holdings = compress_daily(dfg, asset_mock)
+        # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
+
         self.assertEqual(1, len(holdings))
 
         dt = pd.Timestamp('2011-12-20')
@@ -56,12 +58,10 @@ class FastDataHandlingTestCase(unittest.TestCase):
         idx_list = find_quotes(df, [decision, execution])
 
         self.assertEqual(2, len(idx_list))
-        self.assertEqual(holdings.iloc[0]['date'], idx_list[0][0])
-        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
+        self.assertEqual(holdings[0][0], idx_list[0][0])
+        self.assertEqual(holdings[0][2], idx_list[0][1])
 
-        self.assertEqual(holdings.iloc[0]['quote_dt'], idx_list[1][0])
-        self.assertEqual(holdings.iloc[0]['exec_dt'], idx_list[1][0])
-        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+        self.assertEqual(holdings[0][3], idx_list[1][1])
 
     def test_find_time_indexes_out_of_session(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -92,6 +92,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         dfg = DataFrameGetter(df)
 
         comp_df, holdings = compress_daily(dfg, asset_mock)
+        # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
         self.assertEqual(1, len(holdings))
 
         dt = pd.Timestamp('2011-12-20')
@@ -101,11 +102,11 @@ class FastDataHandlingTestCase(unittest.TestCase):
 
         self.assertEqual(2, len(idx_list))
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[0][0])
-        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
+        self.assertEqual(holdings[0][2], idx_list[0][1])
 
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
-        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+        self.assertEqual(holdings[0][3], idx_list[1][1])
 
     def test_find_time_missing_time_in_df(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -119,6 +120,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         dfg = DataFrameGetter(df)
 
         comp_df, holdings = compress_daily(dfg, asset_mock)
+        # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
         self.assertEqual(1, len(holdings))
 
         dt = pd.Timestamp('2011-12-20')
@@ -129,10 +131,9 @@ class FastDataHandlingTestCase(unittest.TestCase):
         self.assertEqual(2, len(idx_list))
         self.assertEqual(2, len(idx_list))
         self.assertEqual(pd.Timestamp('2011-12-20 10:39:00-0800'), idx_list[0][0])
-        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
+        self.assertEqual(holdings[0][2], idx_list[0][1])
 
-        self.assertEqual(holdings.iloc[0]['quote_dt'], idx_list[1][0])
-        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+        self.assertEqual(holdings[0][3], idx_list[1][1])
 
 
 

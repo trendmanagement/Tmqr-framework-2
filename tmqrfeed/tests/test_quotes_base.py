@@ -49,100 +49,101 @@ class QuoteBaseTestCase(unittest.TestCase):
         self.assertRaises(QuoteEngineEmptyQuotes, QuoteBase.merge_series, [None, None])
 
     def test_merge_positions(self):
-        position1 = pd.DataFrame([
-            {'date': datetime(2013, 1, 1),
-             'px': 100,
-             'qty': 1,
-             'asset': "A1", },
-            {'date': datetime(2013, 1, 2),
-             'px': 100,
-             'qty': 1,
-             'asset': "A1", },
-        ])
+        position1 = [
+            # Tuple of: date, asset, decision_px, exec_px, qty
+            (datetime(2013, 1, 1), "A1", 100, 101, 1),
+            (datetime(2013, 1, 2), "A1", 110, 102, 1),
+        ]
 
-        position2 = pd.DataFrame([
-            {'date': datetime(2013, 1, 2),
-             'px': 200,
-             'qty': 1,
-             'asset': "A2", },
-            {'date': datetime(2013, 1, 3),
-             'px': 200,
-             'qty': 1,
-             'asset': "A2", },
-        ])
+        position2 = [
+            # Tuple of: date, asset, decision_px, exec_px, qty
+            (datetime(2013, 1, 2), "A2", 200, 201, 1),
+            (datetime(2013, 1, 3), "A2", 210, 212, 1),
+        ]
 
         merged_pos = QuoteBase.merge_positions([position1, position2])
-        self.assertEqual('date', merged_pos.index.name)
+        self.assertEqual(dict, type(merged_pos))
+        self.assertEqual(3, len(merged_pos))
 
-        self.assertEqual(4, len(merged_pos))
+        d = merged_pos[datetime(2013, 1, 1)]
+        self.assertEqual(dict, type(d))
+        self.assertEqual(1, len(d))
+        dtckr = d['A1']
+        self.assertEqual(dtckr[0], 100)
+        self.assertEqual(dtckr[1], 101)
+        self.assertEqual(dtckr[2], 1)
 
-        df = merged_pos.ix[datetime(2013, 1, 1)]
-        self.assertEqual(df['qty'], 1)
-        self.assertEqual(df['px'], 100)
-        self.assertEqual(df['asset'], 'A1')
+        d = merged_pos[datetime(2013, 1, 2)]
+        self.assertEqual(dict, type(d))
+        self.assertEqual(2, len(d))
+        dtckr = d['A1']
+        self.assertEqual(dtckr[0], 110)
+        self.assertEqual(dtckr[1], 102)
+        self.assertEqual(dtckr[2], 0)
 
-        df = merged_pos.ix[datetime(2013, 1, 2)]
+        dtckr = d['A2']
+        self.assertEqual(dtckr[0], 200)
+        self.assertEqual(dtckr[1], 201)
+        self.assertEqual(dtckr[2], 1)
 
-        self.assertEqual(df.iloc[0]['qty'], 0)
-        self.assertEqual(df.iloc[0]['px'], 100)
-        self.assertEqual(df.iloc[0]['asset'], 'A1')
-        self.assertEqual(df.iloc[1]['qty'], 1)
-        self.assertEqual(df.iloc[1]['px'], 200)
-        self.assertEqual(df.iloc[1]['asset'], 'A2')
+        d = merged_pos[datetime(2013, 1, 3)]
+        self.assertEqual(dict, type(d))
+        self.assertEqual(1, len(d))
+        dtckr = d['A2']
+        self.assertEqual(dtckr[0], 210)
+        self.assertEqual(dtckr[1], 212)
+        self.assertEqual(dtckr[2], 1)
 
-        df = merged_pos.ix[datetime(2013, 1, 3)]
-        self.assertEqual(df['qty'], 1)
-        self.assertEqual(df['px'], 200)
-        self.assertEqual(df['asset'], 'A2')
+
 
     def test_merge_positions2(self):
-        position1 = pd.DataFrame([
-            {'date': datetime(2013, 1, 2),
-             'px': 150,
-             'qty': 1,
-             'asset': "A1", },
-            {'date': datetime(2013, 1, 2),
-             'px': 100,
-             'qty': 1,
-             'asset': "A1", },
-        ])
+        position1 = [
+            # Tuple of: date, asset, decision_px, exec_px, qty
+            (datetime(2013, 1, 2), "A1", 100, 101, 1),
+            (datetime(2013, 1, 2), "A3", 110, 102, 1),
+        ]
 
-        position2 = pd.DataFrame([
-            {'date': datetime(2013, 1, 2),
-             'px': 200,
-             'qty': 1,
-             'asset': "A2", },
-            {'date': datetime(2013, 1, 3),
-             'px': 200,
-             'qty': 1,
-             'asset': "A2", },
-        ])
+        position2 = [
+            # Tuple of: date, asset, decision_px, exec_px, qty
+            (datetime(2013, 1, 2), "A2", 200, 201, 1),
+            (datetime(2013, 1, 3), "A2", 210, 212, 1),
+        ]
 
         merged_pos = QuoteBase.merge_positions([position1, position2])
-        self.assertEqual('date', merged_pos.index.name)
+        self.assertEqual(dict, type(merged_pos))
+        self.assertEqual(2, len(merged_pos))
 
-        self.assertEqual(4, len(merged_pos))
+        d = merged_pos[datetime(2013, 1, 2)]
+        self.assertEqual(dict, type(d))
+        self.assertEqual(3, len(d))
+        dtckr = d['A1']
+        self.assertEqual(dtckr[0], 100)
+        self.assertEqual(dtckr[1], 101)
+        self.assertEqual(dtckr[2], 0)
 
-        df = merged_pos.ix[datetime(2013, 1, 2)]
+        dtckr = d['A3']
+        self.assertEqual(dtckr[0], 110)
+        self.assertEqual(dtckr[1], 102)
+        self.assertEqual(dtckr[2], 0)
 
-        self.assertEqual(df.iloc[0]['qty'], 0)
-        self.assertEqual(df.iloc[0]['px'], 150)
-        self.assertEqual(df.iloc[0]['asset'], 'A1')
-        self.assertEqual(df.iloc[1]['qty'], 0)
-        self.assertEqual(df.iloc[1]['px'], 100)
-        self.assertEqual(df.iloc[1]['asset'], 'A1')
-        self.assertEqual(df.iloc[2]['qty'], 1)
-        self.assertEqual(df.iloc[2]['px'], 200)
-        self.assertEqual(df.iloc[2]['asset'], 'A2')
+        dtckr = d['A2']
+        self.assertEqual(dtckr[0], 200)
+        self.assertEqual(dtckr[1], 201)
+        self.assertEqual(dtckr[2], 1)
 
-        df = merged_pos.ix[datetime(2013, 1, 3)]
-        self.assertEqual(df['qty'], 1)
-        self.assertEqual(df['px'], 200)
-        self.assertEqual(df['asset'], 'A2')
+        d = merged_pos[datetime(2013, 1, 3)]
+        self.assertEqual(dict, type(d))
+        self.assertEqual(1, len(d))
+        dtckr = d['A2']
+        self.assertEqual(dtckr[0], 210)
+        self.assertEqual(dtckr[1], 212)
+        self.assertEqual(dtckr[2], 1)
+
+
 
     def test_merge_positions_none(self):
         merged_pos = QuoteBase.merge_positions([None, None])
-        self.assertEqual(merged_pos, None)
+        self.assertEqual(merged_pos, {})
 
     def test_build(self):
         qb = QuoteBase(datamanager='test')

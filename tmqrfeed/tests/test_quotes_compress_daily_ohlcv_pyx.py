@@ -47,7 +47,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == pd.DataFrame)
+        self.assertTrue(type(holdings) == list)
 
         row_1 = comp_df.iloc[0]
         self.assertEqual(row_1.name.date(), datetime(2011, 12, 20).date())
@@ -75,7 +75,8 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == pd.DataFrame)
+        self.assertTrue(type(holdings) == list)
+        self.assertTrue(type(holdings[0]) == tuple)
 
         self.assertEqual(2, len(comp_df))
 
@@ -117,27 +118,25 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == pd.DataFrame)
+        self.assertTrue(type(holdings) == list)
 
         self.assertEqual(2, len(holdings))
 
-        row = holdings.iloc[0]
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)), row['date'])
-        self.assertEqual("TestAsset", str(row['asset']))
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['exec_dt'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 45, 00)), row['quote_dt'])
-        self.assertEqual(97.39, row['exec_px'])
-        self.assertEqual(97.47, row['decision_px'])
-        self.assertEqual(1, row['qty'])
+        # Tuple of: date, asset, decision_px, exec_px, qty
+        row = holdings[0]
 
-        row = holdings.iloc[1]
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)), row['date'])
-        self.assertEqual("TestAsset", str(row['asset']))
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['exec_dt'])
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 45, 00)), row['quote_dt'])
-        self.assertEqual(97.39, row['exec_px'])
-        self.assertEqual(97.47, row['decision_px'])
-        self.assertEqual(1, row['qty'])
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)), row[0])
+        self.assertEqual("TestAsset", str(row[1]))
+        self.assertEqual(97.47, row[2])
+        self.assertEqual(97.39, row[3])
+        self.assertEqual(1, row[4])
+
+        row = holdings[1]
+        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)), row[0])
+        self.assertEqual("TestAsset", str(row[1]))
+        self.assertEqual(97.47, row[2])
+        self.assertEqual(97.39, row[3])
+        self.assertEqual(1, row[4])
 
     def test_compress_invalid_series(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -154,7 +153,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == pd.DataFrame)
+        self.assertTrue(type(holdings) == list)
 
         self.assertEqual(0, len(comp_df))
         self.assertEqual(0, len(holdings))

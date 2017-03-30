@@ -69,15 +69,9 @@ def compress_daily(dfg, asset):
                 values_index.append(dt_sess_decision)
 
                 # Store exec values
-                exec_values.append({
-                    'date': dt_sess_decision,
-                    'decision_px': _c,
-                    'exec_dt': dt_sess_exec,
-                    'quote_dt': asset_session.tz.localize(dfg.index[exec_i]),
-                    'exec_px': _exec_px,
-                    'qty': 1,
-                    'asset': asset,
-                    }
+                exec_values.append(
+                    # Tuple of: date, asset, decision_px, exec_px, qty
+                    (dt_sess_decision, asset, _c, _exec_px, 1)
                 )
 
             # Calculate trading session params
@@ -129,18 +123,12 @@ def compress_daily(dfg, asset):
             }
         )
         # Store exec values
-        exec_values.append({
-            'date': dt_sess_decision,
-            'decision_px': _c,
-            'quote_dt': asset_session.tz.localize(dfg.index[exec_i]),
-            'exec_dt': dt_sess_exec,
-            'exec_px': _exec_px,
-            'qty': 1,
-            'asset': asset,
-        }
+        exec_values.append(
+            # Tuple of: date, asset, decision_px, exec_px, qty
+            (dt_sess_decision, asset, _c, _exec_px, 1)
         )
         values_index.append(dt_sess_decision)
 
     df_result = pd.DataFrame(values, index=values_index)
     df_result.index.rename('dt', inplace=True)
-    return df_result, pd.DataFrame(exec_values)
+    return df_result, exec_values

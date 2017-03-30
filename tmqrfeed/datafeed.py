@@ -129,9 +129,9 @@ class DataFeed:
                 # Convert timezone of the dataframe (in place)
                 dfseries.tz_convert(tz, copy=False)
 
-            indexes = find_quotes(dfseries, dt_list)
+            quotes_tuple_arr = find_quotes(dfseries, dt_list)
             # TODO: check for errors
             # TODO: save prices to cache
-            return [dfseries.iloc[i]['c'] for i in indexes]
+            return [px for dt, px in quotes_tuple_arr]
         else:
             raise NotImplementedError("Quote type is not implemented yet.")

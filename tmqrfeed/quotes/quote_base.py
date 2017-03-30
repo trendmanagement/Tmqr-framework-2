@@ -2,7 +2,7 @@ import pandas as pd
 
 from tmqr.errors import ArgumentError
 from tmqr.errors import QuoteEngineEmptyQuotes
-
+from collections import OrderedDict
 
 class QuoteBase:
     """
@@ -26,31 +26,53 @@ class QuoteBase:
         return merged_series
 
     @staticmethod
-    def merge_positions(positions_df_list):
+    def merge_positions(positions_list):
         valid_positions_count = 0
+        result_positions = {}
 
-        for i in range(len(positions_df_list) - 1):
+        for i in range(len(positions_list)):
             j = -1
             last_date = None
-            pos = positions_df_list[i]
-            if positions_df_list[i] is None:
+            pos = positions_list[i]
+            if positions_list[i] is None:
                 continue
             valid_positions_count += 1
 
-            while True:
-                if abs(j) > len(pos):
-                    break
-                row = pos.iloc[j]
-                if last_date is not None and last_date != row['date']:
-                    break
+            if i < len(positions_list) - 1:
+                # Implementing rollover for previous contracts
+                while True:
+                    if abs(j) > len(pos):
+                        break
+                    row = pos[j]
+                    # 'row' is a tuple of: date, asset, decision_px, exec_px, qty
+                    if last_date is not None and last_date != row[0]:
+                        break
+                    last_date = row[0]
+                    # Re-constructing new tuple with 0.0 - qty field
+                    pos[j] = (row[0], row[1], row[2], row[3], 0.0)
+                    j -= 1
 
-                last_date = row['date']
-                pos.at[row.name, 'qty'] = 0.0
-                j -= 1
+            # Filling positions_dictionary
+            for p in pos:
+                # 'p' is a tuple of: date, asset, decision_px, exec_px, qty
+                date = p[0]
+                asset = p[1]
+                decision_px = p[2]
+                exec_px = p[3]
+                qty = p[4]
+
+                assets_at_date_dict = result_positions.setdefault(date, {})
+
+                # Checking that we don't have same asset records at the same date
+                assert asset not in assets_at_date_dict
+
+                # Saving prices and qty to dictionary
+                assets_at_date_dict[asset] = (decision_px, exec_px, qty)
+
         if valid_positions_count == 0:
-            return None
+            return {}
         else:
-            return pd.concat(positions_df_list).set_index(['date'])
+            return result_positions
 
     def build(self):
         """
