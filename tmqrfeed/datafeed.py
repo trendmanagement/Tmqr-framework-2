@@ -11,7 +11,7 @@ from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.instrumentinfo import InstrumentInfo
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
-from tmqrfeed.fast_data_handling import find_time_indexes
+from tmqrfeed.fast_data_handling import find_quotes
 
 
 class DataFeed:
@@ -129,7 +129,7 @@ class DataFeed:
                 # Convert timezone of the dataframe (in place)
                 dfseries.tz_convert(tz, copy=False)
 
-            indexes = find_time_indexes(dfseries, dt_list)
+            indexes = find_quotes(dfseries, dt_list)
             # TODO: check for errors
             # TODO: save prices to cache
             return [dfseries.iloc[i]['c'] for i in indexes]

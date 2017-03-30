@@ -7,13 +7,15 @@ import pandas as pd
 import pytz
 import pyximport
 
+from tmqr.errors import *
+
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 import os
 
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
-from tmqrfeed.fast_data_handling import find_time_indexes
+from tmqrfeed.fast_data_handling import find_quotes
 
 
 class FastDataHandlingTestCase(unittest.TestCase):
@@ -51,15 +53,87 @@ class FastDataHandlingTestCase(unittest.TestCase):
         dt = pd.Timestamp('2011-12-20')
         start, decision, execution, next_sess_date = self.sess.get(dt)
 
-        idx_list = find_time_indexes(df, [decision, execution])
+        idx_list = find_quotes(df, [decision, execution])
 
         self.assertEqual(2, len(idx_list))
-        self.assertEqual(holdings.iloc[0]['date'], df.index[idx_list[0]])
-        self.assertEqual(holdings.iloc[0]['decision_px'], df['c'][idx_list[0]])
+        self.assertEqual(holdings.iloc[0]['date'], idx_list[0][0])
+        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
 
-        self.assertEqual(holdings.iloc[0]['quote_dt'], df.index[idx_list[1]])
-        self.assertEqual(holdings.iloc[0]['exec_dt'], df.index[idx_list[1]])
-        self.assertEqual(holdings.iloc[0]['exec_px'], df['c'][idx_list[1]])
+        self.assertEqual(holdings.iloc[0]['quote_dt'], idx_list[1][0])
+        self.assertEqual(holdings.iloc[0]['exec_dt'], idx_list[1][0])
+        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+
+    def test_find_time_indexes_out_of_session(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+        df = df.between_time('11:00', '15:00')
+        asset_mock = MagicMock()
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock)
+        self.assertEqual(0, len(holdings))
+
+        dt = pd.Timestamp('2011-12-20')
+        start, decision, execution, next_sess_date = self.sess.get(dt)
+
+        self.assertRaises(IntradayQuotesNotFoundError, find_quotes, df, [decision, execution])
+
+    def test_find_time_indexes_partial_session(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+        df = df.between_time('00:00', '09:00')
+        asset_mock = MagicMock()
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock)
+        self.assertEqual(1, len(holdings))
+
+        dt = pd.Timestamp('2011-12-20')
+        start, decision, execution, next_sess_date = self.sess.get(dt)
+
+        idx_list = find_quotes(df, [decision, execution])
+
+        self.assertEqual(2, len(idx_list))
+        self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[0][0])
+        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
+
+        self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
+        self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
+        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+
+    def test_find_time_missing_time_in_df(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+        df = df.drop([df.ix['2011-12-20 10:40'].name,
+                      df.ix['2011-12-20 10:45'].name])
+        asset_mock = MagicMock()
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock)
+        self.assertEqual(1, len(holdings))
+
+        dt = pd.Timestamp('2011-12-20')
+        start, decision, execution, next_sess_date = self.sess.get(dt)
+
+        idx_list = find_quotes(df, [decision, execution])
+
+        self.assertEqual(2, len(idx_list))
+        self.assertEqual(2, len(idx_list))
+        self.assertEqual(pd.Timestamp('2011-12-20 10:39:00-0800'), idx_list[0][0])
+        self.assertEqual(holdings.iloc[0]['decision_px'], idx_list[0][1])
+
+        self.assertEqual(holdings.iloc[0]['quote_dt'], idx_list[1][0])
+        self.assertEqual(holdings.iloc[0]['exec_px'], idx_list[1][1])
+
 
 
 if __name__ == '__main__':
