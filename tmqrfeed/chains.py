@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from tmqr.errors import ArgumentError
+from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError
 from tmqr.settings import *
-from tmqrfeed.contracts import FutureContract
+from tmqrfeed.contracts import FutureContract, ContractBase
 
 
 class FutureChain:
@@ -108,18 +108,28 @@ class OptionChainList:
     This class stores list of options chains with many expiration dates
     """
 
-    def __init__(self, chain_list, datamanager=None):
+    def __init__(self, chain_list, underlying: ContractBase, datamanager):
         if chain_list is None or len(chain_list) == 0:
             raise ArgumentError("Empty 'chain_list' argument")
 
         self.dm = datamanager
+        if self.dm is None:
+            raise ArgumentError("DataManager instance must be set")
+
+        self.underlying = underlying
+        """Underlying contract instance of option chain"""
+
+        if self.underlying is None:
+            raise ArgumentError("Underlying asset in None")
+
+        if self.dm is None:
+            raise ArgumentError("DataManager instance must be set")
 
         self.chain_list = OrderedDict()
         for expiration, chain in chain_list.items():
-            self.chain_list[expiration] = OptionChain(chain, expiration, datamanager=self.dm)
+            self.chain_list[expiration] = OptionChain(chain, expiration, underlying, datamanager=self.dm)
 
         self._expirations = sorted(list(self.chain_list.keys()))
-
 
     def __len__(self):
         return len(self.chain_list)
@@ -135,6 +145,9 @@ class OptionChainList:
     def items(self):
         for k, v in self.chain_list.items():
             yield k, v
+
+    def to_expiration_days(self, date):
+        return (self._expiration.date() - date.date()).days
 
     def find(self, by, **kwargs):
         """
@@ -172,10 +185,86 @@ class OptionChain:
     Main class for option chains data management.
     """
 
-    def __init__(self, option_chain_record, expiration, datamanager=None):
+    def __init__(self, option_chain_record, expiration: datetime, underlying: ContractBase, datamanager):
         self._expiration = expiration
         self.dm = datamanager
+        self.underlying = underlying
+
+        self._options = option_chain_record
+        self._strike_array = np.array(list(self._options.keys()))
+
+        if self.dm is None:
+            raise ArgumentError("DataManager instance must be set")
 
     @property
     def expiration(self):
         return self._expiration
+
+    def __len__(self):
+        return len(self._strike_array)
+
+    def find(self, date, item, opttype, how='offset', limit=20, **kwargs):
+        """
+        Find option contract in chain using 'how' criteria
+        :param date: analysis date
+        :param item: search value
+        :param opttype: option type 'C' or 'P'
+        :param how: search method
+                    - 'offset' - by strike offset from ATM
+                    - 'strike' - by strike absolute value
+                    - 'delta'  - by delta                    
+        :param limit: number strikes to search (both sides from ATM strike)
+        :param kwargs: 
+        :return: OptionContract
+        """
+        if how == 'offset':
+            return self._find_by_offset(date, item, opttype, limit)
+        else:
+            raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
+
+    def _get_atm_index(self, ulprice: float):
+        return np.argmin(np.abs(self._strike_array - ulprice))
+
+    def _find_by_offset(self, date: datetime, item: int, opttype: str, limit: int):
+
+        # Fetching underlying price
+        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, date)
+
+        atm_index = self._get_atm_index(ul_decision_px)
+
+        #
+        # Perform strike search by index
+        #
+        is_not_found = False
+        while True:
+            if atm_index + item < 0 or atm_index + item > len(self._strike_array) - 1:
+                if is_not_found:
+                    raise ChainNotFoundError(
+                        "Failed to find options quotes while processing chain at {0}".format(self.underlying.date))
+                else:
+                    raise ChainNotFoundError("Strike offset is too low, "
+                                             "[{0}, {1}] values allowed".format(-atm_index,
+                                                                                len(
+                                                                                    self._strike_array) - atm_index - 1))
+            strike = self._strike_array[atm_index + item]
+            call_contract, put_contract = self._options[strike]
+            try:
+                # Getting Put/Call prices
+                # To make sure that we have quotes available in the DB
+                selected_option = call_contract if opttype == 'C' else put_contract
+
+                # Getting option price to check data availability (rises 'NotFoundError' if not)
+                # and populating pricing context for selected option
+                opt_decision_px, opt_exec_px = self.dm.price_get(selected_option, date)
+
+                # Set pricing context for option, this prevents extra DB calls
+                # Because we expect that selected option will be priced soon in the calling code
+                selected_option.set_pricing_context(date, ul_decision_px, ul_exec_px, opt_decision_px, opt_exec_px)
+                return selected_option
+            except NotFoundError:
+                is_not_found = True
+                # Searching next strike
+                if item >= 0:
+                    item += 1
+                else:
+                    item -= 1

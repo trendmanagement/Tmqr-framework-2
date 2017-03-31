@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from tmqr.errors import *
 from tmqrfeed.chains import OptionChainList, OptionChain
+from tmqrfeed.contracts import FutureContract
 from tmqrfeed.manager import DataManager
 
 
@@ -14,31 +15,32 @@ class ChainListTestCase(unittest.TestCase):
     def setUpClass(cls):
         fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es.pkl'))
         cls.dm = DataManager()
-
+        cls.underlying = FutureContract('US.F.ES.H11.110318')
         with open(fn, 'rb') as f:
-            cls.chain_list = cls.dm.datafeed._process_raw_options_chains(pickle.load(f))
+            cls.chain_list = cls.dm.datafeed._process_raw_options_chains(pickle.load(f), cls.underlying)
 
     def setUp(self):
-        self.opt_chain = OptionChainList(self.chain_list)
+        self.dm = DataManager()
+        self.opt_chain = OptionChainList(self.chain_list, self.underlying, self.dm)
 
     def test_init(self):
-        chainlst = OptionChainList(self.chain_list)
+        chainlst = OptionChainList(self.chain_list, self.underlying, self.dm)
         self.assertEqual(type(chainlst.chain_list), OrderedDict)
         self.assertEqual(len(chainlst.chain_list), 3)
 
-        self.assertRaises(ArgumentError, OptionChainList, None)
-        self.assertRaises(ArgumentError, OptionChainList, [])
+        self.assertRaises(ArgumentError, OptionChainList, self.chain_list, self.underlying, None)
+        self.assertRaises(ArgumentError, OptionChainList, self.chain_list, None, self.dm)
+        self.assertRaises(ArgumentError, OptionChainList, None, self.underlying, self.dm)
+        self.assertRaises(ArgumentError, OptionChainList, OrderedDict(), self.underlying, self.dm)
 
     def test_has_len(self):
-        chainlst = OptionChainList(self.chain_list)
-        self.assertEqual(3, len(chainlst))
+        self.assertEqual(3, len(self.opt_chain))
 
     def test_has_expiraitons(self):
-        chainlst = OptionChainList(self.chain_list)
         exp_list = [datetime.datetime(2011, 1, 21, 0, 0),
                     datetime.datetime(2011, 2, 18, 0, 0),
                     datetime.datetime(2011, 3, 18, 0, 0)]
-        self.assertEqual(exp_list, chainlst.expirations)
+        self.assertEqual(exp_list, self.opt_chain.expirations)
 
     def test_has_iterable(self):
         for chain in self.opt_chain:

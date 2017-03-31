@@ -2,6 +2,7 @@ from tmqr.errors import ArgumentError
 from tmqr.settings import *
 
 
+
 class ContractBase:
     """
     Base class for generic asset
@@ -145,11 +146,12 @@ class FutureContract(ContractBase):
     Future contract asset class
     """
 
-    def __init__(self, tckr, datamanager=None):
+    def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init future contract from special `tckr` code
         :param tckr: Ticker code
         :param datamanager: DataManager instance
+        :param kwargs:            
         """
         super().__init__(tckr, datamanager)
         if self.ctype != 'F':
@@ -215,11 +217,13 @@ class OptionContract(ContractBase):
     Option contract asset class
     """
 
-    def __init__(self, tckr, datamanager=None):
+    def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init option contract from special `tckr` code
         :param tckr: Ticker code
         :param datamanager: DataManager instance
+        :param kwargs: contract init kwargs
+            - 'underlying' - underlying contract instance
         """
         super().__init__(tckr, datamanager)
         if self.ctype != 'P' and self.ctype != 'C':
@@ -229,8 +233,8 @@ class OptionContract(ContractBase):
 
         self.exp_date = self._parse_expiration(self._toks[3])
         self.strike = float(self._toks[4])
-        # TODO: Implement underlying init argument
-        self._underlying = None
+
+        self._underlying = kwargs.get('underlying', None)
 
     @property
     def name(self):
@@ -268,3 +272,6 @@ class OptionContract(ContractBase):
     @property
     def data_source(self):
         return self.instrument_info.data_options_src
+
+    def set_pricing_context(self, date, ul_decision_px, ul_exec_px, option_decision_px, option_exec_px):
+        pass

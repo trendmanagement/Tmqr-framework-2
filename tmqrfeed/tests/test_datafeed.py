@@ -8,12 +8,10 @@ from unittest import mock
 import pandas as pd
 import pytz
 
-from tmqr.errors import *
-from tmqr.settings import *
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
-from tmqrfeed.contracts import FutureContract
+from tmqrfeed.contracts import *
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.instrumentinfo import InstrumentInfo
@@ -300,7 +298,7 @@ class DataFeedTestCase(unittest.TestCase):
                 dfeed = DataFeed()
                 dfeed.dm = 'DM'
 
-                dfeed.get_option_chains("TEST")
+                dfeed.get_option_chains(FutureContract('US.F.ES.H11.110318'))
 
                 self.assertEqual(True, mock_cls_chain_list.called)
                 optchain_call_args = mock_cls_chain_list.call_args[0][0]
@@ -318,10 +316,13 @@ class DataFeedTestCase(unittest.TestCase):
                     for strike, opts in v.items():
                         strike_count += 1
                         self.assertGreater(strike, prev_strike)
-                        self.assertTrue(f'@{strike}' in opts[0])
-                        self.assertTrue(f'@{strike}' in opts[1])
-                        self.assertTrue('.C.' in opts[0])
-                        self.assertTrue('.P.' in opts[1])
+                        self.assertEqual(OptionContract, type(opts[0]))
+                        self.assertEqual(OptionContract, type(opts[1]))
+                        self.assertTrue(f'@{strike}' in opts[0].ticker)
+                        self.assertTrue(f'@{strike}' in opts[1].ticker)
+                        self.assertTrue('.C.' in opts[0].ticker)
+                        self.assertTrue('.P.' in opts[1].ticker)
                         prev_strike = strike
 
                 self.assertEqual(strike_count, 1110 / 2)
+

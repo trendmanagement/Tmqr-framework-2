@@ -1,4 +1,5 @@
 from tmqr.errors import *
+from tmqrfeed.contracts import ContractBase
 from tmqrfeed.datafeed import DataFeed
 
 
@@ -95,7 +96,7 @@ class DataManager:
         # TODO: implement series checks
         return True
 
-    def series_get(self, asset, **kwargs):
+    def series_get(self, asset: ContractBase, **kwargs):
         """
         Get asset's raw series from the DB
         :param asset: asset instance
@@ -115,16 +116,16 @@ class DataManager:
                                             date_end=kw_date_end
                                             )
 
-    def price_get(self, asset, date, **kwargs):
+    def price_get(self, asset: ContractBase, date, **kwargs):
         """
         Get price at decision and execution time for given asset
         :param asset: Contract class instance
         :param date: timestamp for price
         :return: 
         """
-        pass
+        return self._price_get_from_datafeed(asset, date, **kwargs)
 
-    def _price_get_cached(self, asset, date):
+    def _price_get_cached(self, asset: ContractBase, date):
         """
         Check internal price cache for asset's price
         :param asset: 
@@ -133,7 +134,7 @@ class DataManager:
         """
         return None
 
-    def _price_set_cached(self, asset, date, decision_px, exec_px):
+    def _price_set_cached(self, asset: ContractBase, date, decision_px, exec_px):
         """
         Populate internal cache
         :param asset: 
@@ -144,7 +145,7 @@ class DataManager:
         """
         pass
 
-    def _price_get_from_datafeed(self, asset, date, **kwargs):
+    def _price_get_from_datafeed(self, asset: ContractBase, date, **kwargs):
         """
         Fetch asset price directly from datafeed
         :return: 

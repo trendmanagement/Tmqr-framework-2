@@ -7,6 +7,7 @@ import pyximport
 from tmqr.settings import *
 from tmqrfeed.chains import FutureChain, OptionChainList
 from tmqrfeed.contractinfo import ContractInfo
+from tmqrfeed.contracts import ContractBase, OptionContract
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.instrumentinfo import InstrumentInfo
 
@@ -72,10 +73,11 @@ class DataFeed:
                            datamanager=self.dm,
                            **kwargs)
 
-    def _process_raw_options_chains(self, chain_list):
+    def _process_raw_options_chains(self, chain_list, underlying_asset: ContractBase):
         """
         Converting MongoDB option chains to OptionsChainList friendly format
         :param chain_list: result of data_engine.db_get_option_chains()
+        :param underlying_asset: underlying asset instance
         :return: OrderedDict[ expiration, OrderedDict[strike, CallPutTickers] ]
         """
         chain_result = OrderedDict()
@@ -97,23 +99,24 @@ class DataFeed:
                         call_idx = i - 1
                         put_idx = i
 
-                    options[strike] = (chain[call_idx]['tckr'], chain[put_idx]['tckr'])
+                    options[strike] = (
+                        OptionContract(chain[call_idx]['tckr'], datamanager=self.dm, underlying=underlying_asset),
+                        OptionContract(chain[put_idx]['tckr'], datamanager=self.dm, underlying=underlying_asset)
+                    )
         return chain_result
 
-    def get_option_chains(self, underlying_tckr):
+    def get_option_chains(self, underlying_asset: ContractBase):
         """
         Fetch OptionChain object for particular underlying ticker
-        :param underlying_tckr: Full-qualified underlying ticker
+        :param underlying_asset: underlying contract instance
         :return: OptionChainList object
         """
 
-        chain_list = self.data_engine.db_get_option_chains(underlying_tckr)
+        chain_list = self.data_engine.db_get_option_chains(underlying_asset.ticker)
 
-        chain_result = self._process_raw_options_chains(chain_list)
+        chain_result = self._process_raw_options_chains(chain_list, underlying_asset)
 
-        return OptionChainList(chain_result, datamanager=self.dm)
-
-
+        return OptionChainList(chain_result, underlying=underlying_asset, datamanager=self.dm)
 
     def get_contract_info(self, tckr):
         """
