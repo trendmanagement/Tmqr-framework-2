@@ -84,6 +84,9 @@ class DataManager:
         self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
         self._secondary_positions[name] = pos
 
+        # Internal price cache for getting single quotes
+        self._price_cache = {}
+
     def series_align(self, primary_quotes, extra_quotes):
         # TODO: implement series alignment
         return extra_quotes
@@ -130,6 +133,17 @@ class DataManager:
         """
         return None
 
+    def _price_set_cached(self, asset, date, decision_px, exec_px):
+        """
+        Populate internal cache
+        :param asset: 
+        :param date: 
+        :param decision_px: 
+        :param exec_px: 
+        :return: 
+        """
+        pass
+
     def _price_get_from_datafeed(self, asset, date, **kwargs):
         """
         Fetch asset price directly from datafeed
@@ -143,7 +157,6 @@ class DataManager:
 
         decision_px, exec_px = self.datafeed.get_raw_prices(asset.ticker,
                                                             source_type=kw_source_type,
-                                                            at_date=date,
                                                             dt_list=[decision, execution],
                                                             timezone=kw_timezone,
                                                             date_start=decision,

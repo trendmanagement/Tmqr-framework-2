@@ -1,4 +1,7 @@
+import os
+import pickle
 import unittest
+from collections import OrderedDict
 from datetime import time
 from unittest import mock
 
@@ -284,3 +287,41 @@ class DataFeedTestCase(unittest.TestCase):
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720', SRC_INTRADAY,
                               [tz.localize(datetime(2008, 10, 10, 10, 39))], timezone='US/Pacific')
+
+    def test_get_options_chains(self):
+        fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es.pkl'))
+
+        with open(fn, 'rb') as f:
+            chain_list = pickle.load(f)
+
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_option_chains') as mock_db_get_option_chains:
+            with mock.patch('tmqrfeed.datafeed.OptionChainList') as mock_cls_chain_list:
+                mock_db_get_option_chains.return_value = chain_list
+                dfeed = DataFeed()
+                dfeed.dm = 'DM'
+
+                dfeed.get_option_chains("TEST")
+
+                self.assertEqual(True, mock_cls_chain_list.called)
+                optchain_call_args = mock_cls_chain_list.call_args[0][0]
+                self.assertEqual('DM', mock_cls_chain_list.call_args[1]['datamanager'])
+
+                self.assertEqual(OrderedDict, type(optchain_call_args))
+                self.assertEqual(3, len(optchain_call_args))
+
+                strike_count = 0
+                for k, v in optchain_call_args.items():
+                    self.assertEqual(datetime, type(k))
+                    self.assertEqual(OrderedDict, type(v))
+
+                    prev_strike = 0.0
+                    for strike, opts in v.items():
+                        strike_count += 1
+                        self.assertGreater(strike, prev_strike)
+                        self.assertTrue(f'@{strike}' in opts[0])
+                        self.assertTrue(f'@{strike}' in opts[1])
+                        self.assertTrue('.C.' in opts[0])
+                        self.assertTrue('.P.' in opts[1])
+                        prev_strike = strike
+
+                self.assertEqual(strike_count, 1110 / 2)

@@ -1,5 +1,5 @@
 import pickle
-from datetime import datetime, time
+from datetime import time
 
 import pandas as pd
 from pymongo import MongoClient
@@ -58,13 +58,13 @@ class DataEngineMongo(DataEngineBase):
         :param underlying_tckr: option's underlying contract tckr code (for example: future tckr code)
         :return: list of options aggregated chains
         """
-        cursor = self.db['asset_index'].aggregate([
+        cursor = self.db[COLLECTION_ASSET_INDEX].aggregate([
             {'$match': {
                 'underlying': underlying_tckr,
                 'type': {'$in': ['P', 'C']},
             }},
             {'$sort': {'strike': 1}},
-            {'$project': {'tckr': 1, 'exp': 1, 'strike': 1}},
+            {'$project': {'tckr': 1, 'exp': 1, 'strike': 1, 'type': 1}},
             {'$group': {
                 '_id': {'date': '$exp'},
                 'chain': {'$push': '$$ROOT'},

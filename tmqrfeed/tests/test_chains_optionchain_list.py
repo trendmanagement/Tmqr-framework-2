@@ -6,15 +6,17 @@ from collections import OrderedDict
 
 from tmqr.errors import *
 from tmqrfeed.chains import OptionChainList, OptionChain
+from tmqrfeed.manager import DataManager
 
 
 class ChainListTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es.pkl'))
+        cls.dm = DataManager()
 
         with open(fn, 'rb') as f:
-            cls.chain_list = pickle.load(f)
+            cls.chain_list = cls.dm.datafeed._process_raw_options_chains(pickle.load(f))
 
     def setUp(self):
         self.opt_chain = OptionChainList(self.chain_list)

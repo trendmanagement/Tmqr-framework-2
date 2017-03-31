@@ -5,7 +5,7 @@ import pytz
 import pyximport
 
 from tmqr.settings import *
-from tmqrfeed.chains import FutureChain
+from tmqrfeed.chains import FutureChain, OptionChainList
 from tmqrfeed.contractinfo import ContractInfo
 from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.instrumentinfo import InstrumentInfo
@@ -13,6 +13,7 @@ from tmqrfeed.instrumentinfo import InstrumentInfo
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.fast_data_handling import find_quotes
 from tmqr.errors import ArgumentError
+from collections import OrderedDict
 
 
 class DataFeed:
@@ -71,14 +72,48 @@ class DataFeed:
                            datamanager=self.dm,
                            **kwargs)
 
-    def get_option_chains(self, underlying_tckr, **kwargs):
+    def _process_raw_options_chains(self, chain_list):
+        """
+        Converting MongoDB option chains to OptionsChainList friendly format
+        :param chain_list: result of data_engine.db_get_option_chains()
+        :return: OrderedDict[ expiration, OrderedDict[strike, CallPutTickers] ]
+        """
+        chain_result = OrderedDict()
+        for exp in chain_list:
+            options = chain_result.setdefault(exp['_id']['date'], OrderedDict())
+
+            chain = exp['chain']
+            for i, strike_rec in enumerate(chain):
+                strike = strike_rec['strike']
+                if i == 0:
+                    continue
+
+                if strike == chain[i - 1]['strike']:
+                    # We have put call pair
+                    if strike_rec['type'] == 'C':
+                        call_idx = i
+                        put_idx = i - 1
+                    else:
+                        call_idx = i - 1
+                        put_idx = i
+
+                    options[strike] = (chain[call_idx]['tckr'], chain[put_idx]['tckr'])
+        return chain_result
+
+    def get_option_chains(self, underlying_tckr):
         """
         Fetch OptionChain object for particular underlying ticker
         :param underlying_tckr: Full-qualified underlying ticker
-        :param kwargs:
-        :return: OptionChain object
+        :return: OptionChainList object
         """
-        pass
+
+        chain_list = self.data_engine.db_get_option_chains(underlying_tckr)
+
+        chain_result = self._process_raw_options_chains(chain_list)
+
+        return OptionChainList(chain_result, datamanager=self.dm)
+
+
 
     def get_contract_info(self, tckr):
         """

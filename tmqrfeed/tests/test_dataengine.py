@@ -1,6 +1,6 @@
 import unittest
+from unittest.mock import patch
 
-from tmqr.errors import *
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import *
 
@@ -83,3 +83,30 @@ class DataEngineTestCase(unittest.TestCase):
         self.assertRaises(DataSourceNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', "NON_EXISTING_SOURCE")
 
         self.assertRaises(IntradayQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.N83.830622', SRC_INTRADAY)
+
+    def test_db_get_option_chains(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.aggregate') as mock_aggregate:
+            deng.db_get_option_chains('US.F.ES.H11.110318')
+
+            expected_query = [
+                {'$match': {
+                    'underlying': 'US.F.ES.H11.110318',
+                    'type': {'$in': ['P', 'C']},
+                }},
+
+                {'$sort': {'strike': 1}},
+
+                {'$project': {'tckr': 1, 'exp': 1, 'strike': 1, 'type': 1}
+                 },
+
+                {'$group': {
+                    '_id': {'date': '$exp'},
+                    'chain': {'$push': '$$ROOT'},
+                }
+                },
+                {'$sort': {"_id.date": 1}}
+            ]
+            self.assertEqual(expected_query, mock_aggregate.call_args[0][0])
+            pass

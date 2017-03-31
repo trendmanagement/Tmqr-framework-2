@@ -108,15 +108,18 @@ class OptionChainList:
     This class stores list of options chains with many expiration dates
     """
 
-    def __init__(self, chain_list):
+    def __init__(self, chain_list, datamanager=None):
         if chain_list is None or len(chain_list) == 0:
             raise ArgumentError("Empty 'chain_list' argument")
 
+        self.dm = datamanager
+
         self.chain_list = OrderedDict()
-        for c in chain_list:
-            self.chain_list[c['_id']['date']] = OptionChain(c)
+        for expiration, chain in chain_list.items():
+            self.chain_list[expiration] = OptionChain(chain, expiration, datamanager=self.dm)
 
         self._expirations = sorted(list(self.chain_list.keys()))
+
 
     def __len__(self):
         return len(self.chain_list)
@@ -169,8 +172,9 @@ class OptionChain:
     Main class for option chains data management.
     """
 
-    def __init__(self, option_chain_record):
-        self._expiration = option_chain_record['_id']['date']
+    def __init__(self, option_chain_record, expiration, datamanager=None):
+        self._expiration = expiration
+        self.dm = datamanager
 
     @property
     def expiration(self):
