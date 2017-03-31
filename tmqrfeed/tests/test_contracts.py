@@ -195,6 +195,9 @@ class ContractsTestCase(unittest.TestCase):
                     'execution': '10:45',
                     'start': '00:32'}]}
 
+            contract = ContractBase('US.F.ES.M83.830520', datamanager=dm)
+            self.assertRaises(NotImplementedError, contract.__getattribute__, 'data_source')
+
             contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
             self.assertEqual(SRC_INTRADAY, contract.data_source)
 

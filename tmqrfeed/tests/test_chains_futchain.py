@@ -151,6 +151,11 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 11, 16), df.iloc[1].date_end)
         self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_start)
 
+    def test_get_list_out_of_date(self):
+        chain = FutureChain(self.chain_tickers, self.ainfo, None)
+        self.assertRaises(ArgumentError, chain.get_list, datetime(2212, 5, 18))
+
+
     def test_get_list_limit(self):
         chain = FutureChain(self.chain_tickers, self.ainfo, None)
 

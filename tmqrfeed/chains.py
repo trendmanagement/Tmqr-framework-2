@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import date
+from datetime import date, time
 
 import numpy as np
 import pandas as pd
@@ -84,8 +84,8 @@ class FutureChain:
             df = df.head(limit)
 
         if len(df) == 0:
-            raise ArgumentError("Can't get futures chain at {0} limit: {1} offset: {2}. "
-                                "Too strict request or not enough data".format(date, limit, offset))
+            raise ArgumentError(
+                f"Can't get futures chain at {date} limit: {limit} offset: {offset}. Too strict request or not enough data")
 
         return df
 
@@ -117,13 +117,10 @@ class OptionChainList:
             raise ArgumentError("DataManager instance must be set")
 
         self.underlying = underlying
-        """Underlying contract instance of option chain"""
+
 
         if self.underlying is None:
             raise ArgumentError("Underlying asset in None")
-
-        if self.dm is None:
-            raise ArgumentError("DataManager instance must be set")
 
         self.chain_list = OrderedDict()
         for expiration, chain in chain_list.items():
@@ -146,9 +143,6 @@ class OptionChainList:
         for k, v in self.chain_list.items():
             yield k, v
 
-    def to_expiration_days(self, date):
-        return (self._expiration.date() - date.date()).days
-
     def find(self, by, **kwargs):
         """
         Find option chain by datetime, date, or offset
@@ -164,7 +158,7 @@ class OptionChainList:
             if isinstance(by, datetime):
                 return self.chain_list[by]
             elif isinstance(by, date):
-                dt = datetime.combine(by, datetime.min.time())
+                dt = datetime.combine(by, time(0, 0, 0))
                 return self.chain_list[dt]
             elif isinstance(by, (int, np.int32, np.int64)):
                 expiration = self._expirations[by]
@@ -200,52 +194,67 @@ class OptionChain:
     def expiration(self):
         return self._expiration
 
-    def __len__(self):
-        return len(self._strike_array)
-
-    def find(self, date, item, opttype, how='offset', limit=20, **kwargs):
+    def find(self, dt: datetime, item, opttype: str, how='offset', **kwargs):
         """
         Find option contract in chain using 'how' criteria
-        :param date: analysis date
+        :param dt: analysis date
         :param item: search value
         :param opttype: option type 'C' or 'P'
         :param how: search method
                     - 'offset' - by strike offset from ATM
                     - 'strike' - by strike absolute value
                     - 'delta'  - by delta                    
-        :param limit: number strikes to search (both sides from ATM strike)
-        :param kwargs: 
+        :param kwargs:
+            * how == 'offset' kwargs:
+                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5) 
         :return: OptionContract
         """
+        if not isinstance(dt, datetime):
+            raise ArgumentError("'dt' argument must be datetime")
+
+        if opttype.upper() not in ('C', 'P'):
+            raise ArgumentError("'opttype' argument must be 'C' or 'P'")
+
+
         if how == 'offset':
-            return self._find_by_offset(date, item, opttype, limit)
+            if not isinstance(item, (int, np.int32, np.int64)):
+                raise ArgumentError("'item' argument must be integer in the case of how=='offset'")
+
+            limit = kwargs.get('error_limit', 5)
+            return self._find_by_offset(dt, item, opttype.upper(), limit)
         else:
             raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
 
     def _get_atm_index(self, ulprice: float):
         return np.argmin(np.abs(self._strike_array - ulprice))
 
-    def _find_by_offset(self, date: datetime, item: int, opttype: str, limit: int):
+    def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5):
 
         # Fetching underlying price
-        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, date)
+        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, dt)
 
         atm_index = self._get_atm_index(ul_decision_px)
+
+        initial_item = item
 
         #
         # Perform strike search by index
         #
         is_not_found = False
         while True:
+            if initial_item != 0:
+                nerrors = abs(item) - abs(initial_item)
+                if nerrors >= error_limit:
+                    raise ChainNotFoundError(f"Couldn't get requested strike offset at {dt}."
+                                             f" QuoteNotFound errors limit reached: {nerrors} errors occurred.")
+
             if atm_index + item < 0 or atm_index + item > len(self._strike_array) - 1:
                 if is_not_found:
-                    raise ChainNotFoundError(
-                        "Failed to find options quotes while processing chain at {0}".format(self.underlying.date))
+                    raise ChainNotFoundError(f"Failed to find options quotes while processing chain at {dt}")
                 else:
-                    raise ChainNotFoundError("Strike offset is too low, "
-                                             "[{0}, {1}] values allowed".format(-atm_index,
-                                                                                len(
-                                                                                    self._strike_array) - atm_index - 1))
+                    raise ChainNotFoundError(f"Strike offset is too low, "
+                                             f"[{-atm_index}, {len(self._strike_array)-atm_index-1}] values allowed")
+
             strike = self._strike_array[atm_index + item]
             call_contract, put_contract = self._options[strike]
             try:
@@ -255,16 +264,35 @@ class OptionChain:
 
                 # Getting option price to check data availability (rises 'NotFoundError' if not)
                 # and populating pricing context for selected option
-                opt_decision_px, opt_exec_px = self.dm.price_get(selected_option, date)
+                opt_decision_px, opt_exec_px = self.dm.price_get(selected_option, dt)
 
                 # Set pricing context for option, this prevents extra DB calls
                 # Because we expect that selected option will be priced soon in the calling code
-                selected_option.set_pricing_context(date, ul_decision_px, ul_exec_px, opt_decision_px, opt_exec_px)
+                selected_option.set_pricing_context(dt, ul_decision_px, ul_exec_px, opt_decision_px, opt_exec_px)
                 return selected_option
             except NotFoundError:
                 is_not_found = True
                 # Searching next strike
-                if item >= 0:
-                    item += 1
+                if initial_item == 0:
+                    # If we need ATM strike we will perform bidirectional strike search
+                    # If ATM options data is missing we will search ATM+1
+                    # If ATM+1 still has no data we will search ATM-1
+                    # If ATM-1 still has no data we will raise ChainNotFoundError()
+                    if item == 0:
+                        # Search for strike ATM+1
+                        item = 1
+                    elif item == 1:
+                        # Search for strike ATM-1
+                        item = -1
+                    else:
+                        missing_strikes = [self._strike_array[atm_index + x] for x in [-1, 0, 1]]
+                        missing_options = [self._options[strike][0 if opttype == 'C' else 1] for strike in
+                                           missing_strikes]
+                        raise ChainNotFoundError(
+                            f"Couldn't find ATM strike data, data for "
+                            f"strikes {missing_options} is missing at {dt}.")
                 else:
-                    item -= 1
+                    if item > 0:
+                        item += 1
+                    else:
+                        item -= 1
