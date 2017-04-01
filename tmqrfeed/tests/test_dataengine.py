@@ -38,8 +38,8 @@ class DataEngineTestCase(unittest.TestCase):
             f = FutureContract(t['tckr'])
 
             if prev_exp is not None:
-                self.assertTrue(f.exp_date > prev_exp)
-            prev_exp = f.exp_date
+                self.assertTrue(f.expiration > prev_exp)
+            prev_exp = f.expiration
 
     def test_get_futures_chain_with_date_filter(self):
         deng = DataEngineMongo()
@@ -50,10 +50,10 @@ class DataEngineTestCase(unittest.TestCase):
             self.assertTrue('tckr' in t)
             f = FutureContract(t['tckr'])
 
-            self.assertTrue(f.exp_date.year >= 2012)
+            self.assertTrue(f.expiration.year >= 2012)
             if prev_exp is not None:
-                self.assertTrue(f.exp_date > prev_exp)
-            prev_exp = f.exp_date
+                self.assertTrue(f.expiration > prev_exp)
+            prev_exp = f.expiration
 
     def test_get_contract_info(self):
         deng = DataEngineMongo()

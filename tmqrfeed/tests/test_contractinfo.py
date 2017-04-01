@@ -61,7 +61,7 @@ class ContractInfoTestCase(unittest.TestCase):
         self.assertEqual(ci.instrument, 'US.CL')
         self.assertEqual(ci.underlying, 'US.CL')
         self.assertEqual(ci.market, 'US')
-        self.assertEqual(ci.exp_date, datetime(1983, 7, 20))
+        self.assertEqual(ci.expiration, datetime(1983, 7, 20))
 
     def test_init_bad_values(self):
         self.assertRaises(ValueError, ContractInfo, None)

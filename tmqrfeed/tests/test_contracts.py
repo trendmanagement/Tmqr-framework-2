@@ -47,12 +47,12 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.name, 'CLM83')
         self.assertEqual(contract.instrument, 'US.CL')
         self.assertEqual(contract.instrument, contract.underlying)
-        self.assertEqual(contract.exp_date, datetime(1983, 5, 20))
-        self.assertEqual(contract.exp_month, 6)
+        self.assertEqual(contract.expiration, datetime(1983, 5, 20))
+        self.assertEqual(contract.expiration_month, 6)
 
     def test_futurecontract_get_month_by_letter(self):
         contract = FutureContract('US.F.CL.M83.830520')
-        self.assertEqual(contract.exp_month, 6)
+        self.assertEqual(contract.expiration_month, 6)
 
         """
         http://www.cmegroup.com/month-codes.html

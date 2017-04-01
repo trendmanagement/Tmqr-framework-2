@@ -46,10 +46,10 @@ class FutChainTestCase(unittest.TestCase):
             prev_row = chain._futchain.iloc[i - 1]
             fut = row.name
 
-            self.assertTrue(fut.exp_month in [3, 6, 9, 12])
+            self.assertTrue(fut.expiration_month in [3, 6, 9, 12])
             self.assertEqual(True, row.date_end > row.date_start)
             self.assertEqual(True, row.date_start == prev_row.date_end)
-            self.assertEqual(True, row.date_end < fut.exp_date)
+            self.assertEqual(True, row.date_end < fut.expiration)
 
     def test_futures(self):
         chain = FutureChain(self.chain_tickers, self.ainfo, None)
@@ -70,10 +70,10 @@ class FutChainTestCase(unittest.TestCase):
             prev_row = chain._futchain.iloc[i - 1]
             fut = row.name
 
-            self.assertTrue(fut.exp_month in [3, 6])
+            self.assertTrue(fut.expiration_month in [3, 6])
             self.assertEqual(True, row.date_end > row.date_start)
             self.assertEqual(True, row.date_start == prev_row.date_end)
-            self.assertEqual(True, row.date_end < fut.exp_date)
+            self.assertEqual(True, row.date_end < fut.expiration)
 
         chain = FutureChain(self.chain_tickers, self.ainfo, None,
                             date_start=datetime(2012, 1, 1))

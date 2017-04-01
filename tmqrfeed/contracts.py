@@ -2,6 +2,9 @@ import warnings
 
 from tmqr.errors import ArgumentError
 from tmqr.settings import *
+import pyximport
+
+pyximport.install()
 from tmqrfeed.fast_option_pricing import blackscholes
 
 FLOAT_NAN = float('nan')
@@ -161,8 +164,8 @@ class FutureContract(ContractBase):
             raise ArgumentError("Contract type 'F' expected, but '{0}' given".format(self.ctype))
         if len(self._toks) != 5:
             raise ArgumentError("Future contract must have 5 tokens in ticker, like: US.F.CL.M83.830520")
-        self.exp_date = self._parse_expiration(self._toks[4])
-        self.exp_month = self._get_month_by_code(self._toks[3][0])
+        self.expiration = self._parse_expiration(self._toks[4])
+        self.expiration_month = self._get_month_by_code(self._toks[3][0])
 
     @property
     def name(self):
@@ -234,7 +237,7 @@ class OptionContract(ContractBase):
         if len(self._toks) != 5:
             raise ArgumentError("Option contract must have 5 tokens in ticker, like: US.C.F-ZB-H11-110322.110121@89.0")
 
-        self.exp_date = self._parse_expiration(self._toks[3])
+        self.expiration = self._parse_expiration(self._toks[3])
         self.strike = float(self._toks[4])
 
         self._underlying = kwargs.get('underlying', None)
@@ -296,7 +299,7 @@ class OptionContract(ContractBase):
         return self._pricing_context
 
     def to_expiration_days(self, date):
-        return (self.exp_date.date() - date.date()).days
+        return (self.expiration.date() - date.date()).days
 
     def to_expiration_years_from_days(self, days_to_expiration):
         return (days_to_expiration * 24.0 * 60 * 60) / 31536000.0
@@ -316,13 +319,14 @@ class OptionContract(ContractBase):
                 warnings.warn(f"{self.ticker}: WhatIF days to expiration greater than current!", stacklevel=0)
         rfr = option_risk_free_rate if riskfreerate is None else riskfreerate
 
-        ulprice = ul_decision_px if ulprice is None else ulprice
-        iv = option_decision_iv + iv_change
+        option_price_decision = self._calc_price(ul_decision_px if ulprice is None else ulprice,
+                                                 days_to_expiration,
+                                                 rfr,
+                                                 option_decision_iv + iv_change)
 
-        option_price_decision = self._calc_price(ulprice, days_to_expiration, rfr, iv)
-
-        ulprice = ul_exec_px if ulprice is None else ulprice
-        iv = option_exec_iv + iv_change
-        option_price_exec = self._calc_price(ulprice, days_to_expiration, rfr, iv)
+        option_price_exec = self._calc_price(ul_exec_px if ulprice is None else ulprice,
+                                             days_to_expiration,
+                                             rfr,
+                                             option_exec_iv + iv_change)
 
         return option_price_decision, option_price_exec

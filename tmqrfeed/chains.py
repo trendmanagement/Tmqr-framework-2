@@ -42,15 +42,15 @@ class FutureChain:
 
         for i, tckr in enumerate(raw_futures):
             fut = FutureContract(tckr, self.datamanager)
-            if fut.exp_month not in self.futures_months:
+            if fut.expiration_month not in self.futures_months:
                 continue
 
             if prev_fut is None:
                 prev_fut = fut
                 continue
             else:
-                series_date_start = prev_fut.exp_date - BDay(self.rollover_days_before)
-                series_date_end = fut.exp_date - BDay(self.rollover_days_before)
+                series_date_start = prev_fut.expiration - BDay(self.rollover_days_before)
+                series_date_end = fut.expiration - BDay(self.rollover_days_before)
                 fut.series_date_start = series_date_start
                 fut.series_date_end = series_date_end
                 chain.append({

@@ -52,7 +52,7 @@ class ContractInfo:
         return self._info_dic['mkt']
 
     @property
-    def exp_date(self):
+    def expiration(self):
         """
         Date of the expiration
         :return:
@@ -118,10 +118,10 @@ class ContractInfo:
             raise ContractInfoIntegrityError(str(contract) + " Instrument names mismatch")
 
         if self.ctype == 'F':
-            if contract.exp_date != self.exp_date:
+            if contract.expiration != self.expiration:
                 raise ContractInfoIntegrityError(str(contract) + " Expiration dates mismatch")
         elif self.ctype in ["C", "P"]:
-            if contract.exp_date != self.exp_date:
+            if contract.expiration != self.expiration:
                 raise ContractInfoIntegrityError(str(contract) + " Expiration dates mismatch")
             if contract.strike != self.strike:
                 raise ContractInfoIntegrityError(str(contract) + " Strike mismatch")
