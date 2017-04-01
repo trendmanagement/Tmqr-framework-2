@@ -1,7 +1,10 @@
+import warnings
+
 from tmqr.errors import ArgumentError
 from tmqr.settings import *
+from tmqrfeed.fast_option_pricing import blackscholes
 
-
+FLOAT_NAN = float('nan')
 
 class ContractBase:
     """
@@ -235,6 +238,7 @@ class OptionContract(ContractBase):
         self.strike = float(self._toks[4])
 
         self._underlying = kwargs.get('underlying', None)
+        self._pricing_context = None
 
     @property
     def name(self):
@@ -273,5 +277,52 @@ class OptionContract(ContractBase):
     def data_source(self):
         return self.instrument_info.data_options_src
 
-    def set_pricing_context(self, date, ul_decision_px, ul_exec_px, option_decision_px, option_exec_px):
-        pass
+    def set_pricing_context(self, date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv,
+                            risk_free_rate=0.0):
+        self._pricing_context = (date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, risk_free_rate)
+
+    def get_pricing_context(self, date):
+        if self._pricing_context is not None and self._pricing_context[0] == date:
+            # Trying to use cached pricing context
+            return self._pricing_context
+
+        # Fetching prices from data manager
+        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, date)
+        option_decision_iv, option_exec_iv = self.dm.price_get(self, date)
+        # TODO: get riskfree rate from DataManager
+        risk_free_rate = 0.0
+
+        self.set_pricing_context(date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, risk_free_rate)
+        return self._pricing_context
+
+    def to_expiration_days(self, date):
+        return (self.exp_date.date() - date.date()).days
+
+    def to_expiration_years_from_days(self, days_to_expiration):
+        return (days_to_expiration * 24.0 * 60 * 60) / 31536000.0
+
+    def _calc_price(self, ulprice, days_to_expiration, rfr, iv):
+        return blackscholes(1 if self.ctype == 'C' else 0, ulprice, self.strike,
+                            self.to_expiration_years_from_days(days_to_expiration),
+                            rfr, iv)
+
+    def price(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
+        date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, option_risk_free_rate = self.get_pricing_context(
+            date)
+
+        days_to_expiration = self.to_expiration_days(date) if days_to_expiration is None else days_to_expiration
+        if days_to_expiration is not None:
+            if days_to_expiration > self.to_expiration_days(date):
+                warnings.warn(f"{self.ticker}: WhatIF days to expiration greater than current!", stacklevel=0)
+        rfr = option_risk_free_rate if riskfreerate is None else riskfreerate
+
+        ulprice = ul_decision_px if ulprice is None else ulprice
+        iv = option_decision_iv + iv_change
+
+        option_price_decision = self._calc_price(ulprice, days_to_expiration, rfr, iv)
+
+        ulprice = ul_exec_px if ulprice is None else ulprice
+        iv = option_exec_iv + iv_change
+        option_price_exec = self._calc_price(ulprice, days_to_expiration, rfr, iv)
+
+        return option_price_decision, option_price_exec

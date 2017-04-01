@@ -76,6 +76,28 @@ class OptionChainTestCase(unittest.TestCase):
         self.assertEqual('P', opt.ctype)
         self.assertEqual(525, opt.strike)
 
+    def test__find_by_offset__set_pricing_context_is_called(self):
+        def dm_price_get_sideeffect(asset, date):
+            if isinstance(asset, FutureContract):
+                return 500.0, 501.0
+            if isinstance(asset, OptionContract):
+                if asset.ctype == 'C':
+                    return 0.25, 0.26
+                else:
+                    return 0.15, 0.16
+
+        self.opt_chain.dm = MagicMock(self.opt_chain.dm)
+        self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
+        with patch('tmqrfeed.contracts.OptionContract.set_pricing_context') as mock_set_pricing_context:
+            opt = self.opt_chain._find_by_offset(datetime.datetime(2011, 1, 19, 0, 0), 0, 'C', 10)
+            self.assertEqual(True, mock_set_pricing_context.called)
+
+            call_args = (datetime.datetime(2011, 1, 19, 0, 0), 500.0, 501.0, 0.25, 0.26)
+            self.assertEqual(call_args, mock_set_pricing_context.call_args[0])
+
+
+
+
     def test__find_by_offset_invalid_notfound_strike_nonatm(self):
         def dm_price_get_sideeffect(asset, date):
             if isinstance(asset, FutureContract):
