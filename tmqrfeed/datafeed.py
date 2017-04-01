@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import numpy as np
 import pytz
 import pyximport
@@ -13,8 +11,9 @@ from tmqrfeed.instrumentinfo import InstrumentInfo
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.fast_data_handling import find_quotes
-from tmqr.errors import ArgumentError
+from tmqr.errors import ArgumentError, OptionsEODQuotesNotFoundError
 from collections import OrderedDict
+from datetime import datetime, time, timedelta
 
 
 class DataFeed:
@@ -172,5 +171,15 @@ class DataFeed:
 
             quotes_tuple_arr = find_quotes(dfseries, dt_list)
             return [px for dt, px in quotes_tuple_arr]
+        elif qtype == QTYPE_OPTIONS_EOD:
+            data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
+            if data_options_use_prev_date:
+                dfseries = dfseries.shift(1)
+
+            # TODO: save series to cache
+            try:
+                return [dfseries.at[datetime.combine(d.date(), time(0, 0, 0)), 'iv'] for d in dt_list]
+            except KeyError:
+                raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
         else:
             raise NotImplementedError("Quote type is not implemented yet.")

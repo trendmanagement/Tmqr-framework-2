@@ -153,6 +153,7 @@ class DataManager:
         iinfo = asset.instrument_info
         kw_source_type = kwargs.get('source_type', asset.data_source)
         kw_timezone = kwargs.get('timezone', iinfo.timezone)
+        kw_data_options_use_prev_date = kwargs.get('data_options_use_prev_date', iinfo.data_options_use_prev_date)
 
         start, decision, execution, next_sess_date = iinfo.session.get(date)
 
@@ -161,7 +162,8 @@ class DataManager:
                                                             dt_list=[decision, execution],
                                                             timezone=kw_timezone,
                                                             date_start=decision,
-                                                            date_end=execution
+                                                            date_end=execution,
+                                                            data_options_use_prev_date=kw_data_options_use_prev_date
                                                             )
 
         return decision_px, exec_px

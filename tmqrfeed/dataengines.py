@@ -115,9 +115,23 @@ class DataEngineMongo(DataEngineBase):
     def db_get_raw_series(self, tckr, source_type, **kwargs):
         if source_type == SRC_INTRADAY:
             return self._source_intraday_get_series(tckr, **kwargs)
-        else:
-            raise DataSourceNotFoundError("Unknown 'datasource' type")
+        if source_type == SRC_OPTIONS:
+            return self._source_options_eod_get_series(tckr, **kwargs)
 
+        raise DataSourceNotFoundError("Unknown 'datasource' type")
+
+    def _source_options_eod_get_series(self, tckr, **kwargs):
+        data = self.db[SRC_OPTIONS].find_one({'_id': tckr})
+        if data is None:
+            raise OptionsEODQuotesNotFoundError(f"No data found for {tckr} in options EOD database")
+
+        data['data'] = pickle.loads(data['data'])
+
+        if not isinstance(data['data'], pd.DataFrame):
+            raise DBDataCorruptionError(
+                f"{tckr} data is corrupted in {SRC_OPTIONS} collection, expected pd.DataFrame, got {type(data['data'])}")
+
+        return data, QTYPE_OPTIONS_EOD
 
     def _source_intraday_get_series(self, tckr, **kwargs):
         """
@@ -142,6 +156,11 @@ class DataEngineMongo(DataEngineBase):
         dframes_list = []
         for data in self.db[SRC_INTRADAY].find(request):
             df = pickle.loads(data['ohlc'])
+            if not isinstance(df, pd.DataFrame):
+                raise DBDataCorruptionError(
+                    f"{tckr} data is corrupted in {SRC_INTRADAY} collection at {data['dt']}, "
+                    f"expected pd.DataFrame, got {type(data['ohlc'])}")
+
             dframes_list.append(df)
 
         if len(dframes_list) == 0:

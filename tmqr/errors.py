@@ -21,11 +21,16 @@ class SettingsError(TMQRError):
 
 class NotFoundError(TMQRError):
     """
-    Raised then something is not found
+    Raised when something is not found
     """
     pass
 
 
+class DBDataCorruptionError(TMQRError):
+    """
+    Raised when data in the DB has different type than expected
+    """
+    pass
 
 class ContractInfoNotFound(NotFoundError):
     pass
@@ -67,6 +72,12 @@ class IntradayQuotesNotFoundError(NotFoundError):
     """
     pass
 
+
+class OptionsEODQuotesNotFoundError(NotFoundError):
+    """
+    Raised when quotes not found in EOD options source
+    """
+    pass
 
 class ChainNotFoundError(NotFoundError):
     """

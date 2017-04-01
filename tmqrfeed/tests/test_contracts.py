@@ -3,6 +3,7 @@ from unittest import mock
 
 from tmqrfeed.contracts import *
 from tmqrfeed.manager import DataManager
+from tmqrfeed.tests.shared_asset_info import ASSET_INFO
 
 
 class ContractsTestCase(unittest.TestCase):
@@ -16,10 +17,7 @@ class ContractsTestCase(unittest.TestCase):
         self.assertEqual(contract.name, 'AAPL')
         self.assertEqual(str(contract), contract.ticker)
 
-        def _get_source():
-            return contract.data_source
-
-        self.assertRaises(NotImplementedError, _get_source)
+        self.assertRaises(NotImplementedError, contract.__getattribute__, 'data_source')
 
     def test_contractbase_magic_funcs(self):
         contract = ContractBase('US.S.AAPL')
@@ -150,21 +148,7 @@ class ContractsTestCase(unittest.TestCase):
     def test_instrument_info(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             dm = DataManager()
-            eng_ainfo.return_value = {
-                'futures_months': [3, 6, 9, 12],
-                'instrument': 'US.ES',
-                'market': 'US',
-                'rollover_days_before': 2,
-                'ticksize': 0.25,
-                'tickvalue': 12.5,
-                'timezone': 'US/Pacific',
-                'data_futures_src': SRC_INTRADAY,
-                'data_options_src': SRC_OPTIONS,
-                'trading_session': [{
-                    'decision': '10:40',
-                    'dt': datetime(1900, 1, 1, 0, 0),
-                    'execution': '10:45',
-                    'start': '00:32'}]}
+            eng_ainfo.return_value = ASSET_INFO
 
             contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
 
@@ -179,21 +163,7 @@ class ContractsTestCase(unittest.TestCase):
     def test_quotes_source(self):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             dm = DataManager()
-            eng_ainfo.return_value = {
-                'futures_months': [3, 6, 9, 12],
-                'instrument': 'US.ES',
-                'market': 'US',
-                'rollover_days_before': 2,
-                'ticksize': 0.25,
-                'tickvalue': 12.5,
-                'timezone': 'US/Pacific',
-                'data_futures_src': SRC_INTRADAY,
-                'data_options_src': SRC_OPTIONS,
-                'trading_session': [{
-                    'decision': '10:40',
-                    'dt': datetime(1900, 1, 1, 0, 0),
-                    'execution': '10:45',
-                    'start': '00:32'}]}
+            eng_ainfo.return_value = ASSET_INFO
 
             contract = ContractBase('US.F.ES.M83.830520', datamanager=dm)
             self.assertRaises(NotImplementedError, contract.__getattribute__, 'data_source')

@@ -5,9 +5,11 @@ from collections import OrderedDict
 from datetime import time
 from unittest import mock
 
+import numpy as np
 import pandas as pd
 import pytz
 
+from tmqr.errors import *
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contractinfo import ContractInfo
@@ -16,6 +18,7 @@ from tmqrfeed.dataengines import DataEngineMongo
 from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.instrumentinfo import InstrumentInfo
 from tmqrfeed.manager import DataManager
+from tmqrfeed.tests.shared_asset_info import ASSET_INFO
 
 
 class DataFeedTestCase(unittest.TestCase):
@@ -41,21 +44,7 @@ class DataFeedTestCase(unittest.TestCase):
         self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL.US.S')
 
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
-            eng_ainfo.return_value = {
-                'futures_months': [3, 6, 9, 12],
-                'instrument': 'US.ES',
-                'market': 'US',
-                'rollover_days_before': 2,
-                'ticksize': 0.25,
-                'tickvalue': 12.5,
-                'timezone': 'US/Pacific',
-                'data_futures_src': SRC_INTRADAY,
-                'data_options_src': SRC_OPTIONS,
-                'trading_session': [{
-                    'decision': '10:40',
-                    'dt': datetime(1900, 1, 1, 0, 0),
-                    'execution': '10:45',
-                    'start': '00:32'}]}
+            eng_ainfo.return_value = ASSET_INFO
             ainfo = dfeed.get_instrument_info("US.ES")
             self.assertEqual(InstrumentInfo, type(ainfo))
             self.assertEqual('US.ES', ainfo.instrument)
@@ -71,21 +60,7 @@ class DataFeedTestCase(unittest.TestCase):
         dfeed = DataFeed()
 
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
-            eng_ainfo.return_value = {
-                'futures_months': [3, 6, 9, 12],
-                'instrument': 'US.ES',
-                'market': 'US',
-                'rollover_days_before': 2,
-                'ticksize': 0.25,
-                'tickvalue': 12.5,
-                'timezone': 'US/Pacific',
-                'data_futures_src': SRC_INTRADAY,
-                'data_options_src': SRC_OPTIONS,
-                'trading_session': [{
-                    'decision': '10:40',
-                    'dt': datetime(1900, 1, 1, 0, 0),
-                    'execution': '10:45',
-                    'start': '00:32'}]}
+            eng_ainfo.return_value = ASSET_INFO
             ainfo = dfeed.get_instrument_info("US.ES")
             self.assertEqual(True, eng_ainfo.called)
 
@@ -218,7 +193,7 @@ class DataFeedTestCase(unittest.TestCase):
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_series, 'US.F.CL.Q83.830720', SRC_INTRADAY)
 
-    def test_get_raw_price(self):
+    def test_get_raw_price_intraday(self):
         info_dic = {
             'futures_months': [3, 6, 9, 12],
             'instrument': 'US.ES',
@@ -285,6 +260,53 @@ class DataFeedTestCase(unittest.TestCase):
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720', SRC_INTRADAY,
                               [tz.localize(datetime(2008, 10, 10, 10, 39))], timezone='US/Pacific')
+
+    def test_get_raw_price_options_eod(self):
+        tz = pytz.timezone("US/Pacific")
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
+            base_date = datetime(2008, 10, 10)
+            data = [
+                {'dt': datetime(2011, 1, 1), 'iv': 1.0},
+                {'dt': datetime(2011, 1, 2), 'iv': 2.0},
+                {'dt': datetime(2011, 1, 3), 'iv': 3.0},
+                {'dt': datetime(2011, 1, 4), 'iv': 4.0},
+            ]
+            source_df = pd.DataFrame(data).set_index('dt')
+            mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
+            dfeed = DataFeed()
+
+            result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
+                                          SRC_OPTIONS,
+                                          [tz.localize(datetime(2011, 1, 1, 10, 39)),
+                                           tz.localize(datetime(2011, 1, 2, 10, 39))
+                                           ],
+                                          timezone=tz)
+            self.assertEqual(2, len(result))
+            self.assertEqual(result[0], 1)
+            self.assertEqual(result[1], 2)
+            #
+            # Quote not found error
+            #
+            self.assertRaises(OptionsEODQuotesNotFoundError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720',
+                              SRC_OPTIONS,
+                              [tz.localize(datetime(2011, 1, 10, 10, 39)),
+                               tz.localize(datetime(2011, 1, 20, 10, 39))
+                               ],
+                              timezone=tz)
+            #
+            # data_options_use_prev_date kwarg True
+            #
+            result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
+                                          SRC_OPTIONS,
+                                          [tz.localize(datetime(2011, 1, 1, 10, 39)),
+                                           tz.localize(datetime(2011, 1, 2, 10, 39))
+                                           ],
+                                          timezone=tz,
+                                          data_options_use_prev_date=True)
+            self.assertEqual(2, len(result))
+            self.assertTrue(np.isnan(result[0]))
+            self.assertEqual(result[1], 1)
+            #
 
     def test_get_options_chains(self):
         fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es.pkl'))

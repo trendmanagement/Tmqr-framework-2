@@ -84,6 +84,14 @@ class DataEngineTestCase(unittest.TestCase):
 
         self.assertRaises(IntradayQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.N83.830622', SRC_INTRADAY)
 
+    def test_get_raw_series_intraday_db_corruption_error(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.find') as mock_find:
+            mock_find.return_value = [{'ohlc': pickle.dumps('NON_DATAFRAME_OBJECT'), 'dt': '2015-01-01'}]
+
+            self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_INTRADAY)
+
     def test_db_get_option_chains(self):
         deng = DataEngineMongo()
 
@@ -110,3 +118,25 @@ class DataEngineTestCase(unittest.TestCase):
             ]
             self.assertEqual(expected_query, mock_aggregate.call_args[0][0])
             pass
+
+    def test_get_raw_series_eod_options(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.find_one') as mock_find_one:
+            mock_find_one.return_value = None
+            self.assertRaises(OptionsEODQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS)
+
+            mock_find_one.reset_mock()
+            mock_find_one.return_value = {'data': pickle.dumps('NON_DATAFRAME_OBJECT')}
+
+            self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS)
+
+            mock_find_one.reset_mock()
+            mock_find_one.return_value = {
+                'data': pickle.dumps(pd.DataFrame([{'iv': 0.1, 'dt': datetime(2011, 1, 1)}]).set_index('dt'))}
+
+            df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_OPTIONS)
+
+            self.assertEqual(dict, type(df))
+            self.assertEqual(pd.DataFrame, type(df['data']))
+            self.assertEqual(QTYPE_OPTIONS_EOD, qtype)

@@ -17,6 +17,7 @@ SRC_OPTIONS = 'quotes_options'
 QTYPE_INTRADAY = 1
 QTYPE_EOD = 2
 QTYPE_SINGLE = 3
+QTYPE_OPTIONS_EOD = 4
 
 #
 # Min-max range of quotes
