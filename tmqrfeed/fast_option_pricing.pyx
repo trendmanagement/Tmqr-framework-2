@@ -1,5 +1,5 @@
 import cython
-from libc.math cimport
+from libc.math cimport exp, log, sqrt
 
 @cython.cdivision(True)
 cdef float cnd(float d):
