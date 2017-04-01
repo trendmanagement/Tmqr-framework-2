@@ -5,9 +5,10 @@ from tmqr.settings import *
 import pyximport
 
 pyximport.install()
-from tmqrfeed.fast_option_pricing import blackscholes
+from tmqrfeed.fast_option_pricing import blackscholes, blackscholes_greeks, GREEK_DELTA
 
 FLOAT_NAN = float('nan')
+
 
 class ContractBase:
     """
@@ -144,9 +145,6 @@ class ContractBase:
         return self.ticker.__hash__()
 
 
-
-
-
 class FutureContract(ContractBase):
     """
     Future contract asset class
@@ -218,6 +216,7 @@ class FutureContract(ContractBase):
     def data_source(self):
         return self.instrument_info.data_futures_src
 
+
 class OptionContract(ContractBase):
     """
     Option contract asset class
@@ -282,9 +281,24 @@ class OptionContract(ContractBase):
 
     def set_pricing_context(self, date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv,
                             risk_free_rate=0.0):
+        """
+        Set recent date pricing context for option contract
+        :param date: 
+        :param ul_decision_px: 
+        :param ul_exec_px: 
+        :param option_decision_iv: 
+        :param option_exec_iv: 
+        :param risk_free_rate: 
+        :return: 
+        """
         self._pricing_context = (date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, risk_free_rate)
 
     def get_pricing_context(self, date):
+        """
+        Fetch pricing context for option contract from cache, otherwise from DataManager
+        :param date: 
+        :return: 
+        """
         if self._pricing_context is not None and self._pricing_context[0] == date:
             # Trying to use cached pricing context
             return self._pricing_context
@@ -299,17 +313,100 @@ class OptionContract(ContractBase):
         return self._pricing_context
 
     def to_expiration_days(self, date):
+        """
+        Calendar days to option expiration
+        :param date: 
+        :return: 
+        """
         return (self.expiration.date() - date.date()).days
 
     def to_expiration_years_from_days(self, days_to_expiration):
+        """
+        Calculate years to expriration from days
+        :param days_to_expiration: 
+        :return: 
+        """
         return (days_to_expiration * 24.0 * 60 * 60) / 31536000.0
 
     def _calc_price(self, ulprice, days_to_expiration, rfr, iv):
+        """
+        Price option contract using fast Black-Scholes algorithm
+        :param ulprice: 
+        :param days_to_expiration: 
+        :param rfr: 
+        :param iv: 
+        :return: option price (float)
+        """
         return blackscholes(1 if self.ctype == 'C' else 0, ulprice, self.strike,
                             self.to_expiration_years_from_days(days_to_expiration),
                             rfr, iv)
 
+    def _calc_greeks(self, ulprice, days_to_expiration, rfr, iv):
+        """
+        Calculate greeks using fast Black-Scholes algorithm
+        :param ulprice: 
+        :param days_to_expiration: 
+        :param rfr: 
+        :param iv: 
+        :return: 
+        """
+        return blackscholes_greeks(1 if self.ctype == 'C' else 0, ulprice, self.strike,
+                                   self.to_expiration_years_from_days(days_to_expiration),
+                                   rfr, iv)
+
+    def iv(self, date):
+        """
+        Get option IV for date
+        :param date: required date
+        :return: decision time IV
+        """
+        context = self.get_pricing_context(date)
+        return context[3]
+
+    def delta(self, date):
+        """
+        Get option delta greek at the decision time
+        :param date: 
+        :return: decision time greeks
+        """
+        return self.greeks(date)[GREEK_DELTA]
+
+    def greeks(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
+        """
+        Calculate option's greeks at the decision time 
+        :param date: 
+        :param ulprice: 
+        :param iv_change: 
+        :param days_to_expiration: 
+        :param riskfreerate: 
+        :return: tuple (decision_price, execution_price)
+        """
+        date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, option_risk_free_rate = self.get_pricing_context(
+            date)
+
+        days_to_expiration = self.to_expiration_days(date) if days_to_expiration is None else days_to_expiration
+        if days_to_expiration is not None:
+            if days_to_expiration > self.to_expiration_days(date):
+                warnings.warn(f"{self.ticker}: WhatIF days to expiration greater than current!", stacklevel=0)
+        rfr = option_risk_free_rate if riskfreerate is None else riskfreerate
+
+        option_greeks = self._calc_greeks(ul_decision_px if ulprice is None else ulprice,
+                                          days_to_expiration,
+                                          rfr,
+                                          option_decision_iv + iv_change)
+
+        return option_greeks
+
     def price(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
+        """
+        Calculate option's price (also could be used for WhatIF analysis)
+        :param date: 
+        :param ulprice: 
+        :param iv_change: 
+        :param days_to_expiration: 
+        :param riskfreerate: 
+        :return: tuple (decision_price, execution_price)
+        """
         date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, option_risk_free_rate = self.get_pricing_context(
             date)
 

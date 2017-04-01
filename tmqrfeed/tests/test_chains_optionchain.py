@@ -83,8 +83,6 @@ class OptionChainTestCase(unittest.TestCase):
             if isinstance(asset, OptionContract):
                 if asset.ctype == 'C':
                     return 0.25, 0.26
-                else:
-                    return 0.15, 0.16
 
         self.opt_chain.dm = MagicMock(self.opt_chain.dm)
         self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect

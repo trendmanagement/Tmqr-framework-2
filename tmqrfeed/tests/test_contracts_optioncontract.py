@@ -68,8 +68,6 @@ class OptionContractTestCase(unittest.TestCase):
             if isinstance(asset, OptionContract):
                 if asset.ctype == 'C':
                     return 0.25, 0.26
-                else:
-                    return 0.15, 0.16
 
         dm = mock.MagicMock(DataManager())
         dm.price_get.side_effect = dm_price_get_sideeffect
@@ -190,3 +188,100 @@ class OptionContractTestCase(unittest.TestCase):
                 self.assertEqual(2, len(mock__calc_price.call_args_list))
                 self.assertEqual((500, 1, 0.001, 0.15), mock__calc_price.call_args_list[0][0])
                 self.assertEqual((501, 1, 0.001, 0.16), mock__calc_price.call_args_list[1][0])
+
+    def test__calc_greeks(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.blackscholes_greeks') as mock_blacksholes_greeks:
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+            contract._calc_greeks(100, 20, 0.001, 0.23)
+            self.assertEqual(True, mock_blacksholes_greeks.called)
+            self.assertEqual(mock_blacksholes_greeks.call_args[0], (1,
+                                                                    100,
+                                                                    89.0,
+                                                                    contract.to_expiration_years_from_days(20),
+                                                                    0.001,
+                                                                    0.23
+                                                                    ))
+
+            mock_blacksholes_greeks.reset_mock()
+            contract = OptionContract('US.P.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+            contract._calc_greeks(100, 20, 0.001, 0.23)
+            self.assertEqual(True, mock_blacksholes_greeks.called)
+            self.assertEqual(mock_blacksholes_greeks.call_args[0], (0,
+                                                                    100,
+                                                                    89.0,
+                                                                    contract.to_expiration_years_from_days(20),
+                                                                    0.001,
+                                                                    0.23
+                                                                    ))
+
+    def test_greeks(self):
+        dm = mock.MagicMock(DataManager())
+
+        def sideeffect__calc_greeks(ulprice, days_to_expiration, rfr, iv):
+            return iv
+
+        with mock.patch('tmqrfeed.contracts.OptionContract.get_pricing_context') as mock_get_price_context:
+            mock_get_price_context.return_value = (datetime(2011, 1, 20), 500, 501, 0.25, 0.26, 0.001)
+
+            with mock.patch('tmqrfeed.contracts.OptionContract._calc_greeks') as mock__calc_greeks:
+                contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+                mock__calc_greeks.side_effect = sideeffect__calc_greeks
+
+                # Regular pricing
+                mock__calc_greeks.reset_mock()
+                decision_px = contract.greeks(datetime(2011, 1, 20))
+                self.assertEqual(decision_px, 0.25)
+                self.assertEqual(1, len(mock__calc_greeks.call_args_list))
+                self.assertEqual((500, 1, 0.001, 0.25), mock__calc_greeks.call_args_list[0][0])
+
+                # Custom UL price
+                mock__calc_greeks.reset_mock()
+                decision_px = contract.greeks(datetime(2011, 1, 20), ulprice=200)
+                self.assertEqual(decision_px, 0.25)
+                self.assertEqual(1, len(mock__calc_greeks.call_args_list))
+                self.assertEqual((200, 1, 0.001, 0.25), mock__calc_greeks.call_args_list[0][0])
+
+                # Custom days to exp
+                mock__calc_greeks.reset_mock()
+                decision_px = contract.greeks(datetime(2011, 1, 20), days_to_expiration=20)
+                self.assertEqual(decision_px, 0.25)
+                self.assertEqual(1, len(mock__calc_greeks.call_args_list))
+                self.assertEqual((500, 20, 0.001, 0.25), mock__calc_greeks.call_args_list[0][0])
+
+                # Custom risk free rate
+                mock__calc_greeks.reset_mock()
+                decision_px = contract.greeks(datetime(2011, 1, 20), riskfreerate=0.1)
+                self.assertEqual(decision_px, 0.25)
+                self.assertEqual(1, len(mock__calc_greeks.call_args_list))
+                self.assertEqual((500, 1, 0.1, 0.25), mock__calc_greeks.call_args_list[0][0])
+
+                # Custom IV change
+                mock__calc_greeks.reset_mock()
+                decision_px = contract.greeks(datetime(2011, 1, 20), iv_change=-0.1)
+                self.assertEqual(decision_px, 0.15)
+                self.assertEqual(1, len(mock__calc_greeks.call_args_list))
+                self.assertEqual((500, 1, 0.001, 0.15), mock__calc_greeks.call_args_list[0][0])
+
+    def test_iv(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.OptionContract.get_pricing_context') as mock_get_price_context:
+            mock_get_price_context.return_value = (datetime(2011, 1, 20), 500, 501, 0.25, 0.26, 0.001)
+
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+
+            self.assertEqual(contract.iv(datetime(2011, 1, 20)), 0.25)
+            self.assertEqual(mock_get_price_context.called, True)
+
+    def test_delta(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.OptionContract.greeks') as mock_greeks:
+            mock_greeks.return_value = (0.5,)
+
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+
+            self.assertEqual(contract.delta(datetime(2011, 1, 20)), 0.5)
+            self.assertEqual(mock_greeks.called, True)

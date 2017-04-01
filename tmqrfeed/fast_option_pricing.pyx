@@ -1,6 +1,8 @@
 import cython
 from libc.math cimport exp, log, sqrt
 
+GREEK_DELTA = 0
+
 @cython.cdivision(True)
 cdef float cnd(float d):
     cdef float a1 = 0.31938153
@@ -37,3 +39,24 @@ def blackscholes(int iscall, float ulprice, float strike, float toexpiry, float 
     else:
         bsPrice = strike * exp(-riskfreerate * toexpiry) * cnd(-d2) - ulprice * cnd(-d1)
     return bsPrice
+
+@cython.cdivision(True)
+def blackscholes_greeks(int iscall, float ulprice, float strike, float toexpiry, float riskfreerate, float iv):
+    if toexpiry <= 0:
+        # Calculate greeks at expiration
+        if iscall == 1:
+            delta = 1.0 if ulprice > strike else 0.0
+        else:
+            delta = -1.0 if ulprice < strike else 0.0
+        return (delta,)
+
+    d1 = (log(ulprice / strike) + (riskfreerate + iv * iv / 2) * toexpiry) / (iv * sqrt(toexpiry))
+    d2 = d1 - iv * sqrt(toexpiry)
+    if iscall == 1:
+        # Call greeks
+        call_delta = cnd(d1)
+        return (call_delta,)
+    else:
+        # put greeks
+        put_delta = -cnd(-d1)
+        return (put_delta,)
