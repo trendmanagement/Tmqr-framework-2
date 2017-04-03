@@ -23,7 +23,9 @@ class NotFoundError(TMQRError):
     """
     Raised when something is not found
     """
-    pass
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class DBDataCorruptionError(TMQRError):
@@ -83,7 +85,9 @@ class ChainNotFoundError(NotFoundError):
     """
     Raised when futures or options chains data not found
     """
-    pass
+
+    def __init__(self, *args, **kwargs):
+        self.option_offset_skipped = kwargs.get('option_offset_skipped', 0)
 
 
 class DataManagerError(TMQRError):

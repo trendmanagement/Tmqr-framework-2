@@ -54,18 +54,33 @@ class ChainListTestCase(unittest.TestCase):
 
     def test_chain_get_item_by_date(self):
         expiry = datetime.datetime(2011, 2, 18, 0, 0)
-        self.assertEqual(self.opt_chain.find(expiry.date()).expiration, expiry)
+
+        self.assertEqual(self.opt_chain.find(datetime.datetime(2011, 2, 11, 0, 0), expiry.date()).expiration, expiry)
 
     def test_chain_get_item_by_date_time(self):
         expiry = datetime.datetime(2011, 2, 18, 0, 0)
-        self.assertEqual(self.opt_chain.find(expiry).expiration, expiry)
+        self.assertEqual(self.opt_chain.find(datetime.datetime(2011, 2, 11, 0, 0), expiry).expiration, expiry)
 
     def test_chain_has_get_item_error_unexpected_item_type(self):
-        self.assertRaises(ValueError, self.opt_chain.find, 'wrong type')
+        self.assertRaises(ValueError, self.opt_chain.find, datetime.datetime(2011, 2, 11, 0, 0), 'wrong type')
 
     def test_chain_get_item_by_offset(self):
-        expiry = datetime.datetime(2011, 1, 21, 0, 0)
-        self.assertEqual(self.opt_chain.find(0).expiration, expiry)
+        expiry = datetime.datetime(2011, 2, 18, 0, 0)
+
+        self.assertEqual(self.opt_chain.find(datetime.datetime(2011, 2, 11, 0, 0), 0).expiration, expiry)
+
+    def test_chain_get_item_by_requested_expired(self):
+        self.assertRaises(ChainNotFoundError, self.opt_chain.find, datetime.datetime(2011, 4, 11, 0, 0), 0)
+
+    def test_chain_get_item_by_requested_chain_not_found_skipped_offset(self):
+        self.assertRaises(ChainNotFoundError, self.opt_chain.find, datetime.datetime(2011, 2, 11, 0, 0), 3)
+        try:
+            self.opt_chain.find(datetime.datetime(2011, 2, 11, 0, 0), 3)
+        except ChainNotFoundError as exc:
+            self.assertEqual(exc.option_offset_skipped, 2)
+
+
+
 
     def test_chain_repr(self):
         exp_str = ""

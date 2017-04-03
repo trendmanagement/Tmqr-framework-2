@@ -89,6 +89,10 @@ class ContractBase:
         return self.dm.datafeed.get_instrument_info(self.instrument)
 
     @staticmethod
+    def to_expiration_days(expiration_date, current_date):
+        return (expiration_date.date() - current_date.date()).days
+
+    @staticmethod
     def _parse(ticker):
         """
         Parses ticker and returns tokenized list of contract meta information
@@ -318,7 +322,7 @@ class OptionContract(ContractBase):
         :param date: 
         :return: 
         """
-        return (self.expiration.date() - date.date()).days
+        return super().to_expiration_days(self.expiration, date)
 
     def to_expiration_years_from_days(self, days_to_expiration):
         """

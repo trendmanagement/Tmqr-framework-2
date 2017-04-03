@@ -5,6 +5,7 @@ from tmqr.errors import *
 from tmqrfeed.contracts import *
 from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.manager import DataManager
+from tmqrfeed.chains import *
 
 
 class DataManagerTestCase(unittest.TestCase):
@@ -125,4 +126,284 @@ class DataManagerTestCase(unittest.TestCase):
         dm = DataManager()
         fut = FutureContract('US.F.CL.G12.120120', datamanager=dm)
 
-        dm._price_get_from_datafeed(fut, datetime(2012, 1, 9))
+        dm._price_get_from_datafeed(fut, datetime.datetime(2012, 1, 9))
+
+    def test_chains_get(self):
+        def mock_opt_chain_find_sideeffect(opt_offset, **kwargs):
+            return (opt_offset, kwargs.get('min_days', -1))
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
+            with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
+                dm = DataManager()
+
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                mock_fut_chain = MagicMock(spec=FutureChain)
+                mock_get_fut_chain.return_value = mock_fut_chain
+
+                # err_count = 0
+                # while True:
+                #    try:
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                mock_fut_contract = MagicMock()
+                mock_fut_chain.get_contract.return_value = mock_fut_contract
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                mock_opt_chain_list = MagicMock(spec=OptionChainList)
+                mock_get_option_chains.return_value = mock_opt_chain_list
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                mock_opt_chain_list.find.side_effect = mock_opt_chain_find_sideeffect
+
+                #        return fut, option_chain
+                #    except ChainNotFoundError as exc:
+                #        err_count += 1
+                #        fut_offset += 1
+                #        opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                #        if err_count == error_limit:
+                #            # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                #            raise ChainNotFoundError(f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")
+
+                result = dm.chains_find("TEST", datetime.datetime(2011, 1, 1))
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                self.assertEqual(True, mock_get_fut_chain.called)
+                self.assertEqual("TEST", mock_get_fut_chain.call_args[0][0])
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                self.assertEqual(True, mock_fut_chain.get_contract.called)
+                self.assertEqual((datetime.datetime(2011, 1, 1), 0), mock_fut_chain.get_contract.call_args[0])
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                self.assertEqual(True, mock_get_option_chains.called)
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                #        return fut, option_chain
+                self.assertEqual(0, result[1][0])  # opt_offset
+                self.assertEqual(2, result[1][1])  # min_days=opt_min_days
+                self.assertEqual(mock_fut_contract, result[0])
+
+    def test_chains_get_error_limit(self):
+        def mock_opt_chain_find_sideeffect(opt_offset, **kwargs):
+            if opt_offset == 0:
+                raise ChainNotFoundError()
+
+            return (opt_offset, kwargs.get('min_days', -1))
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
+            with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
+                dm = DataManager()
+
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                mock_fut_chain = MagicMock(spec=FutureChain)
+                mock_get_fut_chain.return_value = mock_fut_chain
+
+                # err_count = 0
+                # while True:
+                #    try:
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                mock_fut_contract = MagicMock()
+                mock_fut_chain.get_contract.return_value = mock_fut_contract
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                mock_opt_chain_list = MagicMock(spec=OptionChainList)
+                mock_get_option_chains.return_value = mock_opt_chain_list
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                mock_opt_chain_list.find.side_effect = mock_opt_chain_find_sideeffect
+
+                #        return fut, option_chain
+                #    except ChainNotFoundError as exc:
+                #        err_count += 1
+                #        fut_offset += 1
+                #        opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                #        if err_count == error_limit:
+                #            # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                #            raise ChainNotFoundError(f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")
+
+                self.assertRaises(ChainNotFoundError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1))
+
+    def test_chains_get_next_future(self):
+        def mock_opt_chain_find_sideeffect(opt_offset, **kwargs):
+            return (opt_offset, kwargs.get('min_days', -1))
+
+        def mock_fut_chain__get_contract_sideeffect(date, fut_offset):
+            if fut_offset == 0:
+                raise ChainNotFoundError()
+            return f'FUT{fut_offset}'
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
+            with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
+                dm = DataManager()
+
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                mock_fut_chain = MagicMock(spec=FutureChain)
+                mock_get_fut_chain.return_value = mock_fut_chain
+
+                # err_count = 0
+                # while True:
+                #    try:
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                mock_fut_contract = MagicMock()
+                mock_fut_chain.get_contract.side_effect = mock_fut_chain__get_contract_sideeffect
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                mock_opt_chain_list = MagicMock(spec=OptionChainList)
+                mock_get_option_chains.return_value = mock_opt_chain_list
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                mock_opt_chain_list.find.side_effect = mock_opt_chain_find_sideeffect
+
+                #        return fut, option_chain
+                #    except ChainNotFoundError as exc:
+                #        err_count += 1
+                #        fut_offset += 1
+                #        opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                #        if err_count == error_limit:
+                #            # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                #            raise ChainNotFoundError(f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")
+
+                result = dm.chains_find("TEST", datetime.datetime(2011, 1, 1))
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                self.assertEqual(True, mock_get_fut_chain.called)
+                self.assertEqual("TEST", mock_get_fut_chain.call_args[0][0])
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                self.assertEqual(True, mock_fut_chain.get_contract.called)
+                self.assertEqual((datetime.datetime(2011, 1, 1), 1), mock_fut_chain.get_contract.call_args[0])
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                self.assertEqual(True, mock_get_option_chains.called)
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                #        return fut, option_chain
+                self.assertEqual(0, result[1][0])  # opt_offset
+                self.assertEqual(2, result[1][1])  # min_days=opt_min_days
+                self.assertEqual('FUT1', result[0])
+
+    def test_chains_get_kwargs(self):
+        def mock_opt_chain_find_sideeffect(opt_offset, **kwargs):
+            return (opt_offset, kwargs.get('min_days', -1))
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
+            with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
+                dm = DataManager()
+
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                mock_fut_chain = MagicMock(spec=FutureChain)
+                mock_get_fut_chain.return_value = mock_fut_chain
+
+                # err_count = 0
+                # while True:
+                #    try:
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                mock_fut_contract = MagicMock()
+                mock_fut_chain.get_contract.return_value = mock_fut_contract
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                mock_opt_chain_list = MagicMock(spec=OptionChainList)
+                mock_get_option_chains.return_value = mock_opt_chain_list
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                mock_opt_chain_list.find.side_effect = mock_opt_chain_find_sideeffect
+
+                #        return fut, option_chain
+                #    except ChainNotFoundError as exc:
+                #        err_count += 1
+                #        fut_offset += 1
+                #        opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                #        if err_count == error_limit:
+                #            # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                #            raise ChainNotFoundError(f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")
+
+                """
+                :param kwargs: 
+                - 'fut_offset' - future expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+                - 'opt_offset' - option expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+                - 'opt_min_days' - minimal days count until option expiration (default: 2)
+                - 'error_limit' - ChainNotFoundError error limit, useful to increase when you are trying to get far 'opt_offset' (default: 3)
+                """
+                result = dm.chains_find("TEST", datetime.datetime(2011, 1, 1), fut_offset=2, opt_offset=3,
+                                        opt_min_days=4)
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                self.assertEqual(True, mock_get_fut_chain.called)
+                self.assertEqual("TEST", mock_get_fut_chain.call_args[0][0])
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                self.assertEqual(True, mock_fut_chain.get_contract.called)
+                self.assertEqual((datetime.datetime(2011, 1, 1), 2), mock_fut_chain.get_contract.call_args[0])
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                self.assertEqual(True, mock_get_option_chains.called)
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                #        return fut, option_chain
+                self.assertEqual(3, result[1][0])  # opt_offset
+                self.assertEqual(4, result[1][1])  # min_days=opt_min_days
+                self.assertEqual(mock_fut_contract, result[0])
+
+    def test_chains_get_kwargs_errors_checks(self):
+
+        dm = DataManager()
+
+        """
+        :param kwargs: 
+        - 'fut_offset' - future expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+        - 'opt_offset' - option expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+        - 'opt_min_days' - minimal days count until option expiration (default: 2)
+        - 'error_limit' - ChainNotFoundError error limit, useful to increase when you are trying to get far 'opt_offset' (default: 3)
+        """
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), fut_offset=None)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), fut_offset=0.2)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), fut_offset=-1)
+
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_offset=None)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_offset=0.2)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_offset=-1)
+
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_min_days=None)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_min_days=0.2)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), opt_min_days=-1)
+
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), error_limit=None)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), error_limit=0)
+        self.assertRaises(ArgumentError, dm.chains_find, "TEST", datetime.datetime(2011, 1, 1), error_limit=-1)
+
+    def test_chains_get_option_offset_skipped(self):
+        def mock_opt_chain_find_sideeffect(opt_offset, **kwargs):
+            return (opt_offset, kwargs.get('min_days', -1))
+
+        def mock_fut_chain__get_contract_sideeffect(date, fut_offset):
+            if fut_offset == 0:
+                raise ChainNotFoundError(option_offset_skipped=2)
+            return f'FUT{fut_offset}'
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
+            with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
+                dm = DataManager()
+
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                mock_fut_chain = MagicMock(spec=FutureChain)
+                mock_get_fut_chain.return_value = mock_fut_chain
+
+                # err_count = 0
+                # while True:
+                #    try:
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                mock_fut_contract = MagicMock()
+                mock_fut_chain.get_contract.side_effect = mock_fut_chain__get_contract_sideeffect
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                mock_opt_chain_list = MagicMock(spec=OptionChainList)
+                mock_get_option_chains.return_value = mock_opt_chain_list
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                mock_opt_chain_list.find.side_effect = mock_opt_chain_find_sideeffect
+
+                #        return fut, option_chain
+                #    except ChainNotFoundError as exc:
+                #        err_count += 1
+                #        fut_offset += 1
+                #        opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                #        if err_count == error_limit:
+                #            # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                #            raise ChainNotFoundError(f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")
+
+                result = dm.chains_find("TEST", datetime.datetime(2011, 1, 1), opt_offset=6)
+                # fut_chain = self.datafeed.get_fut_chain(instrument)
+                self.assertEqual(True, mock_get_fut_chain.called)
+                self.assertEqual("TEST", mock_get_fut_chain.call_args[0][0])
+                #        fut = fut_chain.get_contract(date, fut_offset)
+                self.assertEqual(True, mock_fut_chain.get_contract.called)
+                self.assertEqual((datetime.datetime(2011, 1, 1), 1), mock_fut_chain.get_contract.call_args[0])
+                #        opt_chain_list = self.datafeed.get_option_chains(fut)
+                self.assertEqual(True, mock_get_option_chains.called)
+                #        option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                #        return fut, option_chain
+                self.assertEqual(4, result[1][0])  # opt_offset
+                self.assertEqual(2, result[1][1])  # min_days=opt_min_days
+                self.assertEqual('FUT1', result[0])

@@ -11,7 +11,7 @@ from tmqrfeed.instrumentinfo import InstrumentInfo
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.fast_data_handling import find_quotes
-from tmqr.errors import ArgumentError, OptionsEODQuotesNotFoundError
+from tmqr.errors import ArgumentError, OptionsEODQuotesNotFoundError, ChainNotFoundError
 from collections import OrderedDict
 from datetime import datetime, time, timedelta
 
@@ -64,7 +64,8 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        chain_dict = self.data_engine.db_get_futures_chain(instrument, QDATE_MIN)
+        chain_dict = self.data_engine.db_get_futures_chain(instrument, self.date_start - timedelta(days=180))
+
         asset_info = self.get_instrument_info(instrument)
         default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
 
@@ -72,9 +73,9 @@ class DataFeed:
         futures_months = kwargs.pop('futures_months', default_fut_months)
 
         return FutureChain([x['tckr'] for x in chain_dict],
+                           datamanager=self.dm,
                            rollover_days_before=rollover_days_before,
                            futures_months=futures_months,
-                           datamanager=self.dm,
                            **kwargs)
 
     def _process_raw_options_chains(self, chain_list, underlying_asset: ContractBase):
@@ -117,6 +118,9 @@ class DataFeed:
         """
 
         chain_list = self.data_engine.db_get_option_chains(underlying_asset.ticker)
+
+        if len(chain_list) == 0:
+            raise ChainNotFoundError(f"Couldn't find options chains in DB for {underlying_asset}")
 
         chain_result = self._process_raw_options_chains(chain_list, underlying_asset)
 

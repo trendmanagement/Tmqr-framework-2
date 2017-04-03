@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from datetime import date, time
 
 import numpy as np
 import pandas as pd
@@ -9,6 +8,8 @@ from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError
 from tmqr.settings import *
 from tmqrfeed.contracts import FutureContract, ContractBase
 import warnings
+import datetime
+
 
 class FutureChain:
     """
@@ -56,6 +57,10 @@ class FutureChain:
 
         for i, tckr in enumerate(raw_futures):
             fut = FutureContract(tckr, self.datamanager)
+
+            #
+            # Check expiration months filter
+            #
             if fut.expiration_month not in self.futures_months:
                 continue
 
@@ -77,7 +82,7 @@ class FutureChain:
         df = pd.DataFrame(chain).set_index('ticker')
         return df[df.date_end > date_start]
 
-    def get_list(self, date, offset=0, limit=0):
+    def get_list(self, date: datetime, offset: int = 0, limit: int = 0):
         """
         Returns list of actual futures contracts for particular date
         :param date: actual date
@@ -98,7 +103,7 @@ class FutureChain:
             df = df.head(limit)
 
         if len(df) == 0:
-            raise ArgumentError(
+            raise ChainNotFoundError(
                 f"Can't get futures chain at {date} limit: {limit} offset: {offset}. Too strict request or not enough data")
 
         return df
@@ -136,7 +141,6 @@ class OptionChainList:
 
         self.underlying = underlying
 
-
         if self.underlying is None:
             raise ArgumentError("Underlying asset in None")
 
@@ -165,28 +169,45 @@ class OptionChainList:
         for k, v in self.chain_list.items():
             yield k, v
 
-    def find(self, by, **kwargs):
+    def find(self, date: datetime, by, **kwargs):
         """
         Find option chain by datetime, date, or offset
         If no **kwargs are set, performs exact match by datetime, date, or offset
         Otherwise if **kwargs are set, performs SMART search where 'by' must be current datetime
+        :param date: current date
         :param by: lookup criteria
         :param kwargs:
             Keywords for SMART chains search:
             - min_days - ignore chains with days to expiration <= min_days
         :return:
         """
-        if len(kwargs) == 0:
-            if isinstance(by, datetime):
-                return self.chain_list[by]
-            elif isinstance(by, date):
-                dt = datetime.combine(by, time(0, 0, 0))
-                return self.chain_list[dt]
-            elif isinstance(by, (int, np.int32, np.int64)):
-                expiration = self._expirations[by]
-                return self.chain_list[expiration]
-            else:
-                raise ValueError('Unexpected item type, must be float or int')
+        if isinstance(by, datetime.datetime):
+            return self.chain_list[by]
+        elif isinstance(by, datetime.date):
+            dt = datetime.datetime.combine(by, datetime.time(0, 0, 0))
+            return self.chain_list[dt]
+        elif isinstance(by, (int, np.int32, np.int64)):
+            option_offset = by
+            min_days = kwargs.get('min_days', 0)
+            start_exp_idx = -1
+            for i, exp in enumerate(self._expirations):
+                if ContractBase.to_expiration_days(exp, date) > min_days:
+                    start_exp_idx = i
+                    break
+            if start_exp_idx == -1:
+                raise ChainNotFoundError(
+                    f"Couldn't find not expired options chains, with days to expiration > {min_days}")
+
+            if start_exp_idx + option_offset > len(self._expirations) - 1:
+                raise ChainNotFoundError(
+                    f"Couldn't find front+{option_offset} options chains, try to look next futures series",
+                    # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
+                    option_offset_skipped=len(self._expirations) - start_exp_idx)
+
+            expiration = self._expirations[start_exp_idx + option_offset]
+            return self.chain_list[expiration]
+        else:
+            raise ValueError('Unexpected item type, must be float or int')
 
     def __repr__(self):
         exp_str = ""
@@ -215,7 +236,6 @@ class OptionChain:
         if len(self._strike_array) == 0:
             raise ChainNotFoundError(f'Empty option chain for {underlying} at expiration: {expiration}')
 
-
     @property
     def expiration(self):
         """
@@ -235,30 +255,22 @@ class OptionChain:
                     - 'strike' - by strike absolute value
                     - 'delta'  - by delta        
                         Search option contract by delta value:
-                        If delta ==  0.5 - returns ATM call
-                        If delta == -0.5 - returns ATM put
-                
-                        If delta > 0.5 - returns ITM call near target delta
-                        If delta < -0.5 - returns ITM put near target delta
-                
-                        If delta > 0 and < 0.5 - returns OTM call
-                        If delta < 0 and > -0.5 - returns OTM put
-                
-                        If delta <= -1 or >= 1 or 0 - raises error
+                        If delta ==  0.5 - returns ATM call/put
+                        If delta > 0.5 - returns ITM call/put near target delta
+                        If delta < 0.5 - returns OTM call/put near target delta
         :param kwargs:
             * how == 'offset' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5) 
             * how == 'delta' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
-                - strike_limit - how many strikes to analyse from ATM
+                - strike_limit - how many strikes to analyse from ATM (default: 30)
         :return: OptionContract
         """
-        if not isinstance(dt, datetime):
+        if not isinstance(dt, datetime.datetime):
             raise ArgumentError("'dt' argument must be datetime")
 
         if opttype.upper() not in ('C', 'P'):
             raise ArgumentError("'opttype' argument must be 'C' or 'P'")
-
 
         if how == 'offset':
             if not isinstance(item, (int, np.int32, np.int64)):
@@ -330,7 +342,7 @@ class OptionChain:
             try:
                 contract = self._find_by_offset(dt, i, opttype, error_limit=1)
                 if (delta > 0.5 and abs(contract.delta(dt)) >= delta) or (
-                        delta < 0.5 and abs(contract.delta(dt)) <= delta):
+                                delta < 0.5 and abs(contract.delta(dt)) <= delta):
                     return contract
                 last_contract = contract
                 nerrors = 0
@@ -348,7 +360,6 @@ class OptionChain:
                                      f" Try to check delta value validity and data presence for {self.underlying}.")
 
         return last_contract
-
 
     def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5):
         """

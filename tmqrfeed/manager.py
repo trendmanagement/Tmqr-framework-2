@@ -29,7 +29,7 @@ class DataManager:
             datafeed_cls = kwargs.pop('datafeed_cls', DataFeed)
             feed = datafeed_cls(**kwargs, datamanager=self)
 
-        self.datafeed = feed
+        self.datafeed: DataFeed = feed
         """DataFeed instance for low-level data fetching"""
 
         # Quotes dataframe for primary series
@@ -175,12 +175,51 @@ class DataManager:
         :param instrument: Full-qualified instrument name
         :param date: current date
         :param kwargs: 
-            - 'fut_offset' - future offset, 0 - front month, +1 - front+1, etc. (default: 0)
-            - 'fut_months' - list of future contract expiration months to pick (default: inherit instrument settings)
-            - 'fut_min_days' - minimal days count until future expiration (default: inherit instrument settings)
-            
-            - 'opt_offset' - future offset, 0 - front month, +1 - front+1, etc. (default: 0)
-            - 'opt_min_days' - minimal days count until option expiration (default: inherit instrument settings)
+            - 'fut_offset' - future expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+            - 'opt_offset' - option expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
+            - 'opt_min_days' - minimal days count until option expiration (default: 2)
+            - 'error_limit' - ChainNotFoundError error limit, useful to increase when you are trying to get far 'opt_offset' (default: 3)
         :return: (tuple) FutureContract, OptionChain
         """
-        pass
+
+        fut_offset = kwargs.get('fut_offset', 0)
+        opt_offset = kwargs.get('opt_offset', 0)
+        opt_min_days = kwargs.get('opt_min_days', 2)
+        error_limit = kwargs.get('error_limit', 3)
+
+        if not isinstance(fut_offset, int) or fut_offset < 0:
+            raise ArgumentError(f"'fut_offset' must be int >= 0, got {type(fut_offset)} {fut_offset}")
+
+        if not isinstance(opt_offset, int) or opt_offset < 0:
+            raise ArgumentError(f"'opt_offset' must be int >= 0, got {type(opt_offset)} {opt_offset}")
+
+        if not isinstance(opt_min_days, int) or opt_min_days < 0:
+            raise ArgumentError(f"'opt_min_days' must be int  >= 0, got {type(opt_min_days)} {opt_min_days}")
+
+        if not isinstance(error_limit, int) or error_limit <= 0:
+            raise ArgumentError(f"'error_limit' must be int > 0, got {type(error_limit)} {error_limit}")
+
+        fut_chain = self.datafeed.get_fut_chain(instrument)
+        err_count = 0
+
+        while True:
+            try:
+                # Getting future contract by offset
+                fut = fut_chain.get_contract(date, fut_offset)
+                # Getting options chains list for the future
+                opt_chain_list = self.datafeed.get_option_chains(fut)
+                # Trying to find option with expiration by offset and days_to_exp > opt_min_days
+                option_chain = opt_chain_list.find(opt_offset, min_days=opt_min_days)
+                return fut, option_chain
+            except ChainNotFoundError as exc:
+                # Chain is not found, probably few days till expiration or no data
+                err_count += 1
+                # Try to seek next future contract
+                fut_offset += 1
+                # Taking into account options expiration that OK, but skipped by opt_offset
+                opt_offset = max(opt_offset - exc.option_offset_skipped, 0)
+
+                if err_count == error_limit:
+                    # Too many errors occurred, probably no data or very strict 'opt_offset' value
+                    raise ChainNotFoundError(
+                        f"Couldn't find suitable chain, error limit reached. Last error: {str(exc)}")

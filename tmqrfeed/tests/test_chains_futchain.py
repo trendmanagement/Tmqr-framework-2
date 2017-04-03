@@ -1,11 +1,12 @@
 import unittest
 
-from tmqr.errors import ArgumentError
+from tmqr.errors import *
 from tmqr.settings import *
 from tmqrfeed.chains import FutureChain
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.instrumentinfo import InstrumentInfo
 from tmqrfeed.tests.shared_asset_info import ASSET_INFO
+
 
 
 class FutChainTestCase(unittest.TestCase):
@@ -149,7 +150,7 @@ class FutChainTestCase(unittest.TestCase):
 
     def test_get_list_out_of_date(self):
 
-        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2212, 5, 18))
+        self.assertRaises(ChainNotFoundError, self.chain.get_list, datetime(2212, 5, 18))
 
     def test_get_list_limit(self):
 
@@ -210,7 +211,7 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
         self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
 
-        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2012, 5, 1), offset=3)
+        self.assertRaises(ChainNotFoundError, self.chain.get_list, datetime(2012, 5, 1), offset=3)
 
     def test_get(self):
 
