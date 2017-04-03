@@ -250,3 +250,142 @@ class OptionChainTestCase(unittest.TestCase):
             self.assertEqual(mock__find_by_offset.call_args[0][1], 0)
             self.assertEqual(mock__find_by_offset.call_args[0][2], 'C')
             self.assertEqual(mock__find_by_offset.call_args[0][3], 2)
+
+    def test__find_by_delta_valid(self):
+        def dm_price_get_sideeffect(asset, date):
+            if isinstance(asset, FutureContract):
+                return 1000, 1500
+            if isinstance(asset, OptionContract):
+                return 0.10, 0.15
+            raise NotImplementedError()
+
+        def blackscholes_greeks_sideeffect(iscall, ulprice, strike, toexpiry, riskfreerate, iv):
+            assert ulprice == 1000
+            assert iv == 0.10
+
+            if iscall == 1:
+                if strike <= 600 or strike >= 1400:
+                    raise OptionsEODQuotesNotFoundError()
+                delta = 1 - strike / (500.0 + 1500.0)
+                return (delta,)
+            elif iscall == 0:
+                if strike <= 600 or strike >= 1400:
+                    raise OptionsEODQuotesNotFoundError()
+                delta = -strike / (500.0 + 1500.0)
+                return (delta,)
+
+        # Checking mock delta algorithm for validity
+        self.assertEqual(0.5, blackscholes_greeks_sideeffect(1, 1000, 1000, 0, 0, 0.1)[0])
+        self.assertEqual(-0.5, blackscholes_greeks_sideeffect(0, 1000, 1000, 0, 0, 0.1)[0])
+
+        # ITM Call delta > 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(1, 1000, 900, 0, 0, 0.1)[0] > 0.5)
+        # OTM Call delta < 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(1, 1000, 1100, 0, 0, 0.1)[0] < 0.5)
+
+        # ITM Call delta > 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(0, 1000, 900, 0, 0, 0.1)[0] > -0.5)
+        # OTM Call delta < 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(0, 1000, 1100, 0, 0, 0.1)[0] < -0.5)
+
+        self.opt_chain.dm = MagicMock(self.opt_chain.dm)
+        self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
+
+        with patch('tmqrfeed.contracts.blackscholes_greeks') as mock_blacksholes_greeks:
+            mock_blacksholes_greeks.side_effect = blackscholes_greeks_sideeffect
+            dt = datetime.datetime(2011, 1, 19, 0, 0)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, 0, 'C', 10)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, 1, 'C', 10)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, float('nan'), 'C', 10)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.5, 'C', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('C', opt.ctype)
+            self.assertEqual(1000, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, -0.5, 'P', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('P', opt.ctype)
+            self.assertEqual(1000, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.65, 'P', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('P', opt.ctype)
+            self.assertEqual(1300, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.64925, 'P', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('P', opt.ctype)
+            self.assertEqual(1300, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.4, 'P', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('P', opt.ctype)
+            self.assertEqual(800, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.6, 'C', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('C', opt.ctype)
+            self.assertEqual(800, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.35, 'C', 10)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('C', opt.ctype)
+            self.assertEqual(1300, opt.strike)
+
+    def test__find_by_delta_error_limit(self):
+        def dm_price_get_sideeffect(asset, date):
+            if isinstance(asset, FutureContract):
+                return 1000, 1500
+            if isinstance(asset, OptionContract):
+                return 0.10, 0.15
+            raise NotImplementedError()
+
+        def blackscholes_greeks_sideeffect(iscall, ulprice, strike, toexpiry, riskfreerate, iv):
+            assert ulprice == 1000
+            assert iv == 0.10
+
+            if iscall == 1:
+                if strike <= 600 or strike >= 1400:
+                    raise OptionsEODQuotesNotFoundError()
+                delta = 1 - strike / (500.0 + 1500.0)
+                return (delta,)
+            elif iscall == 0:
+                if strike <= 600 or strike >= 1400:
+                    raise OptionsEODQuotesNotFoundError()
+                delta = -strike / (500.0 + 1500.0)
+                return (delta,)
+
+        # Checking mock delta algorithm for validity
+        self.assertEqual(0.5, blackscholes_greeks_sideeffect(1, 1000, 1000, 0, 0, 0.1)[0])
+        self.assertEqual(-0.5, blackscholes_greeks_sideeffect(0, 1000, 1000, 0, 0, 0.1)[0])
+
+        # ITM Call delta > 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(1, 1000, 900, 0, 0, 0.1)[0] > 0.5)
+        # OTM Call delta < 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(1, 1000, 1100, 0, 0, 0.1)[0] < 0.5)
+
+        # ITM Call delta > 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(0, 1000, 900, 0, 0, 0.1)[0] > -0.5)
+        # OTM Call delta < 0.5
+        self.assertTrue(blackscholes_greeks_sideeffect(0, 1000, 1100, 0, 0, 0.1)[0] < -0.5)
+
+        self.opt_chain.dm = MagicMock(self.opt_chain.dm)
+        self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
+
+        with patch('tmqrfeed.contracts.blackscholes_greeks') as mock_blacksholes_greeks:
+            mock_blacksholes_greeks.side_effect = blackscholes_greeks_sideeffect
+            dt = datetime.datetime(2011, 1, 19, 0, 0)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, 0, 'C', 10)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, 1, 'C', 10)
+            self.assertRaises(ArgumentError, self.opt_chain._find_by_delta, dt, float('nan'), 'C', 10)
+
+            self.assertRaises(ChainNotFoundError, self.opt_chain._find_by_delta, dt, 0.8, 'P', error_limit=5)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('P', opt.ctype)
+            self.assertEqual(800, opt.strike)
+
+            opt = self.opt_chain._find_by_delta(dt, 0.2, 'C', error_limit=5)
+            self.assertTrue(isinstance(opt, OptionContract))
+            self.assertEqual('C', opt.ctype)
+            self.assertEqual(1300, opt.strike)

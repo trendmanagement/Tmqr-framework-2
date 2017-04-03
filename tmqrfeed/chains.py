@@ -8,7 +8,7 @@ from pandas.tseries.offsets import BDay
 from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError
 from tmqr.settings import *
 from tmqrfeed.contracts import FutureContract, ContractBase
-
+import warnings
 
 class FutureChain:
     """
@@ -203,7 +203,18 @@ class OptionChain:
         :param how: search method
                     - 'offset' - by strike offset from ATM
                     - 'strike' - by strike absolute value
-                    - 'delta'  - by delta                    
+                    - 'delta'  - by delta        
+                        Search option contract by delta value:
+                        If delta ==  0.5 - returns ATM call
+                        If delta == -0.5 - returns ATM put
+                
+                        If delta > 0.5 - returns ITM call near target delta
+                        If delta < -0.5 - returns ITM put near target delta
+                
+                        If delta > 0 and < 0.5 - returns OTM call
+                        If delta < 0 and > -0.5 - returns OTM put
+                
+                        If delta <= -1 or >= 1 or 0 - raises error
         :param kwargs:
             * how == 'offset' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5) 
@@ -222,11 +233,127 @@ class OptionChain:
 
             limit = kwargs.get('error_limit', 5)
             return self._find_by_offset(dt, item, opttype.upper(), limit)
+        if how == 'delta':
+            if not isinstance(item, (float, np.float, np.double)):
+                raise ArgumentError("'item' argument must be float in the case of how=='delta'")
+
+            limit = kwargs.get('error_limit', 5)
+            return self._find_by_delta(dt, item, opttype.upper(), limit)
         else:
             raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
 
     def _get_atm_index(self, ulprice: float):
-        return np.argmin(np.abs(self._strike_array - ulprice))
+        return int(np.argmin(np.abs(self._strike_array - ulprice)))
+
+    def _find_by_delta(self, dt: datetime, delta: float, opttype: str, error_limit: int = 5):
+        """
+        Search option contract by delta value:
+        If delta ==  0.5 - returns ATM call/put
+        If delta > 0.5 - returns ITM call/put near target delta
+        If delta < 0.5 - returns OTM call/put near target delta
+        :param dt: calculation date
+        :param delta: delta to find (must be > 0 and < 1)
+        :param opttype: option type 'C' or 'P'
+        :param error_limit: 
+        :return: Option contract instance 
+        """
+
+        delta = abs(delta)
+        if delta <= 0 or delta >= 1 or np.isnan(delta):
+            raise ArgumentError("Delta values must be > 0 and < 1")
+
+        if delta == 0.5:
+            return self._find_by_offset(dt, 0, opttype, error_limit=error_limit)
+
+        # Fetching underlying price
+        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, dt)
+
+        atm_index = self._get_atm_index(ul_decision_px)
+        maxoffset = len(self._strike_array) - atm_index - 1
+        minoffset = -atm_index
+
+        if delta > 0.5 and opttype == 'P':
+            i = 1
+            nerrors = 0
+            # Search for ITM put
+            while i <= maxoffset:
+                try:
+                    contract = self._find_by_offset(dt, i, 'P', error_limit=1)
+                    if abs(contract.delta(dt)) >= delta:
+                        return contract
+                    nerrors = 0
+                except NotFoundError:
+                    # Catching data errors
+                    nerrors += 1
+                    if nerrors >= error_limit:
+                        raise ChainNotFoundError(f"Couldn't get requested strike by delta {delta} at {dt}."
+                                                 f" QuoteNotFound errors limit reached: {nerrors} errors occurred.")
+                i += 1
+
+            # Can't find suitable delta
+            last_option = self._find_by_offset(dt, maxoffset, 'P', error_limit=error_limit)
+            warnings.warn(
+                f"Can't find contract with delta: {delta} using last available contract in chain: {last_option}")
+            return last_option
+
+        if delta < 0.5 and opttype == 'P':
+            # Search for OTM put
+            i = -1
+            while i >= minoffset:
+                try:
+                    contract = self._find_by_offset(dt, i, 'P', error_limit=1)
+                    if abs(contract.delta(dt)) <= delta:
+                        return contract
+                except NotFoundError:
+                    # Catching data errors is the contract has custom strike
+                    pass
+                i -= 1
+
+            # Can't find suitable delta
+            last_option = self._find_by_offset(dt, minoffset, 'P', error_limit=1)
+            warnings.warn(
+                f"Can't find contract with delta: {delta} using last available contract in chain: {last_option}")
+            return last_option
+
+        if delta > 0.5 and opttype == 'C':
+            # Search for ITM call
+            i = -1
+            while i >= minoffset:
+                try:
+                    contract = self._find_by_offset(dt, i, 'C', error_limit=1)
+                    if contract.delta(dt) >= delta:
+                        return contract
+                except NotFoundError:
+                    # Catching data errors is the contract has custom strike
+                    pass
+
+                i -= 1
+
+            # Can't find suitable delta
+            last_option = self._find_by_offset(dt, minoffset, 'C', error_limit=1)
+            warnings.warn(
+                f"Can't find contract with delta: {delta} using last available contract in chain: {last_option}")
+            return last_option
+
+        if delta < 0.5 and opttype == 'C':
+            i = 1
+            # Search for OTM call
+            while i <= maxoffset:
+                try:
+                    contract = self._find_by_offset(dt, i, 'C', error_limit=1)
+                    if contract.delta(dt) <= delta:
+                        return contract
+                except NotFoundError:
+                    # Catching data errors is the contract has custom strike
+                    pass
+                i += 1
+
+            # Can't find suitable delta
+            last_option = self._find_by_offset(dt, maxoffset, 'C', error_limit=1)
+            warnings.warn(
+                f"Can't find contract with delta: {delta} using last available contract in chain: {last_option}")
+            return last_option
+
 
     def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5):
 
