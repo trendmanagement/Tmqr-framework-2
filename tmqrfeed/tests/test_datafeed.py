@@ -82,7 +82,7 @@ class DataFeedTestCase(unittest.TestCase):
                                            {'tckr': 'US.F.CL.J11.110322'},
                                            {'tckr': 'US.F.CL.K11.110419'}, ]
             dm = DataManager()
-            chain = dm.datafeed.get_fut_chain('US.CL')
+            chain = dm.datafeed.get_fut_chain('US.CL', rollover_days_before=2, futures_months=list(range(1, 12)))
             self.assertEqual(FutureChain, type(chain))
             for c in chain.get_all():
                 self.assertEqual(FutureContract, type(c))

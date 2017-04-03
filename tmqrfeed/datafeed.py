@@ -64,11 +64,16 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        chain_dict = self.data_engine.db_get_futures_chain(instrument,
-                                                           self.date_start - timedelta(days=180))
+        chain_dict = self.data_engine.db_get_futures_chain(instrument, QDATE_MIN)
+        asset_info = self.get_instrument_info(instrument)
+        default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
+
+        rollover_days_before = kwargs.pop('rollover_days_before', asset_info.rollover_days_before)
+        futures_months = kwargs.pop('futures_months', default_fut_months)
 
         return FutureChain([x['tckr'] for x in chain_dict],
-                           asset_info=self.get_instrument_info(instrument),
+                           rollover_days_before=rollover_days_before,
+                           futures_months=futures_months,
                            datamanager=self.dm,
                            **kwargs)
 

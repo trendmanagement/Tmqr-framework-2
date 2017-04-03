@@ -7,6 +7,7 @@ from tmqrfeed.contracts import FutureContract
 from tmqrfeed.instrumentinfo import InstrumentInfo
 from tmqrfeed.tests.shared_asset_info import ASSET_INFO
 
+
 class FutChainTestCase(unittest.TestCase):
     def setUp(self):
         self.info_dic = ASSET_INFO
@@ -36,14 +37,15 @@ class FutChainTestCase(unittest.TestCase):
                         'US.F.CL.Z12.121120',
                         ]
         self.chain_tickers = [x for x in self.tickers]
+        self.chain = FutureChain(self.chain_tickers, 'DM', rollover_days_before=2,
+                                 futures_months=[3, 6, 9, 12])
 
     def test_init(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        self.assertEqual('US.F.CL.M11.110520', chain._futchain.iloc[0].name.ticker)
-        for i in range(1, len(chain._futchain)):
-            row = chain._futchain.iloc[i]
-            prev_row = chain._futchain.iloc[i - 1]
+        self.assertEqual('US.F.CL.M11.110520', self.chain._futchain.iloc[0].name.ticker)
+        for i in range(1, len(self.chain._futchain)):
+            row = self.chain._futchain.iloc[i]
+            prev_row = self.chain._futchain.iloc[i - 1]
             fut = row.name
 
             self.assertTrue(fut.expiration_month in [3, 6, 9, 12])
@@ -51,15 +53,29 @@ class FutChainTestCase(unittest.TestCase):
             self.assertEqual(True, row.date_start == prev_row.date_end)
             self.assertEqual(True, row.date_end < fut.expiration)
 
+        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, None, rollover_days_before=2,
+                          futures_months=[3, 6, 9, 12])
+
+        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=None,
+                          futures_months=[3, 6, 9, 12])
+
+        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM',
+                          futures_months=[3, 6, 9, 12])
+
+        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=2,
+                          futures_months=None)
+
+        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=2)
+
     def test_futures(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
-        self.assertEqual(len(chain._futchain), len(chain.get_all()))
+        self.assertEqual(len(self.chain._futchain), len(self.chain.get_all()))
 
     def test_init_kwargs(self):
-        chain1 = FutureChain(self.chain_tickers, self.ainfo, None)
+        chain1 = FutureChain(self.chain_tickers, 'DM', rollover_days_before=2,
+                             futures_months=[3, 6, 9, 12])
         self.assertEqual('US.F.CL.M11.110520', chain1._futchain.iloc[0].name.ticker)
 
-        chain = FutureChain(self.chain_tickers, self.ainfo, None,
+        chain = FutureChain(self.chain_tickers, 'DM',
                             rollover_days_before=3,
                             futures_months=[3, 6])
         self.assertEqual('US.F.CL.M11.110520', chain._futchain.iloc[0].name.ticker)
@@ -75,18 +91,20 @@ class FutChainTestCase(unittest.TestCase):
             self.assertEqual(True, row.date_start == prev_row.date_end)
             self.assertEqual(True, row.date_end < fut.expiration)
 
-        chain = FutureChain(self.chain_tickers, self.ainfo, None,
-                            date_start=datetime(2012, 1, 1))
+        chain = FutureChain(self.chain_tickers, 'DM',
+                            date_start=datetime(2012, 1, 1), rollover_days_before=3,
+                            futures_months=[3, 6])
         self.assertEqual('US.F.CL.H12.120222', chain._futchain.iloc[0].name.ticker)
 
     def test_init_empty_or_none_tickers_list(self):
-        self.assertRaises(ArgumentError, FutureChain, None, self.ainfo, None)
-        self.assertRaises(ArgumentError, FutureChain, [], self.ainfo, None)
+        self.assertRaises(ArgumentError, FutureChain, None, 'DM', rollover_days_before=3,
+                          futures_months=[3, 6])
+        self.assertRaises(ArgumentError, FutureChain, [], 'DM', rollover_days_before=3,
+                          futures_months=[3, 6])
 
     def test_get_list(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        df = chain.get_list(datetime(2012, 5, 1))
+        df = self.chain.get_list(datetime(2012, 5, 1))
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -114,9 +132,8 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 8, 20), df.iloc[2].date_start)
 
     def test_get_list_datepicking_check(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        df = chain.get_list(datetime(2012, 5, 18))
+        df = self.chain.get_list(datetime(2012, 5, 18))
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -140,15 +157,13 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_start)
 
     def test_get_list_out_of_date(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
-        self.assertRaises(ArgumentError, chain.get_list, datetime(2212, 5, 18))
 
+        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2212, 5, 18))
 
     def test_get_list_limit(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        df = chain.get_list(datetime(2012, 5, 1), limit=2)
-        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), limit=-2)
+        df = self.chain.get_list(datetime(2012, 5, 1), limit=2)
+        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2012, 5, 1), limit=-2)
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -172,11 +187,10 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 5, 18), df.iloc[1].date_start)
 
     def test_get_list_offset(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        df = chain.get_list(datetime(2012, 5, 1), offset=1)
+        df = self.chain.get_list(datetime(2012, 5, 1), offset=1)
 
-        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), offset=-1)
+        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2012, 5, 1), offset=-1)
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -199,17 +213,16 @@ class FutChainTestCase(unittest.TestCase):
         self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
         self.assertEqual(datetime(2012, 5, 18), df.iloc[1].date_start)
 
-        df = chain.get_list(datetime(2012, 5, 1), offset=1, limit=1)
+        df = self.chain.get_list(datetime(2012, 5, 1), offset=1, limit=1)
         self.assertEqual(1, len(df))
         self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
         self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
         self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
 
-        self.assertRaises(ArgumentError, chain.get_list, datetime(2012, 5, 1), offset=3)
+        self.assertRaises(ArgumentError, self.chain.get_list, datetime(2012, 5, 1), offset=3)
 
     def test_get(self):
-        chain = FutureChain(self.chain_tickers, self.ainfo, None)
 
-        self.assertEqual(True, isinstance(chain.get_contract(datetime(2012, 5, 1)), FutureContract))
-        self.assertEqual('US.F.CL.M12.120522', chain.get_contract(datetime(2012, 5, 1)).ticker)
-        self.assertEqual('US.F.CL.U12.120822', chain.get_contract(datetime(2012, 5, 1), offset=1).ticker)
+        self.assertEqual(True, isinstance(self.chain.get_contract(datetime(2012, 5, 1)), FutureContract))
+        self.assertEqual('US.F.CL.M12.120522', self.chain.get_contract(datetime(2012, 5, 1)).ticker)
+        self.assertEqual('US.F.CL.U12.120822', self.chain.get_contract(datetime(2012, 5, 1), offset=1).ticker)

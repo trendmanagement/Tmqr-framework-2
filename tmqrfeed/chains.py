@@ -15,17 +15,24 @@ class FutureChain:
     Futures chain class
     """
 
-    def __init__(self, fut_tckr_list, asset_info, datamanager, **kwargs):
+    def __init__(self, fut_tckr_list, datamanager, **kwargs):
 
         if fut_tckr_list is None or len(fut_tckr_list) == 0:
             raise ArgumentError("Failed to initiate futures chain empty tickers list")
 
-        self.ainfo = asset_info
-        self.rollover_days_before = kwargs.get('rollover_days_before', self.ainfo.rollover_days_before)
-        default_fut_months = self.ainfo.get('futures_months', range(1, 12))
-        self.futures_months = kwargs.get('futures_months', default_fut_months)
+        self.rollover_days_before = kwargs.get('rollover_days_before', None)
+        if self.rollover_days_before is None:
+            raise ArgumentError("'rollover_days_before' kwarg is not set")
+
+        self.futures_months = kwargs.get('futures_months', None)
+        if self.futures_months is None:
+            raise ArgumentError("'futures_months' kwarg is not set")
+
         self.date_start = kwargs.get('date_start', None)
         self.datamanager = datamanager
+
+        if self.datamanager is None:
+            raise ArgumentError("'datamanager' is None")
 
         self._futchain = self._generatechain_list(fut_tckr_list)
 

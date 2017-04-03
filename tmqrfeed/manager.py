@@ -1,6 +1,7 @@
 from tmqr.errors import *
 from tmqrfeed.contracts import ContractBase
 from tmqrfeed.datafeed import DataFeed
+from datetime import datetime
 
 
 class DataManager:
@@ -167,3 +168,19 @@ class DataManager:
                                                             )
 
         return decision_px, exec_px
+
+    def chains_find(self, instrument: str, date: datetime, **kwargs):
+        """
+        Find future+option chain by given criteria
+        :param instrument: Full-qualified instrument name
+        :param date: current date
+        :param kwargs: 
+            - 'fut_offset' - future offset, 0 - front month, +1 - front+1, etc. (default: 0)
+            - 'fut_months' - list of future contract expiration months to pick (default: inherit instrument settings)
+            - 'fut_min_days' - minimal days count until future expiration (default: inherit instrument settings)
+            
+            - 'opt_offset' - future offset, 0 - front month, +1 - front+1, etc. (default: 0)
+            - 'opt_min_days' - minimal days count until option expiration (default: inherit instrument settings)
+        :return: (tuple) FutureContract, OptionChain
+        """
+        pass
