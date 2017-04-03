@@ -59,13 +59,8 @@ class FutChainTestCase(unittest.TestCase):
         self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=None,
                           futures_months=[3, 6, 9, 12])
 
-        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM',
-                          futures_months=[3, 6, 9, 12])
-
         self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=2,
                           futures_months=None)
-
-        self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, 'DM', rollover_days_before=2)
 
     def test_futures(self):
         self.assertEqual(len(self.chain._futchain), len(self.chain.get_all()))
@@ -91,10 +86,6 @@ class FutChainTestCase(unittest.TestCase):
             self.assertEqual(True, row.date_start == prev_row.date_end)
             self.assertEqual(True, row.date_end < fut.expiration)
 
-        chain = FutureChain(self.chain_tickers, 'DM',
-                            date_start=datetime(2012, 1, 1), rollover_days_before=3,
-                            futures_months=[3, 6])
-        self.assertEqual('US.F.CL.H12.120222', chain._futchain.iloc[0].name.ticker)
 
     def test_init_empty_or_none_tickers_list(self):
         self.assertRaises(ArgumentError, FutureChain, None, 'DM', rollover_days_before=3,

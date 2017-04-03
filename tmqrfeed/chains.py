@@ -15,20 +15,27 @@ class FutureChain:
     Futures chain class
     """
 
-    def __init__(self, fut_tckr_list, datamanager, **kwargs):
+    def __init__(self, fut_tckr_list, datamanager, rollover_days_before, futures_months, **kwargs):
+        """
+        Initiate Futures chain
+        :param fut_tckr_list: list of futures contracts full-qualified tickers        
+        :param datamanager: DataManager instance
+        :param rollover_days_before: rollover in days before future contract expiration
+        :param futures_months: list of tradable futures months
+        :param kwargs: 
+        """
 
         if fut_tckr_list is None or len(fut_tckr_list) == 0:
             raise ArgumentError("Failed to initiate futures chain empty tickers list")
 
-        self.rollover_days_before = kwargs.get('rollover_days_before', None)
+        self.rollover_days_before = rollover_days_before
         if self.rollover_days_before is None:
             raise ArgumentError("'rollover_days_before' kwarg is not set")
 
-        self.futures_months = kwargs.get('futures_months', None)
+        self.futures_months = futures_months
         if self.futures_months is None:
             raise ArgumentError("'futures_months' kwarg is not set")
 
-        self.date_start = kwargs.get('date_start', None)
         self.datamanager = datamanager
 
         if self.datamanager is None:
@@ -43,7 +50,7 @@ class FutureChain:
         :return:
         """
         prev_fut = None
-        date_start = QDATE_MIN if self.date_start is None else self.date_start
+        date_start = QDATE_MIN
 
         chain = []
 
@@ -107,6 +114,10 @@ class FutureChain:
         return df.iloc[0].name
 
     def get_all(self):
+        """
+        Get futures contracts list sorted by expiration date
+        :return: 
+        """
         return self._futchain.index
 
 
@@ -140,6 +151,10 @@ class OptionChainList:
 
     @property
     def expirations(self):
+        """
+        List of available expirations for options chains
+        :return: 
+        """
         return self._expirations
 
     def __iter__(self):
@@ -203,6 +218,10 @@ class OptionChain:
 
     @property
     def expiration(self):
+        """
+        Expiration date for option chain
+        :return: 
+        """
         return self._expiration
 
     def find(self, dt: datetime, item, opttype: str, how='offset', **kwargs):
@@ -229,6 +248,9 @@ class OptionChain:
         :param kwargs:
             * how == 'offset' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5) 
+            * how == 'delta' kwargs:
+                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
+                - strike_limit - how many strikes to analyse from ATM
         :return: OptionContract
         """
         if not isinstance(dt, datetime):
@@ -255,6 +277,11 @@ class OptionChain:
             raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
 
     def _get_atm_index(self, ulprice: float):
+        """
+        Find ATM index of strike array based on underlying price
+        :param ulprice: underlying price
+        :return: strike array index pointing to ATM strike
+        """
         return int(np.argmin(np.abs(self._strike_array - ulprice)))
 
     def _find_by_delta(self, dt: datetime, delta: float, opttype: str, error_limit: int = 5, strike_limit: int = 30):
@@ -267,7 +294,7 @@ class OptionChain:
         :param delta: delta to find (must be > 0 and < 1)
         :param opttype: option type 'C' or 'P'
         :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised
-        :param strike_limit: how many strikes to analyse
+        :param strike_limit: how many strikes to analyse from ATM
         :return: Option contract instance 
         """
 
@@ -324,6 +351,15 @@ class OptionChain:
 
 
     def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5):
+        """
+        Find option contract by offset from ATM
+        :param dt: current datetime
+        :param item: strike offset where 0 - ATM strike, +1 - ATM+1 strike above, -1 - ATM-1 strike below, etc...
+        :param opttype: option type 'P' or 'C'
+        :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised
+        :return: OptionContract instance
+        :rtype: OptionContract 
+        """
 
         # Fetching underlying price
         ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, dt)
