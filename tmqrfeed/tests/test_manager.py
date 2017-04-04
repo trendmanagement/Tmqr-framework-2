@@ -182,8 +182,6 @@ class DataManagerTestCase(unittest.TestCase):
             if opt_offset == 0:
                 raise ChainNotFoundError()
 
-            return (opt_offset, kwargs.get('min_days', -1))
-
         with patch('tmqrfeed.datafeed.DataFeed.get_fut_chain') as mock_get_fut_chain:
             with patch('tmqrfeed.datafeed.DataFeed.get_option_chains') as mock_get_option_chains:
                 dm = DataManager()
@@ -409,9 +407,86 @@ class DataManagerTestCase(unittest.TestCase):
                 self.assertEqual(2, result[1][1])  # min_days=opt_min_days
                 self.assertEqual('FUT1', result[0])
 
-    def test_data_management_debug(self):
-
+    def test__price_get_set_cached(self):
         dm = DataManager()
-        dt = pd.Timestamp('2011-12-01 10:40:00-0800')
-        for i in range(100):
-            fut, opt_chain = dm.chains_options_get('US.CL', dt, opt_offset=0)
+        fut = FutureContract('US.F.CL.G12.120120', datamanager=dm)
+        stk = ContractBase('US.S.AAPL', datamanager=dm)
+        opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+        self.assertEqual(0, len(dm._cache_single_price))
+
+        dt = datetime.datetime(2012, 1, 1)
+        px_data = (1, 2)
+
+        dm._price_set_cached(opt, dt, px_data)
+        self.assertTrue(opt not in dm._cache_single_price)
+
+        dm._price_set_cached(fut, dt, px_data)
+        self.assertTrue(fut in dm._cache_single_price)
+        self.assertEqual(px_data, dm._cache_single_price[fut][dt])
+
+        dm._price_set_cached(stk, dt, px_data)
+        self.assertTrue(stk in dm._cache_single_price)
+        self.assertEqual(px_data, dm._cache_single_price[stk][dt])
+
+        self.assertEqual((None, None), dm._price_get_cached(opt, dt))
+        self.assertEqual(px_data, dm._price_get_cached(fut, dt))
+        self.assertEqual(px_data, dm._price_get_cached(stk, dt))
+
+    def test__price_get_positions_cached(self):
+        dm = DataManager()
+        dm._primary_positions = None
+        stk = ContractBase('US.S.AAPL', datamanager=dm)
+        opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+        fut = FutureContract('US.F.CL.G12.120120', datamanager=dm)
+        dt = datetime.datetime(2012, 1, 1)
+
+        # No cached positions
+        self.assertEqual((None, None), dm._price_get_positions_cached(stk, dt))
+
+        stk = ContractBase('US.S.AAPL', datamanager=dm)
+        opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+
+        dm._primary_positions = {
+            datetime.datetime(2012, 1, 1): {
+                stk: (0.1, 0.2, 1),
+                opt: (1, 2, 4)
+            }
+        }
+
+        dt = datetime.datetime(2012, 1, 1)
+        # No date time
+        self.assertEqual((None, None), dm._price_get_positions_cached(stk, datetime.datetime(2012, 1, 2)))
+
+        # No asset
+        self.assertEqual((None, None), dm._price_get_positions_cached(fut, datetime.datetime(2012, 1, 1)))
+
+        # Existing assets, working also with options
+        self.assertEqual((0.1, 0.2), dm._price_get_positions_cached(stk, datetime.datetime(2012, 1, 1)))
+        self.assertEqual((1, 2), dm._price_get_positions_cached(opt, datetime.datetime(2012, 1, 1)))
+
+    def test__price_get(self):
+        with patch('tmqrfeed.manager.DataManager._price_get_positions_cached') as mock__price_get_positions_cached:
+            with patch('tmqrfeed.manager.DataManager._price_get_cached') as mock__price_get_cached:
+                with patch('tmqrfeed.manager.DataManager._price_get_from_datafeed') as mock__price_get_from_datafeed:
+                    with patch(
+                            'tmqrfeed.manager.DataManager._price_set_cached') as mock__price_set_cached:
+                        dm = DataManager()
+                        stk = ContractBase('US.S.AAPL', datamanager=dm)
+                        dt = datetime.datetime(2011, 1, 1)
+
+                        mock__price_get_positions_cached.return_value = (1, 1)
+                        # Fetch from _price_get_positions_cached
+
+                        self.assertEqual((1, 1), dm.price_get(stk, dt))
+
+                        mock__price_get_positions_cached.return_value = None, None
+                        mock__price_get_cached.return_value = (2, 2)
+                        self.assertEqual((2, 2), dm.price_get(stk, dt))
+
+                        mock__price_get_positions_cached.return_value = None, None
+                        mock__price_get_cached.return_value = None, None
+                        mock__price_get_from_datafeed.return_value = (3, 3)
+                        self.assertEqual((3, 3), dm.price_get(stk, dt))
+
+                        self.assertTrue(mock__price_set_cached.called)
+                        self.assertEqual((stk, dt, (3, 3)), mock__price_set_cached.call_args[0])

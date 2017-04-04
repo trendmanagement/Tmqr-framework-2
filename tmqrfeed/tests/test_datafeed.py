@@ -175,8 +175,9 @@ class DataFeedTestCase(unittest.TestCase):
             source_df = pd.DataFrame(data).set_index('dt').tz_localize('US/Pacific').tz_convert("UTC")
             mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
             dfeed = DataFeed()
-
+            self.assertEqual(0, len(dfeed._cache_price_data))
             result = dfeed.get_raw_series('US.F.CL.Q83.830720', SRC_INTRADAY)
+            self.assertEqual(0, len(dfeed._cache_price_data))
             for d in source_df.index:
                 self.assertTrue(d in result.index)
             #
@@ -238,11 +239,12 @@ class DataFeedTestCase(unittest.TestCase):
             source_df = pd.DataFrame(data).set_index('dt')
             mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
             dfeed = DataFeed()
-
+            self.assertEqual(0, len(dfeed._cache_price_data))
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
                                           SRC_INTRADAY,
                                           [tz.localize(datetime(2008, 10, 10, 10, 39))],
                                           timezone=tz)
+            self.assertEqual(0, len(dfeed._cache_price_data))
             self.assertEqual(1, len(result))
             self.assertEqual(result[0], 100)
 
@@ -275,7 +277,6 @@ class DataFeedTestCase(unittest.TestCase):
             source_df = pd.DataFrame(data).set_index('dt')
             mock_db_get_raw_series.return_value = {'data': source_df}, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
-
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
                                           SRC_OPTIONS_EOD,
                                           [tz.localize(datetime(2011, 1, 1, 10, 39)),
@@ -308,6 +309,37 @@ class DataFeedTestCase(unittest.TestCase):
             self.assertTrue(np.isnan(result[0]))
             self.assertEqual(result[1], 1)
             #
+
+    def test_get_raw_price_options_eod_caching(self):
+        tz = pytz.timezone("US/Pacific")
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
+            base_date = datetime(2008, 10, 10)
+            data = [
+                {'dt': datetime(2011, 1, 1, 23, 59, 59), 'iv': 1.0},
+                {'dt': datetime(2011, 1, 2, 23, 59, 59), 'iv': 2.0},
+                {'dt': datetime(2011, 1, 3, 23, 59, 59), 'iv': 3.0},
+                {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
+            ]
+            source_df = pd.DataFrame(data).set_index('dt')
+            mock_db_get_raw_series.return_value = {'data': source_df}, QTYPE_OPTIONS_EOD
+            dfeed = DataFeed()
+            self.assertEqual(0, len(dfeed._cache_price_data))
+            result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
+                                          SRC_OPTIONS_EOD,
+                                          [tz.localize(datetime(2011, 1, 1, 10, 39)),
+                                           tz.localize(datetime(2011, 1, 2, 10, 39))
+                                           ],
+                                          timezone=tz)
+            self.assertEqual(1, len(dfeed._cache_price_data))
+            self.assertTrue('US.F.CL.Q83.830720' in dfeed._cache_price_data)
+            self.assertEqual(tuple, type(dfeed._cache_price_data['US.F.CL.Q83.830720']))
+            self.assertEqual(dict, type(dfeed._cache_price_data['US.F.CL.Q83.830720'][0]))
+            self.assertEqual(pd.DataFrame, type(dfeed._cache_price_data['US.F.CL.Q83.830720'][0]['data']))
+            self.assertEqual(QTYPE_OPTIONS_EOD, dfeed._cache_price_data['US.F.CL.Q83.830720'][1])
+            # Make sure that initial data is not changed after caching
+            df = dfeed._cache_price_data['US.F.CL.Q83.830720'][0]['data']
+            self.assertEqual(True, np.all(df.index == source_df.index))
+            self.assertEqual(True, np.all(df['iv'] == source_df['iv']))
 
     def test_get_options_chains(self):
         fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es.pkl'))
@@ -349,3 +381,12 @@ class DataFeedTestCase(unittest.TestCase):
 
                 self.assertEqual(strike_count, 1110 / 2)
 
+    def test_get_options_chains_chain_not_found(self):
+
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_option_chains') as mock_db_get_option_chains:
+            with mock.patch('tmqrfeed.datafeed.OptionChainList') as mock_cls_chain_list:
+                mock_db_get_option_chains.return_value = []
+                dfeed = DataFeed()
+                dfeed.dm = 'DM'
+
+                self.assertRaises(ChainNotFoundError, dfeed.get_option_chains, FutureContract('US.F.ES.H11.110318'))

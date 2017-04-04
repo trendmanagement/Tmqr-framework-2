@@ -74,7 +74,7 @@ class FutureChain:
 
         return chain
 
-    def bisect_right(self, fut_chain, end_date, lo=0, hi=None):
+    def bisect_right(self, fut_chain, end_date):
         """Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.
 
         The return value i is such that all e in fut_chain[:i] have e <= end_date, and all e in
@@ -84,11 +84,9 @@ class FutureChain:
         Optional args lo (default 0) and hi (default len(fut_chain)) bound the
         slice of fut_chain to be searched.
         """
+        lo = 0
+        hi = len(fut_chain)
 
-        if lo < 0:
-            raise ValueError('lo must be non-negative')
-        if hi is None:
-            hi = len(fut_chain)
         while lo < hi:
             mid = (lo + hi) // 2
             if end_date < fut_chain[mid][2]:  # Slightly changed algo to fetch end date

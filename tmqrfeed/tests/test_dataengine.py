@@ -80,6 +80,19 @@ class DataEngineTestCase(unittest.TestCase):
         self.assertEqual(datetime(2011, 8, 1).date(), df2.index[0].date())
         self.assertEqual(datetime(2012, 7, 19).date(), df2.index[-1].date())
 
+        #
+        # Check support of 'date' type for date_start, date_end
+        #
+        df2, qtype2 = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_INTRADAY,
+                                             date_start=datetime(2011, 8, 1).date(),
+                                             date_end=datetime(2012, 7, 19).date())
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual(qtype, QTYPE_INTRADAY)
+        self.assertEqual(True, len(df) > 0)
+        self.assertEqual(True, len(df) > len(df2))
+        self.assertEqual(datetime(2011, 8, 1).date(), df2.index[0].date())
+        self.assertEqual(datetime(2012, 7, 19).date(), df2.index[-1].date())
+
         self.assertRaises(DataSourceNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', "NON_EXISTING_SOURCE")
 
         self.assertRaises(IntradayQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.N83.830622', SRC_INTRADAY)

@@ -145,15 +145,9 @@ class DataEngineMongo(DataEngineBase):
 
         dt_filter = {}
         if date_start is not None:
-            if isinstance(date_start, date):
-                dt_filter['$gte'] = datetime.combine(date_start, time(0, 0, 0))
-            else:
-                dt_filter['$gte'] = datetime.combine(date_start.date(), time(0, 0, 0))
+            dt_filter['$gte'] = datetime.combine(date_start, time(0, 0, 0))
         if date_end is not None:
-            if isinstance(date_end, date):
-                dt_filter['$lte'] = datetime.combine(date_end, time(0, 0, 0))
-            else:
-                dt_filter['$lte'] = datetime.combine(date_end.date(), time(0, 0, 0))
+            dt_filter['$lte'] = datetime.combine(date_end, time(0, 0, 0))
 
         request = {'tckr': tckr}
         if len(dt_filter) > 0:

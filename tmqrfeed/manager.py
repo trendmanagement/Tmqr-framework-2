@@ -151,6 +151,7 @@ class DataManager:
                 if pos_tuple is not None:
                     return pos_tuple[0], pos_tuple[1]  # decision_px, exec_px
 
+        # TODO: add look up for secondary data positions
         return None, None
 
     def _price_get_cached(self, asset: ContractBase, date):

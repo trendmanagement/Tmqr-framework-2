@@ -25,16 +25,20 @@ class OptionChainTestCase(unittest.TestCase):
 
     def setUp(self):
 
-        self.expiraiton = datetime.datetime(2011, 1, 21, 0, 0)
-        self.opt_chain = OptionChain(self.chain_list[self.expiraiton], self.expiraiton, self.underlying, self.dm)
+        self.expiration = datetime.datetime(2011, 1, 21, 0, 0)
+        self.opt_chain = OptionChain(self.chain_list[self.expiration], self.expiration, self.underlying, self.dm)
 
     def test_init(self):
-        self.assertEqual(self.opt_chain.expiration, self.expiraiton)
+        self.assertEqual(self.opt_chain.expiration, self.expiration)
 
-        self.assertRaises(ArgumentError, OptionChain, self.chain_list[self.expiraiton], self.expiraiton,
+        self.assertRaises(ArgumentError, OptionChain, self.chain_list[self.expiration], self.expiration,
                           self.underlying, None)
-        self.assertRaises(ChainNotFoundError, OptionChain, {}, self.expiraiton,
+        self.assertRaises(ChainNotFoundError, OptionChain, {}, self.expiration,
                           self.underlying, self.dm)
+
+    def test_repr_and_str(self):
+        self.assertEqual(str(self.opt_chain), f'Chain: {self.underlying} {self.expiration.date()}')
+        self.assertEqual(str(self.opt_chain), self.opt_chain.__repr__())
 
     def test__get_atm_index(self):
         self.opt_chain._strike_array = np.array([90, 91, 92, 93, 94, 95])
