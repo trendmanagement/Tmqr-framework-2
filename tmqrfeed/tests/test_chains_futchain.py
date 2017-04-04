@@ -1,5 +1,5 @@
 import unittest
-
+import pandas as pd
 from tmqr.errors import *
 from tmqr.settings import *
 from tmqrfeed.chains import FutureChain
@@ -43,16 +43,16 @@ class FutChainTestCase(unittest.TestCase):
 
     def test_init(self):
 
-        self.assertEqual('US.F.CL.M11.110520', self.chain._futchain.iloc[0].name.ticker)
+        self.assertEqual('US.F.CL.M11.110520', self.chain._futchain[0][0])
         for i in range(1, len(self.chain._futchain)):
-            row = self.chain._futchain.iloc[i]
-            prev_row = self.chain._futchain.iloc[i - 1]
-            fut = row.name
+            row = self.chain._futchain[i]
+            prev_row = self.chain._futchain[i - 1]
+            fut = row[0]
 
             self.assertTrue(fut.expiration_month in [3, 6, 9, 12])
-            self.assertEqual(True, row.date_end > row.date_start)
-            self.assertEqual(True, row.date_start == prev_row.date_end)
-            self.assertEqual(True, row.date_end < fut.expiration)
+            self.assertEqual(True, row[2] > row[1])
+            self.assertEqual(True, row[1] == prev_row[2])
+            self.assertEqual(True, row[2] < fut.expiration.date())
 
         self.assertRaises(ArgumentError, FutureChain, self.chain_tickers, None, rollover_days_before=2,
                           futures_months=[3, 6, 9, 12])
@@ -69,23 +69,23 @@ class FutChainTestCase(unittest.TestCase):
     def test_init_kwargs(self):
         chain1 = FutureChain(self.chain_tickers, 'DM', rollover_days_before=2,
                              futures_months=[3, 6, 9, 12])
-        self.assertEqual('US.F.CL.M11.110520', chain1._futchain.iloc[0].name.ticker)
+        self.assertEqual('US.F.CL.M11.110520', chain1._futchain[0][0])
 
         chain = FutureChain(self.chain_tickers, 'DM',
                             rollover_days_before=3,
                             futures_months=[3, 6])
-        self.assertEqual('US.F.CL.M11.110520', chain._futchain.iloc[0].name.ticker)
-        self.assertTrue(chain1._futchain.iloc[0].date_end > chain._futchain.iloc[0].date_end)
+        self.assertEqual('US.F.CL.M11.110520', chain._futchain[0][0])
+        self.assertTrue(chain1._futchain[0][2] > chain._futchain[0][2])
 
         for i in range(1, len(chain._futchain)):
-            row = chain._futchain.iloc[i]
-            prev_row = chain._futchain.iloc[i - 1]
-            fut = row.name
+            row = chain._futchain[i]
+            prev_row = chain._futchain[i - 1]
+            fut = row[0]
 
             self.assertTrue(fut.expiration_month in [3, 6])
-            self.assertEqual(True, row.date_end > row.date_start)
-            self.assertEqual(True, row.date_start == prev_row.date_end)
-            self.assertEqual(True, row.date_end < fut.expiration)
+            self.assertEqual(True, row[2] > row[1])
+            self.assertEqual(True, row[1] == prev_row[2])
+            self.assertEqual(True, row[2] < fut.expiration.date())
 
 
     def test_init_empty_or_none_tickers_list(self):
@@ -94,9 +94,18 @@ class FutChainTestCase(unittest.TestCase):
         self.assertRaises(ArgumentError, FutureChain, [], 'DM', rollover_days_before=3,
                           futures_months=[3, 6])
 
+    def test_bisect(self):
+
+        date = datetime(2012, 1, 1)
+        fut_idx = self.chain.bisect_right(self.chain._futchain, date.date())
+        self.assertEqual(('US.F.CL.H12.120222', pd.Timestamp('2011-11-17 00:00:00').date(),
+                          pd.Timestamp('2012-02-20 00:00:00').date()),
+                         self.chain._futchain[fut_idx]
+                         )
+
     def test_get_list(self):
 
-        df = self.chain.get_list(datetime(2012, 5, 1))
+        clist = self.chain.get_list(datetime(2012, 5, 1))
 
         """'US.F.CL.G12.120120',
         'US.F.CL.H12.120222',
@@ -110,18 +119,18 @@ class FutChainTestCase(unittest.TestCase):
         'US.F.CL.X12.121022',
         'US.F.CL.Z12.121120', +
         """
-        self.assertEqual(3, len(df))
-        self.assertEqual('US.F.CL.M12.120522', df.iloc[0].name.ticker)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
-        self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
+        self.assertEqual(3, len(clist))
+        self.assertEqual('US.F.CL.M12.120522', clist[0][0])
+        self.assertEqual(datetime(2012, 5, 18).date(), clist[0][2])
+        self.assertEqual(datetime(2012, 2, 20).date(), clist[0][1])
 
-        self.assertEqual('US.F.CL.U12.120822', df.iloc[1].name.ticker)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[1].date_start)
+        self.assertEqual('US.F.CL.U12.120822', clist[1][0])
+        self.assertEqual(datetime(2012, 8, 20).date(), clist[1][2])
+        self.assertEqual(datetime(2012, 5, 18).date(), clist[1][1])
 
-        self.assertEqual('US.F.CL.Z12.121120', df.iloc[2].name.ticker)
-        self.assertEqual(datetime(2012, 11, 16), df.iloc[2].date_end)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[2].date_start)
+        self.assertEqual('US.F.CL.Z12.121120', clist[2][0])
+        self.assertEqual(datetime(2012, 11, 16).date(), clist[2][2])
+        self.assertEqual(datetime(2012, 8, 20).date(), clist[2][1])
 
     def test_get_list_datepicking_check(self):
 
@@ -140,13 +149,13 @@ class FutChainTestCase(unittest.TestCase):
         'US.F.CL.Z12.121120', +
         """
         self.assertEqual(2, len(df))
-        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[0].date_end)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_start)
+        self.assertEqual('US.F.CL.U12.120822', df[0][0])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[0][2])
+        self.assertEqual(datetime(2012, 5, 18).date(), df[0][1])
 
-        self.assertEqual('US.F.CL.Z12.121120', df.iloc[1].name.ticker)
-        self.assertEqual(datetime(2012, 11, 16), df.iloc[1].date_end)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_start)
+        self.assertEqual('US.F.CL.Z12.121120', df[1][0])
+        self.assertEqual(datetime(2012, 11, 16).date(), df[1][2])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[1][1])
 
     def test_get_list_out_of_date(self):
 
@@ -170,13 +179,13 @@ class FutChainTestCase(unittest.TestCase):
         'US.F.CL.Z12.121120', +
         """
         self.assertEqual(2, len(df))
-        self.assertEqual('US.F.CL.M12.120522', df.iloc[0].name.ticker)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
-        self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
+        self.assertEqual('US.F.CL.M12.120522', df[0][0])
+        self.assertEqual(datetime(2012, 5, 18).date(), df[0][2])
+        self.assertEqual(datetime(2012, 2, 20).date(), df[0][1])
 
-        self.assertEqual('US.F.CL.U12.120822', df.iloc[1].name.ticker)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[1].date_start)
+        self.assertEqual('US.F.CL.U12.120822', df[1][0])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[1][2])
+        self.assertEqual(datetime(2012, 5, 18).date(), df[1][1])
 
     def test_get_list_offset(self):
 
@@ -197,19 +206,19 @@ class FutChainTestCase(unittest.TestCase):
         'US.F.CL.Z12.121120', +
         """
         self.assertEqual(2, len(df))
-        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
-        self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
+        self.assertEqual('US.F.CL.U12.120822', df[0][0])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[0][2])
+        self.assertEqual(datetime(2012, 5, 18).date(), df[0][1])
 
-        self.assertEqual('US.F.CL.Z12.121120', df.iloc[1].name.ticker)
-        self.assertEqual(datetime(2012, 8, 20), df.iloc[1].date_end)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[1].date_start)
+        self.assertEqual('US.F.CL.Z12.121120', df[1][0])
+        self.assertEqual(datetime(2012, 11, 16).date(), df[1][2])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[1][1])
 
         df = self.chain.get_list(datetime(2012, 5, 1), offset=1, limit=1)
         self.assertEqual(1, len(df))
-        self.assertEqual('US.F.CL.U12.120822', df.iloc[0].name.ticker)
-        self.assertEqual(datetime(2012, 5, 18), df.iloc[0].date_end)
-        self.assertEqual(datetime(2012, 2, 20), df.iloc[0].date_start)
+        self.assertEqual('US.F.CL.U12.120822', df[0][0])
+        self.assertEqual(datetime(2012, 8, 20).date(), df[0][2])
+        self.assertEqual(datetime(2012, 5, 18).date(), df[0][1])
 
         self.assertRaises(ChainNotFoundError, self.chain.get_list, datetime(2012, 5, 1), offset=3)
 

@@ -39,10 +39,10 @@ class DataFeed:
         self.date_start = kwargs.get('date_start', QDATE_MIN)
 
         # Cache setup
-        self.instrument_info_cache = {}
-        self.contract_info_cache = {}
-        self.futchain_cache = {}
-        self.opt_chain_cache = {}
+        self._cache_instrument_info = {}
+        self._cache_contract_info = {}
+        self._cache_futchain = {}
+        self._cache_opt_chain = {}
 
     def get_instrument_info(self, instrument):
         """
@@ -50,12 +50,12 @@ class DataFeed:
         :param instrument: full qualified instrument name
         :return: AssetInfo class instance
         """
-        if instrument in self.instrument_info_cache:
+        if instrument in self._cache_instrument_info:
             # Use caching
-            return self.instrument_info_cache[instrument]
+            return self._cache_instrument_info[instrument]
         else:
             ainfo = InstrumentInfo(self.data_engine.db_get_instrument_info(instrument))
-            self.instrument_info_cache[instrument] = ainfo
+            self._cache_instrument_info[instrument] = ainfo
             return ainfo
 
     def get_fut_chain(self, instrument, **kwargs):
@@ -64,16 +64,20 @@ class DataFeed:
         :param instrument: Full-qualified instrument name <Market>.<Name>
         :return: FutureChain class instance
         """
-        chain_dict = self.data_engine.db_get_futures_chain(instrument, self.date_start - timedelta(days=180))
-        asset_info = self.get_instrument_info(instrument)
-        default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
-        rollover_days_before = kwargs.pop('rollover_days_before', asset_info.rollover_days_before)
-        futures_months = kwargs.pop('futures_months', default_fut_months)
-        return FutureChain([x['tckr'] for x in chain_dict],
-                           datamanager=self.dm,
-                           rollover_days_before=rollover_days_before,
-                           futures_months=futures_months,
-                           **kwargs)
+        if instrument not in self._cache_futchain:
+            chain_dict = self.data_engine.db_get_futures_chain(instrument, self.date_start - timedelta(days=180))
+            asset_info = self.get_instrument_info(instrument)
+            default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
+            rollover_days_before = kwargs.pop('rollover_days_before', asset_info.rollover_days_before)
+            futures_months = kwargs.pop('futures_months', default_fut_months)
+            fut_chain = FutureChain([x['tckr'] for x in chain_dict],
+                                    datamanager=self.dm,
+                                    rollover_days_before=rollover_days_before,
+                                    futures_months=futures_months,
+                                    **kwargs)
+            self._cache_futchain[instrument] = fut_chain
+
+        return self._cache_futchain[instrument]
 
     def _process_raw_options_chains(self, chain_list, underlying_asset: ContractBase):
         """
@@ -113,15 +117,16 @@ class DataFeed:
         :param underlying_asset: underlying contract instance
         :return: OptionChainList object
         """
+        if underlying_asset not in self._cache_opt_chain:
+            chain_list = self.data_engine.db_get_option_chains(underlying_asset.ticker)
+            if len(chain_list) == 0:
+                raise ChainNotFoundError(f"Couldn't find options chains in DB for {underlying_asset}")
+            chain_result = self._process_raw_options_chains(chain_list, underlying_asset)
 
-        chain_list = self.data_engine.db_get_option_chains(underlying_asset.ticker)
+            opt_chain = OptionChainList(chain_result, underlying=underlying_asset, datamanager=self.dm)
+            self._cache_opt_chain[underlying_asset] = opt_chain
 
-        if len(chain_list) == 0:
-            raise ChainNotFoundError(f"Couldn't find options chains in DB for {underlying_asset}")
-
-        chain_result = self._process_raw_options_chains(chain_list, underlying_asset)
-
-        return OptionChainList(chain_result, underlying=underlying_asset, datamanager=self.dm)
+        return self._cache_opt_chain[underlying_asset]
 
     def get_contract_info(self, tckr):
         """
@@ -130,12 +135,12 @@ class DataFeed:
         :return: ContractInfo class instance
         """
 
-        if tckr not in self.contract_info_cache:
+        if tckr not in self._cache_contract_info:
             # Populate cache if contract info not set
             cinfo = ContractInfo(self.data_engine.db_get_contract_info(tckr))
-            self.contract_info_cache[tckr] = cinfo
+            self._cache_contract_info[tckr] = cinfo
 
-        return self.contract_info_cache[tckr]
+        return self._cache_contract_info[tckr]
 
     def get_raw_series(self, tckr, source_type, **kwargs):
         """

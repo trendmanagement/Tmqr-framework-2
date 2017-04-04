@@ -45,9 +45,6 @@ class ContractBase:
         self.dm = datamanager
         """Global DataManager class instance"""
 
-        self.series_date_start = kwargs.get('date_start', QDATE_MIN)
-        self.series_date_end = kwargs.get('date_end', QDATE_MAX)
-
     @property
     def instrument(self):
         """

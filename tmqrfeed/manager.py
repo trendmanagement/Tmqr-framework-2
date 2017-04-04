@@ -2,6 +2,7 @@ from tmqr.errors import *
 from tmqrfeed.contracts import ContractBase
 from tmqrfeed.datafeed import DataFeed
 from datetime import datetime
+from tmqr.settings import QDATE_MIN, QDATE_MAX
 
 
 class DataManager:
@@ -107,8 +108,8 @@ class DataManager:
         iinfo = asset.instrument_info
         kw_source_type = kwargs.get('source_type', asset.data_source)
         kw_timezone = kwargs.get('timezone', iinfo.timezone)
-        kw_date_start = kwargs.get('date_start', asset.series_date_start)
-        kw_date_end = kwargs.get('date_end', asset.series_date_end)
+        kw_date_start = kwargs.get('date_start', QDATE_MIN)
+        kw_date_end = kwargs.get('date_end', QDATE_MAX)
 
         return self.datafeed.get_raw_series(asset.ticker,
                                             source_type=kw_source_type,

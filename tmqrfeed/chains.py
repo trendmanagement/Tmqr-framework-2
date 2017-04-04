@@ -51,7 +51,6 @@ class FutureChain:
         :return:
         """
         prev_fut = None
-        date_start = QDATE_MIN
 
         chain = []
 
@@ -70,17 +69,33 @@ class FutureChain:
             else:
                 series_date_start = prev_fut.expiration - BDay(self.rollover_days_before)
                 series_date_end = fut.expiration - BDay(self.rollover_days_before)
-                fut.series_date_start = series_date_start
-                fut.series_date_end = series_date_end
-                chain.append({
-                    'ticker': fut,
-                    'date_start': series_date_start,
-                    'date_end': series_date_end,
-                })
+                chain.append((fut, series_date_start.date(), series_date_end.date()))
                 prev_fut = fut
 
-        df = pd.DataFrame(chain).set_index('ticker')
-        return df[df.date_end > date_start]
+        return chain
+
+    def bisect_right(self, fut_chain, end_date, lo=0, hi=None):
+        """Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.
+
+        The return value i is such that all e in fut_chain[:i] have e <= end_date, and all e in
+        fut_chain[i:] have e > end_date.  So if end_date already appears in the list, fut_chain.insert(end_date) will
+        insert just after the rightmost end_date already there.
+
+        Optional args lo (default 0) and hi (default len(fut_chain)) bound the
+        slice of fut_chain to be searched.
+        """
+
+        if lo < 0:
+            raise ValueError('lo must be non-negative')
+        if hi is None:
+            hi = len(fut_chain)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if end_date < fut_chain[mid][2]:  # Slightly changed algo to fetch end date
+                hi = mid
+            else:
+                lo = mid + 1
+        return lo
 
     def get_list(self, date: datetime.datetime, offset: int = 0, limit: int = 0):
         """
@@ -90,23 +105,24 @@ class FutureChain:
         :param limit: Number contracts to return (0 - all)
         :return: pd.DataFrame with chain information
         """
-        df = self._futchain[self._futchain.date_end > date]
+        idx_start = self.bisect_right(self._futchain, date.date())
+
 
         if offset < 0:
             raise ArgumentError("'offset' argument must be >= 0")
-        elif offset > 0:
-            df = df.shift(offset).dropna()
-
         if limit < 0:
             raise ArgumentError("'limit' argument must be > 0")
-        elif limit > 0:
-            df = df.head(limit)
 
-        if len(df) == 0:
+        if limit > 0:
+            result = self._futchain[idx_start + offset: idx_start + offset + limit]
+        else:
+            result = self._futchain[idx_start + offset:]
+
+        if len(result) == 0:
             raise ChainNotFoundError(
                 f"Can't get futures chain at {date} limit: {limit} offset: {offset}. Too strict request or not enough data")
 
-        return df
+        return result
 
     def get_contract(self, date, offset=0):
         """
@@ -116,14 +132,14 @@ class FutureChain:
         :return: FutureContract class instance
         """
         df = self.get_list(date, offset, limit=1)
-        return df.iloc[0].name
+        return df[0][0]
 
     def get_all(self):
         """
         Get futures contracts list sorted by expiration date
         :return: 
         """
-        return self._futchain.index
+        return self._futchain
 
 
 class OptionChainList:

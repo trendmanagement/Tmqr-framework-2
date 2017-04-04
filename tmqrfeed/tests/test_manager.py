@@ -413,4 +413,5 @@ class DataManagerTestCase(unittest.TestCase):
 
         dm = DataManager()
         dt = pd.Timestamp('2011-12-01 10:40:00-0800')
-        fut, opt_chain = dm.chains_options_get('US.CL', dt, opt_offset=0)
+        for i in range(100):
+            fut, opt_chain = dm.chains_options_get('US.CL', dt, opt_offset=0)

@@ -54,11 +54,13 @@ class QuoteContFut(QuoteBase):
         # 1. Iterate chains
         df_data = []
         df_positions = []
-        for row in chain_values.iterrows():
-            fut_contract, fut_range = row
+        for fut_chain_row in chain_values:
+            fut_contract = fut_chain_row[0]
+            date_start = fut_chain_row[1]
+            date_end = fut_chain_row[2]
             try:
                 # 2. Get futures raw series
-                series = self.dm.series_get(fut_contract)
+                series = self.dm.series_get(fut_contract, date_start=date_start, date_end=date_end)
                 # 3. Do resampling (timeframe compression)
                 series, positions = compress_daily(DataFrameGetter(series), fut_contract)
 

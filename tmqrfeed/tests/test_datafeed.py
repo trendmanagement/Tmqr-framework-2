@@ -27,7 +27,7 @@ class DataFeedTestCase(unittest.TestCase):
         self.assertEqual(True, isinstance(dfeed.data_engine, DataEngineMongo))
         self.assertEqual(dfeed.data_engine_settings, {})
         self.assertEqual(dfeed.date_start, datetime(1900, 1, 1))
-        self.assertEqual(dfeed.instrument_info_cache, {})
+        self.assertEqual(dfeed._cache_instrument_info, {})
 
     def test_init_kwargs(self):
         dfeed = DataFeed(data_engine_settings={'test': 'ok'},
@@ -84,7 +84,8 @@ class DataFeedTestCase(unittest.TestCase):
             dm = DataManager()
             chain = dm.datafeed.get_fut_chain('US.CL', rollover_days_before=2, futures_months=list(range(1, 12)))
             self.assertEqual(FutureChain, type(chain))
-            for c in chain.get_all():
+            for chain_rec in chain.get_all():
+                c = chain_rec[0]
                 self.assertEqual(FutureContract, type(c))
                 self.assertTrue(c.dm is not None)
                 self.assertEqual(DataManager, type(c.dm))

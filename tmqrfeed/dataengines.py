@@ -1,12 +1,12 @@
 import pickle
-from datetime import time
+
 
 import pandas as pd
 from pymongo import MongoClient
 
 from tmqr.errors import *
 from tmqr.settings import *
-
+from datetime import date, datetime, time
 #
 # Collection names constants
 #
@@ -145,9 +145,15 @@ class DataEngineMongo(DataEngineBase):
 
         dt_filter = {}
         if date_start is not None:
-            dt_filter['$gte'] = datetime.combine(date_start.date(), time(0, 0, 0))
+            if isinstance(date_start, date):
+                dt_filter['$gte'] = datetime.combine(date_start, time(0, 0, 0))
+            else:
+                dt_filter['$gte'] = datetime.combine(date_start.date(), time(0, 0, 0))
         if date_end is not None:
-            dt_filter['$lte'] = datetime.combine(date_end.date(), time(0, 0, 0))
+            if isinstance(date_end, date):
+                dt_filter['$lte'] = datetime.combine(date_end, time(0, 0, 0))
+            else:
+                dt_filter['$lte'] = datetime.combine(date_end.date(), time(0, 0, 0))
 
         request = {'tckr': tckr}
         if len(dt_filter) > 0:
