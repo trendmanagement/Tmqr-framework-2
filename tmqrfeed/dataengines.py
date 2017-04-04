@@ -115,13 +115,13 @@ class DataEngineMongo(DataEngineBase):
     def db_get_raw_series(self, tckr, source_type, **kwargs):
         if source_type == SRC_INTRADAY:
             return self._source_intraday_get_series(tckr, **kwargs)
-        if source_type == SRC_OPTIONS:
+        if source_type == SRC_OPTIONS_EOD:
             return self._source_options_eod_get_series(tckr, **kwargs)
 
         raise DataSourceNotFoundError("Unknown 'datasource' type")
 
     def _source_options_eod_get_series(self, tckr, **kwargs):
-        data = self.db[SRC_OPTIONS].find_one({'_id': tckr})
+        data = self.db[SRC_OPTIONS_EOD].find_one({'_id': tckr})
         if data is None:
             raise OptionsEODQuotesNotFoundError(f"No data found for {tckr} in options EOD database")
 
@@ -129,7 +129,7 @@ class DataEngineMongo(DataEngineBase):
 
         if not isinstance(data['data'], pd.DataFrame):
             raise DBDataCorruptionError(
-                f"{tckr} data is corrupted in {SRC_OPTIONS} collection, expected pd.DataFrame, got {type(data['data'])}")
+                f"{tckr} data is corrupted in {SRC_OPTIONS_EOD} collection, expected pd.DataFrame, got {type(data['data'])}")
 
         return data, QTYPE_OPTIONS_EOD
 

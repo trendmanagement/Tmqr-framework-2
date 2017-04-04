@@ -82,7 +82,7 @@ class FutureChain:
         df = pd.DataFrame(chain).set_index('ticker')
         return df[df.date_end > date_start]
 
-    def get_list(self, date: datetime, offset: int = 0, limit: int = 0):
+    def get_list(self, date: datetime.datetime, offset: int = 0, limit: int = 0):
         """
         Returns list of actual futures contracts for particular date
         :param date: actual date
@@ -244,7 +244,7 @@ class OptionChain:
         """
         return self._expiration
 
-    def find(self, dt: datetime, item, opttype: str, how='offset', **kwargs):
+    def find(self, dt: datetime.datetime, item, opttype: str, how='offset', **kwargs):
         """
         Find option contract in chain using 'how' criteria
         :param dt: analysis date
@@ -438,3 +438,9 @@ class OptionChain:
                         item += 1
                     else:
                         item -= 1
+
+    def __str__(self):
+        return f'Chain: {self.underlying} {self.expiration.date()}'
+
+    def __repr__(self):
+        return self.__str__()

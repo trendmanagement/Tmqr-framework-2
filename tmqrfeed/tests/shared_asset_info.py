@@ -11,7 +11,7 @@ ASSET_INFO = {
     'tickvalue': 12.5,
     'timezone': 'US/Pacific',
     'data_futures_src': SRC_INTRADAY,
-    'data_options_src': SRC_OPTIONS,
+    'data_options_src': SRC_OPTIONS_EOD,
     'data_options_use_prev_date': True,
     'trading_session': [{
         'decision': '10:40',

@@ -128,6 +128,4 @@ class ContractsTestCase(unittest.TestCase):
             self.assertEqual(SRC_INTRADAY, contract.data_source)
 
             option = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
-            self.assertEqual(SRC_OPTIONS, option.data_source)
-
-
+            self.assertEqual(SRC_OPTIONS_EOD, option.data_source)

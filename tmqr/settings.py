@@ -9,7 +9,7 @@ MONGO_DB = 'tmqr2'
 # Datasources types for DataFeed
 #
 SRC_INTRADAY = 'quotes_intraday'
-SRC_OPTIONS = 'quotes_options'
+SRC_OPTIONS_EOD = 'quotes_options_eod'
 
 #
 # Quotes types returned by datafeed

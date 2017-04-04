@@ -266,17 +266,17 @@ class DataFeedTestCase(unittest.TestCase):
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
             base_date = datetime(2008, 10, 10)
             data = [
-                {'dt': datetime(2011, 1, 1), 'iv': 1.0},
-                {'dt': datetime(2011, 1, 2), 'iv': 2.0},
-                {'dt': datetime(2011, 1, 3), 'iv': 3.0},
-                {'dt': datetime(2011, 1, 4), 'iv': 4.0},
+                {'dt': datetime(2011, 1, 1, 23, 59, 59), 'iv': 1.0},
+                {'dt': datetime(2011, 1, 2, 23, 59, 59), 'iv': 2.0},
+                {'dt': datetime(2011, 1, 3, 23, 59, 59), 'iv': 3.0},
+                {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
             ]
             source_df = pd.DataFrame(data).set_index('dt')
-            mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
+            mock_db_get_raw_series.return_value = {'data': source_df}, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
 
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
-                                          SRC_OPTIONS,
+                                          SRC_OPTIONS_EOD,
                                           [tz.localize(datetime(2011, 1, 1, 10, 39)),
                                            tz.localize(datetime(2011, 1, 2, 10, 39))
                                            ],
@@ -288,7 +288,7 @@ class DataFeedTestCase(unittest.TestCase):
             # Quote not found error
             #
             self.assertRaises(OptionsEODQuotesNotFoundError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720',
-                              SRC_OPTIONS,
+                              SRC_OPTIONS_EOD,
                               [tz.localize(datetime(2011, 1, 10, 10, 39)),
                                tz.localize(datetime(2011, 1, 20, 10, 39))
                                ],
@@ -297,7 +297,7 @@ class DataFeedTestCase(unittest.TestCase):
             # data_options_use_prev_date kwarg True
             #
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
-                                          SRC_OPTIONS,
+                                          SRC_OPTIONS_EOD,
                                           [tz.localize(datetime(2011, 1, 1, 10, 39)),
                                            tz.localize(datetime(2011, 1, 2, 10, 39))
                                            ],

@@ -124,18 +124,19 @@ class DataEngineTestCase(unittest.TestCase):
 
         with patch('pymongo.collection.Collection.find_one') as mock_find_one:
             mock_find_one.return_value = None
-            self.assertRaises(OptionsEODQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS)
+            self.assertRaises(OptionsEODQuotesNotFoundError, deng.db_get_raw_series, 'US.F.CL.Q12.120720',
+                              SRC_OPTIONS_EOD)
 
             mock_find_one.reset_mock()
             mock_find_one.return_value = {'data': pickle.dumps('NON_DATAFRAME_OBJECT')}
 
-            self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS)
+            self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
 
             mock_find_one.reset_mock()
             mock_find_one.return_value = {
                 'data': pickle.dumps(pd.DataFrame([{'iv': 0.1, 'dt': datetime(2011, 1, 1)}]).set_index('dt'))}
 
-            df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_OPTIONS)
+            df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
 
             self.assertEqual(dict, type(df))
             self.assertEqual(pd.DataFrame, type(df['data']))

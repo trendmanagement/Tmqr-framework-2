@@ -65,13 +65,10 @@ class DataFeed:
         :return: FutureChain class instance
         """
         chain_dict = self.data_engine.db_get_futures_chain(instrument, self.date_start - timedelta(days=180))
-
         asset_info = self.get_instrument_info(instrument)
         default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
-
         rollover_days_before = kwargs.pop('rollover_days_before', asset_info.rollover_days_before)
         futures_months = kwargs.pop('futures_months', default_fut_months)
-
         return FutureChain([x['tckr'] for x in chain_dict],
                            datamanager=self.dm,
                            rollover_days_before=rollover_days_before,
@@ -182,12 +179,13 @@ class DataFeed:
             return [px for dt, px in quotes_tuple_arr]
         elif qtype == QTYPE_OPTIONS_EOD:
             data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
+            dfseries = dfseries['data']
             if data_options_use_prev_date:
                 dfseries = dfseries.shift(1)
 
             # TODO: save series to cache
             try:
-                return [dfseries.at[datetime.combine(d.date(), time(0, 0, 0)), 'iv'] for d in dt_list]
+                return [dfseries.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
             except KeyError:
                 raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
         else:
