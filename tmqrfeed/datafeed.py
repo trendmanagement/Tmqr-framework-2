@@ -43,6 +43,7 @@ class DataFeed:
         self._cache_contract_info = {}
         self._cache_futchain = {}
         self._cache_opt_chain = {}
+        self._cache_price_data = {}
 
     def get_instrument_info(self, instrument):
         """
@@ -173,24 +174,30 @@ class DataFeed:
 
         if type(tz) == str:
             tz = pytz.timezone(tz)
-
-        dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
+        # Trying to get cache
+        dfseries, qtype = self._cache_price_data.get(tckr, (None, None))
+        if dfseries is None:
+            # Cache is not exists for 'tckr'
+            dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
 
         if qtype == QTYPE_INTRADAY:
             # Convert timezone of the dataframe (in place)
             dfseries.tz_convert(tz, copy=False)
-
             quotes_tuple_arr = find_quotes(dfseries, dt_list)
             return [px for dt, px in quotes_tuple_arr]
-        elif qtype == QTYPE_OPTIONS_EOD:
-            data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
-            dfseries = dfseries['data']
-            if data_options_use_prev_date:
-                dfseries = dfseries.shift(1)
 
-            # TODO: save series to cache
+        elif qtype == QTYPE_OPTIONS_EOD:
+            # IMPORTANT: make sure that caching raw data (before shifting, and changing)
+            # And don't changing cached values
+            self._cache_price_data[tckr] = (dfseries, qtype)
+
+            data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
+            df = dfseries['data']
+            if data_options_use_prev_date:
+                df = df.shift(1)
+
             try:
-                return [dfseries.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
+                return [df.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
             except KeyError:
                 raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
         else:

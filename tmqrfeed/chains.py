@@ -356,7 +356,10 @@ class OptionChain:
         last_contract = None
         while abs(i) <= min(strike_limit, max_offset):
             try:
-                contract = self._find_by_offset(dt, i, opttype, error_limit=1)
+                contract = self._find_by_offset(dt, i, opttype,
+                                                error_limit=1,
+                                                ul_decision_px=ul_decision_px,
+                                                ul_exec_px=ul_exec_px)
                 if (delta > 0.5 and abs(contract.delta(dt)) >= delta) or (
                                 delta < 0.5 and abs(contract.delta(dt)) <= delta):
                     return contract
@@ -377,7 +380,8 @@ class OptionChain:
 
         return last_contract
 
-    def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5):
+    def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5, ul_decision_px=None,
+                        ul_exec_px=None):
         """
         Find option contract by offset from ATM
         :param dt: current datetime
@@ -389,7 +393,8 @@ class OptionChain:
         """
 
         # Fetching underlying price
-        ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, dt)
+        if ul_decision_px is None or ul_exec_px is None:
+            ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, dt)
 
         atm_index = self._get_atm_index(ul_decision_px)
 

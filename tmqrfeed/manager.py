@@ -1,5 +1,5 @@
 from tmqr.errors import *
-from tmqrfeed.contracts import ContractBase
+from tmqrfeed.contracts import ContractBase, FutureContract
 from tmqrfeed.datafeed import DataFeed
 from datetime import datetime
 from tmqr.settings import QDATE_MIN, QDATE_MAX
@@ -42,6 +42,9 @@ class DataManager:
         self._primary_positions = None
         # Secondary series positions dictionary
         self._secondary_positions = {}
+
+        # Internal price cache for getting single quotes
+        self._cache_single_price = {}
 
     def series_primary_set(self, quote_engine_cls, *args, **kwargs):
         """
@@ -87,8 +90,7 @@ class DataManager:
         self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
         self._secondary_positions[name] = pos
 
-        # Internal price cache for getting single quotes
-        self._price_cache = {}
+
 
     def series_align(self, primary_quotes, extra_quotes):
         # TODO: implement series alignment
@@ -125,7 +127,31 @@ class DataManager:
         :param date: timestamp for price
         :return: 
         """
-        return self._price_get_from_datafeed(asset, date, **kwargs)
+        # Trying to search positions cache
+        res = self._price_get_positions_cached(asset, date)
+        if res[0] is not None:
+            return res
+
+        # Trying to search internal price cache
+        res = self._price_get_cached(asset, date)
+        if res[0] is not None:
+            return res
+
+        res = self._price_get_from_datafeed(asset, date, **kwargs)
+        self._price_set_cached(asset, date, res)
+        return res
+
+    def _price_get_positions_cached(self, asset: ContractBase, date):
+
+        # Looking for primary positions
+        if self._primary_positions is not None:
+            assets_dict = self._primary_positions.get(date, None)
+            if assets_dict is not None:
+                pos_tuple = assets_dict.get(asset, None)
+                if pos_tuple is not None:
+                    return pos_tuple[0], pos_tuple[1]  # decision_px, exec_px
+
+        return None, None
 
     def _price_get_cached(self, asset: ContractBase, date):
         """
@@ -134,9 +160,15 @@ class DataManager:
         :param date: 
         :return: 
         """
-        return None
+        if type(asset) == FutureContract or type(asset) == ContractBase:
+            price_data_dict = self._cache_single_price.get(asset, None)
+            if price_data_dict is not None:
+                price_data = price_data_dict.get(date, None)
+                if price_data is not None:
+                    return price_data
+        return None, None
 
-    def _price_set_cached(self, asset: ContractBase, date, decision_px, exec_px):
+    def _price_set_cached(self, asset: ContractBase, date, price_data):
         """
         Populate internal cache
         :param asset: 
@@ -145,7 +177,9 @@ class DataManager:
         :param exec_px: 
         :return: 
         """
-        pass
+        if type(asset) == FutureContract or type(asset) == ContractBase:
+            price_data_dict = self._cache_single_price.setdefault(asset, {})
+            price_data_dict[date] = price_data
 
     def _price_get_from_datafeed(self, asset: ContractBase, date, **kwargs):
         """
