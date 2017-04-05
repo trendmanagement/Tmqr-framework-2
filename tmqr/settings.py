@@ -2,7 +2,7 @@ from datetime import datetime
 
 # MongoDB credentials
 #
-MONGO_CONNSTR = 'mongodb://localhost'
+MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr22?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
 
 #
@@ -24,3 +24,12 @@ QTYPE_OPTIONS_EOD = 4
 #
 QDATE_MIN = datetime(1900, 1, 1)
 QDATE_MAX = datetime(2100, 1, 1)
+
+# Allow any settings to be defined in settings_local.py which should be
+# ignored in your version control system allowing for settings to be
+# defined per machine.
+try:
+    from tmqr.settings_local import *
+except ImportError as e:
+    if "settings_local" not in str(e):
+        raise e

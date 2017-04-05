@@ -49,3 +49,4 @@
 # Windows Installer files
 # Windows shortcuts
 .idea/
+/tmqr/settings_local.py
