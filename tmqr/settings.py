@@ -2,7 +2,7 @@ from datetime import datetime
 
 # MongoDB credentials
 #
-MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr22?authMechanism=SCRAM-SHA-1'
+MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
 
 #
