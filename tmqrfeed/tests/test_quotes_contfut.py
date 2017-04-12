@@ -24,6 +24,7 @@ import pyximport
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.manager import DataManager
+from tmqrfeed.contracts import ContractBase
 
 
 class QuoteContFutTestCase(unittest.TestCase):
@@ -57,11 +58,11 @@ class QuoteContFutTestCase(unittest.TestCase):
                                    index_col=0, compression='gzip')
         self.series2.index = self.series2.index.tz_localize(pytz.utc).tz_convert(self.tz)
 
-        self.fut1 = MagicMock()
+        self.fut1 = MagicMock(ContractBase("US.F.Fut1"))
         self.fut1.__str__.return_value = "TestAsset1"
         self.fut1.instrument_info.session = self.sess
 
-        self.fut2 = MagicMock()
+        self.fut2 = MagicMock(ContractBase("US.F.Fut1"))
         self.fut2.__str__.return_value = "TestAsset2"
         self.fut2.instrument_info.session = self.sess
 

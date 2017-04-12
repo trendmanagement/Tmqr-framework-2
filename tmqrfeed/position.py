@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError
 from tmqrfeed.contracts import ContractBase
-import warnings
 from tmqr.logs import log
 
 

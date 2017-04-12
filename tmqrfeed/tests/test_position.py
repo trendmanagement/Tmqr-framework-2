@@ -1,11 +1,12 @@
 import unittest
-from unittest.mock import patch, MagicMock
-from tmqrstrategy.position import Position
 from collections import OrderedDict
-from tmqrfeed.manager import DataManager
 from datetime import datetime
-from tmqrfeed.contracts import ContractBase
+from unittest.mock import patch, MagicMock
+
 from tmqr.errors import *
+from tmqrfeed.contracts import ContractBase
+from tmqrfeed.manager import DataManager
+from tmqrfeed.position import Position
 
 
 class PositionTestCase(unittest.TestCase):
@@ -187,7 +188,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
-        with patch('tmqrstrategy.position.Position._check_position_validity') as mock__check_position_validity:
+        with patch('tmqrfeed.position.Position._check_position_validity') as mock__check_position_validity:
             p.add_transaction(dt, asset, 3.0)
 
             self.assertEqual(1, len(p._position))
@@ -237,7 +238,7 @@ class PositionTestCase(unittest.TestCase):
         def mock_get_net_position_side(*args, **kwargs):
             raise PositionNotFoundError('PositionNotFoundError raised')
 
-        with patch('tmqrstrategy.position.Position.get_net_position') as mock_get_net_position:
+        with patch('tmqrfeed.position.Position.get_net_position') as mock_get_net_position:
             mock_get_net_position.side_effect = mock_get_net_position_side
             with patch('tmqr.logs.log.warn') as mock_log:
                 p.keep_previous_position(dt2)
@@ -299,6 +300,7 @@ class PositionTestCase(unittest.TestCase):
         p3 = Position(dm, position_dict=p_dict3)
 
         merged_pos = Position.merge(dm, [p1, p2, p3])
+        self.assertEqual(Position, type(merged_pos))
 
         m_pdict = merged_pos._position
 

@@ -16,7 +16,7 @@ import os
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
 from tmqrfeed.fast_data_handling import find_quotes
-
+from tmqrfeed.contracts import ContractBase
 
 class FastDataHandlingTestCase(unittest.TestCase):
     def setUp(self):
@@ -42,7 +42,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
                          index_col=0)
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
@@ -50,18 +50,20 @@ class FastDataHandlingTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
 
-        self.assertEqual(1, len(holdings))
+        self.assertEqual(1, len(holdings._position))
 
         dt = pd.Timestamp('2011-12-20')
         start, decision, execution, next_sess_date = self.sess.get(dt)
 
         idx_list = find_quotes(df, [decision, execution])
 
-        self.assertEqual(2, len(idx_list))
-        self.assertEqual(holdings[0][0], idx_list[0][0])
-        self.assertEqual(holdings[0][2], idx_list[0][1])
+        dpx, epx = holdings.get_asset_price(decision, asset_mock)
 
-        self.assertEqual(holdings[0][3], idx_list[1][1])
+        self.assertEqual(2, len(idx_list))
+        self.assertEqual(decision, idx_list[0][0])
+        self.assertEqual(dpx, idx_list[0][1])
+
+        self.assertEqual(epx, idx_list[1][1])
 
     def test_find_time_indexes_out_of_session(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -71,10 +73,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         asset_mock = MagicMock()
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
-        dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
-        self.assertEqual(0, len(holdings))
 
         dt = pd.Timestamp('2011-12-20')
         start, decision, execution, next_sess_date = self.sess.get(dt)
@@ -86,27 +85,28 @@ class FastDataHandlingTestCase(unittest.TestCase):
                          index_col=0)
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
         df = df.between_time('00:00', '09:00')
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
         comp_df, holdings = compress_daily(dfg, asset_mock)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
-        self.assertEqual(1, len(holdings))
 
         dt = pd.Timestamp('2011-12-20')
         start, decision, execution, next_sess_date = self.sess.get(dt)
 
         idx_list = find_quotes(df, [decision, execution])
 
+        dpx, epx = holdings.get_asset_price(decision, asset_mock)
+
         self.assertEqual(2, len(idx_list))
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[0][0])
-        self.assertEqual(holdings[0][2], idx_list[0][1])
+        self.assertEqual(dpx, idx_list[0][1])
 
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
         self.assertEqual(pd.Timestamp('2011-12-20 09:00:00-0800'), idx_list[1][0])
-        self.assertEqual(holdings[0][3], idx_list[1][1])
+        self.assertEqual(epx, idx_list[1][1])
 
     def test_find_time_missing_time_in_df(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -114,24 +114,25 @@ class FastDataHandlingTestCase(unittest.TestCase):
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
         df = df.drop([df.ix['2011-12-20 10:40'].name,
                       df.ix['2011-12-20 10:45'].name])
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
         comp_df, holdings = compress_daily(dfg, asset_mock)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
-        self.assertEqual(1, len(holdings))
+        self.assertEqual(1, len(holdings._position))
 
         dt = pd.Timestamp('2011-12-20')
         start, decision, execution, next_sess_date = self.sess.get(dt)
 
         idx_list = find_quotes(df, [decision, execution])
 
+        dpx, epx = holdings.get_asset_price(decision, asset_mock)
+
         self.assertEqual(2, len(idx_list))
         self.assertEqual(2, len(idx_list))
         self.assertEqual(pd.Timestamp('2011-12-20 10:39:00-0800'), idx_list[0][0])
-        self.assertEqual(holdings[0][2], idx_list[0][1])
+        self.assertEqual(dpx, idx_list[0][1])
 
-        self.assertEqual(holdings[0][3], idx_list[1][1])
-
+        self.assertEqual(epx, idx_list[1][1])

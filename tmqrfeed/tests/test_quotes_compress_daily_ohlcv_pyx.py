@@ -13,6 +13,8 @@ import os
 
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
+from  tmqrfeed.contracts import ContractBase
+from tmqrfeed.position import Position
 
 
 class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
@@ -39,7 +41,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
                          index_col=0)
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
@@ -47,7 +49,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == list)
+        self.assertTrue(type(holdings) == Position)
 
         row_1 = comp_df.iloc[0]
         self.assertEqual(row_1.name.date(), datetime(2011, 12, 20).date())
@@ -67,7 +69,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series_2days.csv')), parse_dates=True,
                          index_col=0)
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
@@ -75,8 +77,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == list)
-        self.assertTrue(type(holdings[0]) == tuple)
+        self.assertTrue(type(holdings) == Position)
 
         self.assertEqual(2, len(comp_df))
 
@@ -110,7 +111,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series_2days.csv')), parse_dates=True,
                          index_col=0)
         df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
@@ -118,25 +119,17 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == list)
+        self.assertTrue(type(holdings) == Position)
+        self.assertEqual(2, len(holdings._position))
 
-        self.assertEqual(2, len(holdings))
 
         # Tuple of: date, asset, decision_px, exec_px, qty
-        row = holdings[0]
+        pos = holdings.get_net_position(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)))
+        self.assertEqual(pos, {asset_mock: (97.47, 97.39, 1)})
 
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 20, 10, 40, 00)), row[0])
-        self.assertEqual("TestAsset", str(row[1]))
-        self.assertEqual(97.47, row[2])
-        self.assertEqual(97.39, row[3])
-        self.assertEqual(1, row[4])
+        pos = holdings.get_net_position(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)))
+        self.assertEqual(pos, {asset_mock: (97.47, 97.39, 1)})
 
-        row = holdings[1]
-        self.assertEqual(self.tz.localize(datetime(2011, 12, 21, 10, 40, 00)), row[0])
-        self.assertEqual("TestAsset", str(row[1]))
-        self.assertEqual(97.47, row[2])
-        self.assertEqual(97.39, row[3])
-        self.assertEqual(1, row[4])
 
     def test_compress_invalid_series(self):
         df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
@@ -145,7 +138,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
 
         df = df.between_time('11:00', '14:00')
 
-        asset_mock = MagicMock()
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
         asset_mock.__str__.return_value = "TestAsset"
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
@@ -153,7 +146,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         comp_df, holdings = compress_daily(dfg, asset_mock)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
-        self.assertTrue(type(holdings) == list)
+        self.assertTrue(type(holdings) == Position)
 
         self.assertEqual(0, len(comp_df))
-        self.assertEqual(0, len(holdings))
+        self.assertEqual(0, len(holdings._position))

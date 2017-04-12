@@ -3,9 +3,11 @@ import pyximport
 
 from tmqr.errors import *
 from tmqrfeed.quotes.quote_base import QuoteBase
+
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
+from tmqrfeed.position import Position
 
 
 class QuoteContFut(QuoteBase):
@@ -62,7 +64,7 @@ class QuoteContFut(QuoteBase):
                 # 2. Get futures raw series
                 series = self.dm.series_get(fut_contract, date_start=date_start, date_end=date_end)
                 # 3. Do resampling (timeframe compression)
-                series, positions = compress_daily(DataFrameGetter(series), fut_contract)
+                series, position = compress_daily(DataFrameGetter(series), fut_contract)
 
 
                 # 4. Append compressed series to continuous futures series
@@ -70,9 +72,9 @@ class QuoteContFut(QuoteBase):
                     df_data.append(series)
                 else:
                     df_data.append(self.calculate_fut_offset_series(df_data[-1], series))
-                positions_list.append(positions)
+                positions_list.append(position)
 
             except IntradayQuotesNotFoundError:
                 continue
 
-        return self.merge_series(df_data), self.merge_positions(positions_list)
+        return self.merge_series(df_data), Position.merge(self.dm, positions_list)

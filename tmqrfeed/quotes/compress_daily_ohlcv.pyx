@@ -1,6 +1,8 @@
-cimport numpy as np
 import cython
 import numpy as np
+cimport numpy as np
+
+from tmqrfeed.position import Position
 
 DTYPE = np.float
 ctypedef np.float64_t DTYPE_t
@@ -38,8 +40,7 @@ def compress_daily(dfg, asset):
     values = []
     values_index = []
 
-    exec_values = []
-    exec_values_index = []
+    position = Position(asset.dm)
 
     # Session filter settings
     asset_session = asset.instrument_info.session
@@ -48,6 +49,7 @@ def compress_daily(dfg, asset):
     cdef np.uint64_t sess_execution = -1
     cdef np.uint64_t sess_next_date = -1
     dt_sess_start = dt_sess_decision = dt_sess_exec = dt_sess_next = None
+
 
     cdef int is_newday = 1 #
 
@@ -68,11 +70,8 @@ def compress_daily(dfg, asset):
                 )
                 values_index.append(dt_sess_decision)
 
-                # Store exec values
-                exec_values.append(
-                    # Tuple of: date, asset, decision_px, exec_px, qty
-                    (dt_sess_decision, asset, _c, _exec_px, 1)
-                )
+                # Store exec values in position
+                position.set_net_position(dt_sess_decision, {asset: (_c, _exec_px, 1)})
 
             # Calculate trading session params
             dt_sess_start, dt_sess_decision, dt_sess_exec, dt_sess_next = asset_session.get(dfg.index[i])
@@ -123,12 +122,10 @@ def compress_daily(dfg, asset):
             }
         )
         # Store exec values
-        exec_values.append(
-            # Tuple of: date, asset, decision_px, exec_px, qty
-            (dt_sess_decision, asset, _c, _exec_px, 1)
-        )
+        position.set_net_position(dt_sess_decision, {asset: (_c, _exec_px, 1)})
+
         values_index.append(dt_sess_decision)
 
     df_result = pd.DataFrame(values, index=values_index)
     df_result.index.rename('dt', inplace=True)
-    return df_result, exec_values
+    return df_result, position
