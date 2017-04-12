@@ -50,12 +50,9 @@ class QuoteContFut(QuoteBase):
         :param future_date_end: 
         :return: 
         """
-        try:
-            pos_last_date = position.last_date
-            if pos_last_date.date() >= future_date_end:
-                position.close(pos_last_date)
-        except PositionNotFoundError:
-            pass
+        pos_last_date = position.last_date
+        if pos_last_date.date() >= future_date_end:
+            position.close(pos_last_date)
 
         return position
 
