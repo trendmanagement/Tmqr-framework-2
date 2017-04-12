@@ -68,14 +68,21 @@ class QuoteEngineEmptyQuotes(NotFoundError):
     pass
 
 
-class IntradayQuotesNotFoundError(NotFoundError):
+class QuoteNotFoundError(NotFoundError):
+    """
+    Raised when quote is not found
+    """
+    pass
+
+
+class IntradayQuotesNotFoundError(QuoteNotFoundError):
     """
     Raised when quotes not found in intraday source
     """
     pass
 
 
-class OptionsEODQuotesNotFoundError(NotFoundError):
+class OptionsEODQuotesNotFoundError(QuoteNotFoundError):
     """
     Raised when quotes not found in EOD options source
     """
@@ -93,5 +100,19 @@ class ChainNotFoundError(NotFoundError):
 class DataManagerError(TMQRError):
     """
     Raised when generic DataManager error occurred
+    """
+    pass
+
+
+class PositionNotFoundError(NotFoundError):
+    """
+    Raised when position is not found for particular date
+    """
+    pass
+
+
+class PositionQuoteNotFoundError(QuoteNotFoundError):
+    """
+    Raised when cached quote is not found in position records
     """
     pass
