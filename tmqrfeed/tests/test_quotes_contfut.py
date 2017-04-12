@@ -25,6 +25,7 @@ pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.manager import DataManager
 from tmqrfeed.contracts import ContractBase
+from tmqrfeed.position import Position
 
 
 class QuoteContFutTestCase(unittest.TestCase):
@@ -180,10 +181,62 @@ class QuoteContFutTestCase(unittest.TestCase):
         for i in range(len(merged_df)):
             self.assertTrue(np.all(merged_df.iloc[i] == target_df.iloc[i]))
 
+    def test_apply_future_rollover_not_expired_future(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+
+        p.add_transaction(datetime(2011, 1, 1), asset, 3.0)
+        p.add_transaction(datetime(2011, 1, 2), asset, 3.0)
+
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
+
+        # Handle not expired future
+        res_pos = qcont_fut.apply_future_rollover(p, datetime(2011, 1, 3).date())
+        prec = res_pos.get_net_position(datetime(2011, 1, 2))
+        self.assertEqual(prec, {asset: (1.0, 2.0, 3.0)})
+
+    def test_apply_future_rollover_near_expired_future(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+
+        p.add_transaction(datetime(2011, 1, 1), asset, 3.0)
+        p.add_transaction(datetime(2011, 1, 2), asset, 3.0)
+
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
+
+        # Handle expired future
+        res_pos = qcont_fut.apply_future_rollover(p, datetime(2011, 1, 1).date())
+        prec = res_pos.get_net_position(datetime(2011, 1, 2))
+        self.assertEqual(prec, {asset: (1.0, 2.0, 0.0)})
+
+        prec = res_pos.get_net_position(datetime(2011, 1, 1))
+        self.assertEqual(prec, {asset: (1.0, 2.0, 3.0)})
+
+
 
 
 
     def test_build(self):
         dm = DataManager()
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
-        qcont_fut.build()
+        df, position = qcont_fut.build()
+
+        for dt, pos_rec in position._position.items():
+            if len(pos_rec) > 1:
+                has_zero = False
+                has_one = False
+
+                for asset, pos_value in pos_rec.items():
+                    if pos_value[2] == 1:
+                        has_one = True
+                    if pos_value[2] == 0:
+                        has_zero = True
+                self.assertEqual(True, has_zero)
+                self.assertEqual(True, has_one)
+        pass

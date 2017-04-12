@@ -6,6 +6,7 @@ from tmqrfeed.contracts import *
 from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.manager import DataManager
 from tmqrfeed.chains import *
+from tmqrfeed.position import Position
 
 
 class DataManagerTestCase(unittest.TestCase):
@@ -446,12 +447,12 @@ class DataManagerTestCase(unittest.TestCase):
         stk = ContractBase('US.S.AAPL', datamanager=dm)
         opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
 
-        dm._primary_positions = {
+        dm._primary_positions = Position(dm, {
             datetime.datetime(2012, 1, 1): {
                 stk: (0.1, 0.2, 1),
                 opt: (1, 2, 4)
             }
-        }
+        })
 
         dt = datetime.datetime(2012, 1, 1)
         # No date time

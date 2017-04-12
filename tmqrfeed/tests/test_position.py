@@ -164,6 +164,19 @@ class PositionTestCase(unittest.TestCase):
         p.add_transaction(datetime(2011, 1, 2), asset, 3.0)
         self.assertEqual(dt, p._prev_day_key(date=datetime(2011, 1, 2)))
 
+    def test_last_date(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+
+        self.assertRaises(PositionNotFoundError, p._prev_day_key, None)
+        p.add_transaction(dt, asset, 3.0)
+
+        self.assertEqual(dt, p.last_date)
+
     def test__check_position_validity(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)
@@ -314,3 +327,21 @@ class PositionTestCase(unittest.TestCase):
 
         for dt, val in expected_dict.items():
             self.assertEqual(m_pdict[dt], val)
+
+    def test_close(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+
+        p.add_transaction(dt, asset, 3.0)
+        p.close(dt)
+
+        self.assertEqual(1, len(p._position))
+        for i, v in enumerate((1.0, 2.0, 0.0)):
+            self.assertEqual(v, p._position[dt][asset][i])
+
+        # Test non existing dates ignored
+        p.close(datetime(2011, 1, 2))

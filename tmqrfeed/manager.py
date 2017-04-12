@@ -145,11 +145,10 @@ class DataManager:
 
         # Looking for primary positions
         if self._primary_positions is not None:
-            assets_dict = self._primary_positions.get(date, None)
-            if assets_dict is not None:
-                pos_tuple = assets_dict.get(asset, None)
-                if pos_tuple is not None:
-                    return pos_tuple[0], pos_tuple[1]  # decision_px, exec_px
+            try:
+                return self._primary_positions.get_asset_price(date, asset)
+            except PositionQuoteNotFoundError:
+                pass
 
         # TODO: add look up for secondary data positions
         return None, None

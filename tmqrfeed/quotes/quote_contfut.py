@@ -43,7 +43,21 @@ class QuoteContFut(QuoteBase):
         new_series = new_series[new_series.index > prev_series.index[-1]]
         return new_series
 
+    def apply_future_rollover(self, position, future_date_end):
+        """
+        Change position to zero if the last day before expiration occurred  
+        :param position: 
+        :param future_date_end: 
+        :return: 
+        """
+        try:
+            pos_last_date = position.last_date
+            if pos_last_date.date() >= future_date_end:
+                position.close(pos_last_date)
+        except PositionNotFoundError:
+            pass
 
+        return position
 
     def build(self):
         # Get futures chain
@@ -72,7 +86,9 @@ class QuoteContFut(QuoteBase):
                     df_data.append(series)
                 else:
                     df_data.append(self.calculate_fut_offset_series(df_data[-1], series))
-                positions_list.append(position)
+
+                # Make sure that we have closed futures after rollover
+                positions_list.append(self.apply_future_rollover(position, date_end))
 
             except IntradayQuotesNotFoundError:
                 continue

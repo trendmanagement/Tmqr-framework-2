@@ -21,6 +21,10 @@ class Position:
             self._position = OrderedDict()
         self.dm = datamanager
 
+    @property
+    def last_date(self):
+        return self._prev_day_key(date=None)
+
     def _prev_day_key(self, date=None):
         """
         Gets previous day key which is less than 'date'
@@ -117,6 +121,22 @@ class Position:
         :return: 
         """
         pass
+
+    def close(self, date):
+        """
+        Close all position at given date
+        :param date: 
+        :return: nothing, changes position in place
+        """
+        try:
+            pos_dict = self._position[date]
+            for asset, pos_rec in pos_dict.items():
+                # Apply zero-qty to all position records, but keep the prices
+                pos_dict[asset] = (pos_rec[0], pos_rec[1], 0.0)
+        except KeyError:
+            # Nothing to close at 'date', just skipping
+            pass
+
 
     def set_net_position(self, date, net_position_dict):
         """
