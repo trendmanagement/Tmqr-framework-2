@@ -53,7 +53,7 @@ class QuoteContFut(QuoteBase):
         # Build price series
         # 1. Iterate chains
         df_data = []
-        df_positions = []
+        positions_list = []
         for fut_chain_row in chain_values:
             fut_contract = fut_chain_row[0]
             date_start = fut_chain_row[1]
@@ -70,9 +70,9 @@ class QuoteContFut(QuoteBase):
                     df_data.append(series)
                 else:
                     df_data.append(self.calculate_fut_offset_series(df_data[-1], series))
-                df_positions.append(positions)
+                positions_list.append(positions)
 
             except IntradayQuotesNotFoundError:
                 continue
 
-        return self.merge_series(df_data), self.merge_positions(df_positions)
+        return self.merge_series(df_data), self.merge_positions(positions_list)

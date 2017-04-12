@@ -10,8 +10,16 @@ class Position:
     Universal position management class for all types of strategies
     """
 
-    def __init__(self, datamanager):
-        self._position = OrderedDict()
+    def __init__(self, datamanager, position_dict=None):
+        """
+        Init the Position instance
+        :param datamanager: DataManager class instance
+        :param position_dict: position dictionary
+        """
+        if position_dict:
+            self._position = position_dict
+        else:
+            self._position = OrderedDict()
         self.dm = datamanager
 
     def _prev_day_key(self, date=None):
@@ -115,6 +123,8 @@ class Position:
         """
         Set net position at given date (overwrites old position if it exists). This method intended to be used
         by low-level Quote* algorithms to initiate positions, generic strategies should use add_net_position() method.
+        
+        This method allow to change position at the previous date, use with care this could ruin data validity.
         :param date: 
         :param net_position_dict: dict of {asset: (decision_px, exec_px, qty), ... }
         :return: nothing, changes position in place
@@ -211,11 +221,47 @@ class Position:
         pass
 
     @staticmethod
-    def merge(self, positions_list):
+    def merge(datamanager, positions_list):
         """
-        Merges list of Positions to single Position class instance. Useful for campaign position building, alpha members position, etc. 
-        :param self: 
-        :param positions_list: 
+        Merges list of Positions to single Position class instance. Useful for campaign position building, alpha members position, etc.
+        :param datamanager: DataManager instance
+        :param positions_list: list of Position class instances to merge
         :return: 
         """
-        pass
+
+        def merge_pos_record(result_dict, new_dict):
+            for asset, pos_value in new_dict.items():
+                result_value = result_dict.get(asset, None)
+
+                if not result_value:
+                    # Asset is not found just add new value
+                    result_dict[asset] = pos_value
+                else:
+                    # Checking the decision and execution prices equality
+                    assert result_value[0] == pos_value[0]
+                    assert result_value[1] == pos_value[1]
+
+                    # Summing the qty of position
+                    result_dict[asset] = (result_value[0], result_value[1], result_value[2] + pos_value[2])
+
+        result_pos_dict = OrderedDict()
+
+        # Get list of unique dates for all positions
+        merged_dates_set = set()
+        for pos in positions_list:
+            merged_dates_set.update(pos._position.keys())
+
+        # Iterate dates in a sorted order
+        for date in sorted(merged_dates_set):
+            result_record = result_pos_dict.setdefault(date, {})
+
+            # Iterate over all positions
+            for pos in positions_list:
+                try:
+                    pos_record = pos._position[date]
+                    # Merge positions records
+                    merge_pos_record(result_record, pos_record)
+                except KeyError:
+                    continue
+
+        return Position(datamanager, position_dict=result_pos_dict)

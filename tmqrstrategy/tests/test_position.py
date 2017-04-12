@@ -14,6 +14,15 @@ class PositionTestCase(unittest.TestCase):
         self.assertEqual(OrderedDict, type(p._position))
         self.assertEqual('datamanager', p.dm)
 
+    def test_init_with_position_dict(self):
+        p_dict = OrderedDict()
+        dm = MagicMock(DataManager())
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+
+        p = Position(dm, position_dict=p_dict)
+        self.assertEqual(p._position, p_dict)
+
     def test_add_transaction_new(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)
@@ -266,3 +275,40 @@ class PositionTestCase(unittest.TestCase):
 
         self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 2), asset)
         self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 1), 'not_existing_asset')
+
+    def test_merge_positions(self):
+
+        dm = MagicMock(DataManager())
+        asset = MagicMock(ContractBase("US.S.AAPL", dm), name='Asset')
+        asset2 = MagicMock(ContractBase("US.S.GOOG", dm), name='Asset2')
+
+        p_dict = OrderedDict()
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict[datetime(2011, 1, 2)] = {asset: (100, 101, 2)}
+
+        p_dict2 = OrderedDict()
+        p_dict2[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+        p_dict2[datetime(2011, 1, 2)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict2[datetime(2011, 1, 3)] = {asset2: (200, 201, 4)}
+
+        p_dict3 = OrderedDict()
+        p_dict3[datetime(2011, 1, 4)] = {asset: (100, 101, 2)}
+
+        p1 = Position(dm, position_dict=p_dict)
+        p2 = Position(dm, position_dict=p_dict2)
+        p3 = Position(dm, position_dict=p_dict3)
+
+        merged_pos = Position.merge(dm, [p1, p2, p3])
+
+        m_pdict = merged_pos._position
+
+        self.assertEqual(4, len(m_pdict))
+
+        expected_dict = OrderedDict()
+        expected_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 4), asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 2)] = {asset: (100, 101, 4), asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 3)] = {asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 4)] = {asset: (100, 101, 2)}
+
+        for dt, val in expected_dict.items():
+            self.assertEqual(m_pdict[dt], val)
