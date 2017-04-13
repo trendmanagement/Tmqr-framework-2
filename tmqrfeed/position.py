@@ -302,14 +302,16 @@ class Position:
                 costs_value = self.dm.costs_get(asset, curr_values[2])
                 result[asset] = (curr_values[0], curr_values[1], curr_values[2], costs_value, costs_value, costs_value)
             elif curr_values is None:
-                decision_price, exec_price = self.dm.price_get(asset, date)
-                costs_value = self.dm.costs_get(asset, -prev_values[2])
+                # Skip old closed positions
+                if prev_values[2] != 0:
+                    decision_price, exec_price = self.dm.price_get(asset, date)
+                    costs_value = self.dm.costs_get(asset, -prev_values[2])
 
-                pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
-                pnl_execution = asset.dollar_pnl(prev_values[1], exec_price, prev_values[2])
+                    pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
+                    pnl_execution = asset.dollar_pnl(prev_values[1], exec_price, prev_values[2])
 
-                result[asset] = (decision_price, exec_price, -prev_values[2],
-                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                    result[asset] = (decision_price, exec_price, -prev_values[2],
+                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             else:
                 # Calculating transactions for existing position
                 trans_qty = curr_values[2] - prev_values[2]

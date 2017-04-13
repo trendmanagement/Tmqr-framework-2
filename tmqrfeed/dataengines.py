@@ -164,6 +164,6 @@ class DataEngineMongo(DataEngineBase):
             dframes_list.append(df)
 
         if len(dframes_list) == 0:
-            raise IntradayQuotesNotFoundError("No data found for {0}".format(tckr))
+            raise IntradayQuotesNotFoundError(f"No data found for {tckr} in period {date_start}-{date_end}")
 
         return pd.concat(dframes_list), QTYPE_INTRADAY

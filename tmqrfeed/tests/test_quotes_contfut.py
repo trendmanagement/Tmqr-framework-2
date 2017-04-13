@@ -224,7 +224,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
     def test_build(self):
         dm = DataManager()
-        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D', date_start=datetime(2010, 1, 1))
         df, position = qcont_fut.build()
 
         for dt, pos_rec in position._position.items():
@@ -239,4 +239,7 @@ class QuoteContFutTestCase(unittest.TestCase):
                         has_zero = True
                 self.assertEqual(True, has_zero)
                 self.assertEqual(True, has_one)
-        pass
+
+        from tmqrfeed.costs import Costs
+        dm.costs_set("US", Costs(3, 3))
+        position.get_pnl_series()
