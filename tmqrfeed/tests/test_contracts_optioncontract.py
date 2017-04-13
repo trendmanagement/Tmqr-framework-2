@@ -285,3 +285,27 @@ class OptionContractTestCase(unittest.TestCase):
 
             self.assertEqual(contract.delta(datetime(2011, 1, 20)), 0.5)
             self.assertEqual(mock_greeks.called, True)
+
+    def test_point_value(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.OptionContract.instrument_info') as mock_instrument_info:
+            contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+
+            mock_instrument_info.ticksize_options = 0.0
+            mock_instrument_info.tickvalue_options = 1.0
+            self.assertRaises(SettingsError, contract.__getattribute__, 'point_value')
+
+            mock_instrument_info.ticksize_options = 1.0
+            mock_instrument_info.tickvalue_options = 0.0
+            self.assertRaises(SettingsError, contract.__getattribute__, 'point_value')
+
+            mock_instrument_info.ticksize_options = 2.0
+            mock_instrument_info.tickvalue_options = 23.0
+
+            self.assertEqual(1 / 2.0 * 23.0, contract.point_value)
+
+            # Caching
+            mock_instrument_info.ticksize_options = 0.0
+            mock_instrument_info.tickvalue_options = 0.0
+            self.assertEqual(1 / 2.0 * 23.0, contract.point_value)

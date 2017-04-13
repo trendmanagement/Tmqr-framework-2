@@ -2,6 +2,7 @@ from collections import OrderedDict
 from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
+import pandas as pd
 
 
 class Position:
@@ -21,9 +22,10 @@ class Position:
             self._position = OrderedDict()
         self.dm = datamanager
 
-    @property
-    def last_date(self):
-        return self._prev_day_key(date=None)
+    #
+    # Private methods
+    #
+    #
 
     def _prev_day_key(self, date=None):
         """
@@ -64,6 +66,11 @@ class Position:
                 raise ArgumentError(f"'net_position_dict' values must be tuples of (decision_px, exec_px, qty),"
                                     f" but got different length {pos_value}")
 
+    #
+    # Position save/load
+    #
+    #
+
     def serialize(self):
         """
         Serialize position data to compatible for MongoDB format
@@ -72,55 +79,18 @@ class Position:
         pass
 
     @staticmethod
-    def deserialize(self):
+    def deserialize(pos_data):
         """
         Deserialize position data from MongoDB format
-        :param self: 
+        :param pos_data: 
         :return: 
         """
         pass
 
-    def get_asset_price(self, date, asset):
-        """
-        Get asset prices from position holdings
-        :param date: required date
-        :param asset: ContractBase class instance        
-        :return: tuple (decision_price, exec_price)
-        """
-        assets_dict = self._position.get(date, None)
-        if assets_dict:
-            pos_tuple = assets_dict.get(asset, None)
-            if pos_tuple:
-                return pos_tuple[0], pos_tuple[1]  # decision_px, exec_px
-
-        raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
-
-    def get_net_position(self, date):
-        """
-        Get net position at given date
-        :param date: date of position slice
-        :return: 
-        """
-        try:
-            return self._position[date]
-        except KeyError:
-            raise PositionNotFoundError(f'No positions records found at {date}')
-
-    def get_transactions(self, date):
-        """
-        Get position transactions at given date
-        :param date: 
-        :return: 
-        """
-        pass
-
-    def get_pnl(self, date):
-        """
-        Get position PnL at given date
-        :param date: 
-        :return: 
-        """
-        pass
+    #
+    # Position management
+    #
+    #
 
     def close(self, date):
         """
@@ -232,12 +202,7 @@ class Position:
             assert pos_record[1] == exec_price
             pos_dict[asset] = (pos_record[0], pos_record[1], qty + pos_record[2])
 
-    def get_pnl_series(self):
-        """
-        Calculates position PnL series for all transactions, also additional execution info provided
-        :return: pandas.DataFrame
-        """
-        pass
+
 
     @staticmethod
     def merge(datamanager, positions_list):
@@ -284,3 +249,115 @@ class Position:
                     continue
 
         return Position(datamanager, position_dict=result_pos_dict)
+
+    #
+    # Position information
+    #
+
+    @property
+    def last_date(self):
+        return self._prev_day_key(date=None)
+
+    def get_asset_price(self, date, asset):
+        """
+        Get asset prices from position holdings
+        :param date: required date
+        :param asset: ContractBase class instance        
+        :return: tuple (decision_price, exec_price)
+        """
+        assets_dict = self._position.get(date, None)
+        if assets_dict:
+            pos_tuple = assets_dict.get(asset, None)
+            if pos_tuple:
+                return pos_tuple[0], pos_tuple[1]  # decision_px, exec_px
+
+        raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
+
+    def get_net_position(self, date):
+        """
+        Get net position at given date
+        :param date: date of position slice
+        :return: 
+        """
+        try:
+            return self._position[date]
+        except KeyError:
+            raise PositionNotFoundError(f'No positions records found at {date}')
+
+    def _calc_transactions(self, date, current_pos, prev_pos):
+        result = {}
+
+        assert current_pos is not None, 'current_pos must be initialized'
+
+        if prev_pos is None:
+            intersected_assets = set(current_pos)
+        else:
+            intersected_assets = set(current_pos) | set(prev_pos)
+
+        for asset in intersected_assets:
+            prev_values = prev_pos.get(asset, None) if prev_pos is not None else None
+            curr_values = current_pos.get(asset, None)
+
+            if prev_values is None:
+                result[asset] = (curr_values[0], curr_values[1], curr_values[2], 0.0, 0.0)
+            elif curr_values is None:
+                decision_price, exec_price = self.dm.price_get(asset, date)
+                pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
+                pnl_execution = asset.dollar_pnl(prev_values[1], exec_price, prev_values[2])
+
+                result[asset] = (decision_price, exec_price, -prev_values[2], pnl_decision, pnl_execution)
+            else:
+                # Calculating transactions for existing position
+                pnl_decision = asset.dollar_pnl(prev_values[0], curr_values[0], prev_values[2])
+                pnl_execution = asset.dollar_pnl(prev_values[1], curr_values[1], prev_values[2])
+
+                result[asset] = (curr_values[0], curr_values[1], curr_values[2] - prev_values[2],
+                                 pnl_decision, pnl_execution)
+
+        return result
+
+    def _transactions_stats(self, trans_dict):
+        pnl_change_decision = 0.0
+        pnl_change_execution = 0.0
+        ncontracts_executed = 0.0
+        noptions_executed = 0.0
+
+        for asset, trans in trans_dict.items():
+            pnl_change_decision += trans[3]
+            pnl_change_execution += trans[4]
+
+            if asset.ctype in ('P', 'C'):
+                noptions_executed += abs(trans[2])
+            else:
+                ncontracts_executed += abs(trans[2])
+
+        # TODO: implement costs estimation
+        return {
+            'pnl_change_decision': pnl_change_decision,
+            'pnl_change_execution': pnl_change_execution,
+            'ncontracts_executed': ncontracts_executed,
+            'noptions_executed': noptions_executed,
+        }
+
+    def get_pnl_series(self):
+        """
+        Calculates position PnL series for all transactions, also additional execution info provided
+        :return: pandas.DataFrame
+        """
+        pnl_result = []
+        prev_pos = None
+
+        for dt, pos_list in self._position.items():
+            transactions = self._calc_transactions(dt, pos_list, prev_pos)
+            stats = self._transactions_stats(transactions)
+            res = {'dt': dt}
+            res.update(stats)
+
+            pnl_result.append(res)
+            prev_pos = pos_list
+
+        df_result = pd.DataFrame(pnl_result).set_index('dt')
+        df_result['equity_decision'] = df_result['pnl_change_decision'].cumsum()
+        df_result['equity_execution'] = df_result['pnl_change_execution'].cumsum()
+
+        return df_result

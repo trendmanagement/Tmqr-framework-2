@@ -19,6 +19,49 @@ class ContractsTestCase(unittest.TestCase):
 
         self.assertRaises(NotImplementedError, contract.__getattribute__, 'data_source')
 
+    def test_contractbase_delta(self):
+        contract = ContractBase('US.S.AAPL')
+        self.assertEqual(1.0, contract.delta(None))
+
+    def test_contractbase_point_value(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            contract = ContractBase('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+
+            mock_instrument_info.ticksize = 0.0
+            mock_instrument_info.tickvalue = 1.0
+            self.assertRaises(SettingsError, contract.__getattribute__, 'point_value')
+
+            mock_instrument_info.ticksize = 1.0
+            mock_instrument_info.tickvalue = 0.0
+            self.assertRaises(SettingsError, contract.__getattribute__, 'point_value')
+
+            mock_instrument_info.ticksize = 2.0
+            mock_instrument_info.tickvalue = 23.0
+
+            self.assertEqual(1 / 2.0 * 23.0, contract.point_value)
+
+            # Caching
+            mock_instrument_info.ticksize = 0.0
+            mock_instrument_info.tickvalue = 0.0
+            self.assertEqual(1 / 2.0 * 23.0, contract.point_value)
+
+    def test_contractbase_dollar_pnl(self):
+        dm = mock.MagicMock(DataManager())
+
+        with mock.patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            contract = ContractBase('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+            mock_instrument_info.ticksize = 2.0
+            mock_instrument_info.tickvalue = 23.0
+
+            self.assertEqual(1 / 2.0 * 23.0, contract.point_value)
+
+            self.assertEqual((101.0 - 100.0) * -5.0 * (1.0 / 2.0 * 23.0), contract.dollar_pnl(100.0, 101.0, -5))
+
+
+
+
     def test_contractbase_magic_funcs(self):
         contract = ContractBase('US.S.AAPL')
         contract3 = ContractBase('US.S.AAPL')

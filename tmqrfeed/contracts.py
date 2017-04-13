@@ -1,6 +1,6 @@
 import warnings
 
-from tmqr.errors import ArgumentError
+from tmqr.errors import ArgumentError, SettingsError
 from tmqr.settings import *
 import pyximport
 
@@ -45,6 +45,8 @@ class ContractBase:
         self.dm = datamanager
         """Global DataManager class instance"""
 
+        self._point_value = None
+
     @property
     def instrument(self):
         """
@@ -85,9 +87,50 @@ class ContractBase:
         """
         return self.dm.datafeed.get_instrument_info(self.instrument)
 
+    @property
+    def point_value(self):
+        """
+        1-point USD value
+        :return: 
+        """
+        if self._point_value is None:
+            iinfo = self.instrument_info
+            if iinfo.ticksize == 0.0 or iinfo.tickvalue == 0.0:
+                raise SettingsError(
+                    f"'ticksize' or 'tickvalue' is not set in instrument {self.instrument} settings. "
+                    f"Check the instrument settings in the DB")
+
+            self._point_value = 1.0 / iinfo.ticksize * iinfo.tickvalue
+
+        return self._point_value
+
+    def dollar_pnl(self, prev_price, current_price, qty):
+        """
+        Calculate dollar PnL for asset
+        :param prev_price: previous price
+        :param current_price: current price
+        :param qty:  
+        :return: PnL in dollars
+        """
+        return (current_price - prev_price) * qty * self.point_value
+
     @staticmethod
     def to_expiration_days(expiration_date, current_date):
+        """
+        Calculates calendar days to expiration
+        :param expiration_date: 
+        :param current_date: 
+        :return: 
+        """
         return (expiration_date.date() - current_date.date()).days
+
+    def delta(self, date):
+        """
+        Get contract delta 
+        :param date: 
+        :return: decision time greeks
+        """
+        return 1.0
 
     @staticmethod
     def _parse(ticker):
@@ -275,6 +318,19 @@ class OptionContract(ContractBase):
             else:
                 self._underlying = ContractBase(underlying_name, self.dm)
         return self._underlying
+
+    @property
+    def point_value(self):
+        if self._point_value is None:
+            iinfo = self.instrument_info
+            if iinfo.ticksize_options == 0.0 or iinfo.tickvalue_options == 0.0:
+                raise SettingsError(
+                    f"'ticksize_options' or 'tickvalue_options' is not set in instrument {self.instrument} settings. "
+                    f"Check the instrument settings in the DB")
+
+            self._point_value = 1.0 / iinfo.ticksize_options * iinfo.tickvalue_options
+
+        return self._point_value
 
     @property
     def data_source(self):
