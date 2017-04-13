@@ -7,6 +7,7 @@ from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.manager import DataManager
 from tmqrfeed.chains import *
 from tmqrfeed.position import Position
+from tmqrfeed.costs import Costs
 
 
 class DataManagerTestCase(unittest.TestCase):
@@ -491,3 +492,19 @@ class DataManagerTestCase(unittest.TestCase):
 
                         self.assertTrue(mock__price_set_cached.called)
                         self.assertEqual((stk, dt, (3, 3)), mock__price_set_cached.call_args[0])
+
+    def test_costs_set_get(self):
+        dm = DataManager()
+        stk = ContractBase('US.S.AAPL', datamanager=dm)
+        stk2 = ContractBase('RU.S.LKOH', datamanager=dm)
+
+        cst = Costs(10, 20)
+        dm.costs_set('US', cst)
+
+        self.assertEqual(1, len(dm._cache_costs))
+        self.assertEqual(dm._cache_costs['US'], cst)
+        self.assertRaises(ArgumentError, dm.costs_set, 'US', 0.0)
+
+        self.assertEqual(cst.calc_costs(stk, 10), dm.costs_get(stk, 10))
+
+        self.assertRaises(CostsNotFoundError, dm.costs_get, stk2, 10)

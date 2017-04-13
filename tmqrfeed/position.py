@@ -299,20 +299,26 @@ class Position:
             curr_values = current_pos.get(asset, None)
 
             if prev_values is None:
-                result[asset] = (curr_values[0], curr_values[1], curr_values[2], 0.0, 0.0)
+                costs_value = self.dm.costs_get(asset, curr_values[2])
+                result[asset] = (curr_values[0], curr_values[1], curr_values[2], costs_value, costs_value, costs_value)
             elif curr_values is None:
                 decision_price, exec_price = self.dm.price_get(asset, date)
+                costs_value = self.dm.costs_get(asset, -prev_values[2])
+
                 pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
                 pnl_execution = asset.dollar_pnl(prev_values[1], exec_price, prev_values[2])
 
-                result[asset] = (decision_price, exec_price, -prev_values[2], pnl_decision, pnl_execution)
+                result[asset] = (decision_price, exec_price, -prev_values[2],
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             else:
                 # Calculating transactions for existing position
+                trans_qty = curr_values[2] - prev_values[2]
+                costs_value = self.dm.costs_get(asset, trans_qty)
                 pnl_decision = asset.dollar_pnl(prev_values[0], curr_values[0], prev_values[2])
                 pnl_execution = asset.dollar_pnl(prev_values[1], curr_values[1], prev_values[2])
 
-                result[asset] = (curr_values[0], curr_values[1], curr_values[2] - prev_values[2],
-                                 pnl_decision, pnl_execution)
+                result[asset] = (curr_values[0], curr_values[1], trans_qty,
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
 
         return result
 
@@ -321,6 +327,7 @@ class Position:
         pnl_change_execution = 0.0
         ncontracts_executed = 0.0
         noptions_executed = 0.0
+        costs = 0.0
 
         for asset, trans in trans_dict.items():
             pnl_change_decision += trans[3]
@@ -331,12 +338,15 @@ class Position:
             else:
                 ncontracts_executed += abs(trans[2])
 
-        # TODO: implement costs estimation
+            costs += trans[5]
+
+
         return {
             'pnl_change_decision': pnl_change_decision,
             'pnl_change_execution': pnl_change_execution,
             'ncontracts_executed': ncontracts_executed,
             'noptions_executed': noptions_executed,
+            'costs': costs
         }
 
     def get_pnl_series(self):

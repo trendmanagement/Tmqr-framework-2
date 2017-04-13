@@ -116,3 +116,10 @@ class PositionQuoteNotFoundError(QuoteNotFoundError):
     Raised when cached quote is not found in position records
     """
     pass
+
+
+class CostsNotFoundError(NotFoundError):
+    """
+    Raised when costs class is not initiated for particular market
+    """
+    pass

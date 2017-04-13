@@ -362,6 +362,7 @@ class PositionTestCase(unittest.TestCase):
             mock_instrument_info.ticksize = 1.0
             mock_instrument_info.tickvalue = 1.0
 
+
             positions = OrderedDict()
             fut = ContractBase("US.S.AAPL")
             fut.ctype = 'F'
@@ -383,28 +384,29 @@ class PositionTestCase(unittest.TestCase):
 
             dm = MagicMock(DataManager())
             dm.price_get.return_value = (501, 502)
+            dm.costs_get.return_value = 0.0
 
             p = Position(dm)
 
             # First transaction
             trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 1)], None)
             self.assertEqual(1, len(trans))
-            self.assertEqual({fut: (100, 101, 2, 0.0, 0.0)}, trans)
+            self.assertEqual({fut: (100, 101, 2, 0.0, 0.0, 0.0)}, trans)
 
             trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 2)],
                                          positions[datetime(2011, 1, 1)])
             self.assertEqual(3, len(trans))
-            self.assertEqual({fut: (101, 102, -1, 2.0, 2.0),
-                              opt1: (201, 202, 3, 0.0, 0.0),
-                              opt2: (301, 302, -4, 0.0, 0.0)
+            self.assertEqual({fut: (101, 102, -1, 2.0, 2.0, 0.0),
+                              opt1: (201, 202, 3, 0.0, 0.0, 0.0),
+                              opt2: (301, 302, -4, 0.0, 0.0, 0.0)
                               }, trans)
 
             trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 3)],
                                          positions[datetime(2011, 1, 2)])
             self.assertEqual(3, len(trans))
-            self.assertEqual({fut: (102, 103, 0.0, 1.0, 1.0),
-                              opt1: (202, 203, -3.0, 3.0, 3.0),
-                              opt2: (501, 502, 4.0, -200 * 4, -200 * 4)
+            self.assertEqual({fut: (102, 103, 0.0, 1.0, 1.0, 0.0),
+                              opt1: (202, 203, -3.0, 3.0, 3.0, 0.0),
+                              opt2: (501, 502, 4.0, -200 * 4, -200 * 4, 0.0)
                               }, trans)
 
     def test__transactions_stats(self):
@@ -429,6 +431,11 @@ class PositionTestCase(unittest.TestCase):
             dm = MagicMock(DataManager())
             dm.price_get.return_value = (501, 502)
 
+            def costs_side(asset, qty):
+                return abs(qty) * -1.0
+
+            dm.costs_get.side_effect = costs_side
+
             p = Position(dm)
 
             mock_instrument_info.ticksize = 1.0
@@ -437,18 +444,20 @@ class PositionTestCase(unittest.TestCase):
             trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 2)],
                                          positions[datetime(2011, 1, 1)])
             self.assertEqual(3, len(trans))
-            self.assertEqual({fut: (101, 102, -1.0, 2.0, 2.0),
-                              opt1: (201, 202, 3.0, 0.0, 0.0),
-                              opt2: (301, 302, -4.0, 0.0, 0.0)
+            self.assertEqual({fut: (101, 102, -1.0, 1.0, 1.0, -1.0),
+                              opt1: (201, 202, 3.0, -3.0, -3.0, -3.0),
+                              opt2: (301, 302, -4.0, -4.0, -4.0, -4.0)
                               }, trans)
+
 
             stats = p._transactions_stats(trans)
 
             self.assertEqual({
-                'pnl_change_decision': 2.0,
-                'pnl_change_execution': 2.0,
+                'pnl_change_decision': -6.0,
+                'pnl_change_execution': -6.0,
                 'ncontracts_executed': 1.0,
                 'noptions_executed': 7.0,
+                'costs': -8.0
             }, stats)
 
     def test_get_pnl_series(self):
@@ -483,7 +492,8 @@ class PositionTestCase(unittest.TestCase):
                   'ncontracts_executed',
                   'noptions_executed',
                   'equity_decision',
-                  'equity_execution']:
+                  'equity_execution',
+                  'costs']:
             self.assertTrue(c in df, c)
 
         self.assertEqual('dt', df.index.name)

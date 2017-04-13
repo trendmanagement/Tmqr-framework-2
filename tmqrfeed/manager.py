@@ -3,7 +3,7 @@ from tmqrfeed.contracts import ContractBase, FutureContract
 from tmqrfeed.datafeed import DataFeed
 from datetime import datetime
 from tmqr.settings import QDATE_MIN, QDATE_MAX
-
+from tmqrfeed.costs import Costs
 
 class DataManager:
     """
@@ -45,6 +45,33 @@ class DataManager:
 
         # Internal price cache for getting single quotes
         self._cache_single_price = {}
+
+        self._cache_costs = {}
+
+    def costs_set(self, market, costs):
+        """
+        Initiate costs settings for position PnL calculations
+        :param market: market name
+        :param costs: Costs class instance
+        :return: 
+        """
+        if not isinstance(costs, Costs):
+            raise ArgumentError("'costs' argument must be instance/or derived from tmqrfeed.costs.Costs class")
+        self._cache_costs[market] = costs
+
+    def costs_get(self, asset, qty):
+        """
+        Calculate costs based on 'asset'.market and qty
+        :param asset: ContractBase instance
+        :param qty: transaction qty
+        :return: costs value in dollars
+        """
+        costs = self._cache_costs.get(asset.market, None)
+        if not costs:
+            raise CostsNotFoundError(f"Couldn't find costs settings for market '{asset.market}'."
+                                     f"Try call datamanager.costs_set('market_name', costs_class_instance first.")
+        return costs.calc_costs(asset, qty)
+
 
     def series_primary_set(self, quote_engine_cls, *args, **kwargs):
         """
