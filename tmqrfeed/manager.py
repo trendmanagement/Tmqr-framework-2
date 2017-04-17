@@ -84,6 +84,8 @@ class DataManager:
         if self._primary_quotes is not None:
             raise DataManagerError("series_primary_set() already called, only one instance of primary quotes allowed")
 
+        kwargs['datamanager'] = self
+
         quote_engine = quote_engine_cls(*args, **kwargs)
         self._primary_quotes, self._primary_positions = quote_engine.build()
 
@@ -117,6 +119,38 @@ class DataManager:
         self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
         self._secondary_positions[name] = pos
 
+    def quotes(self, series_key=None):
+        """
+        Get aligned primary or extra quotes data
+        :param series_key: extra_series key, or if None - return primary series
+        :return: pd.DataFrame of series
+        """
+        if series_key is None:
+            if self._primary_quotes is None:
+                raise QuoteNotFoundError("Primary quotes are not initiated, run series_primary_set() first")
+            return self._primary_quotes
+        else:
+            extra_series = self._secondary_quotes.get(series_key, None)
+            if extra_series is None:
+                raise QuoteNotFoundError(f"Couldn't find extra quotes by 'series_key'='{series_key}',"
+                                         f" run series_extra_set() first or check the 'series_key' validity")
+            return extra_series
+
+    def position(self, position_key=None):
+        """
+        Get aligned primary or extra position instance
+        :param position_key: extra_series key, or if None - return primary series
+        :return: pd.DataFrame of series
+        """
+        if position_key is None:
+            return self._primary_positions
+        else:
+            try:
+                extra_positions = self._secondary_positions[position_key]
+            except KeyError:
+                raise QuoteNotFoundError(f"Couldn't find extra position by 'position_key'='{position_key}',"
+                                         f" run series_extra_set() first or check the 'position_key' validity")
+            return extra_positions
 
 
     def series_align(self, primary_quotes, extra_quotes):

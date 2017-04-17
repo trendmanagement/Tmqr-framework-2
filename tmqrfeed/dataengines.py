@@ -82,7 +82,7 @@ class DataEngineMongo(DataEngineBase):
         """
         toks = instrument.split('.')
         if len(toks) != 2:
-            raise ValueError("Instrument name must be <MARKET>.<INSTRUMENT>")
+            raise ArgumentError("Instrument name must be <MARKET>.<INSTRUMENT>")
         mkt_name, instr_name = toks
 
         ainfo_default = self.db[COLLECTION_ASSET_INFO].find_one({'instrument': '{0}.$DEFAULT$'.format(mkt_name)})

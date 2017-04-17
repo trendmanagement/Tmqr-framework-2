@@ -8,9 +8,9 @@ from tmqrfeed.dataengines import *
 class DataEngineTestCase(unittest.TestCase):
     def test_get_asset_info_bad_instrument(self):
         dfeed = DataEngineMongo()
-        self.assertRaises(ValueError, dfeed.db_get_instrument_info, 'CL')
-        self.assertRaises(ValueError, dfeed.db_get_instrument_info, '')
-        self.assertRaises(ValueError, dfeed.db_get_instrument_info, 'CL.US.S')
+        self.assertRaises(ArgumentError, dfeed.db_get_instrument_info, 'CL')
+        self.assertRaises(ArgumentError, dfeed.db_get_instrument_info, '')
+        self.assertRaises(ArgumentError, dfeed.db_get_instrument_info, 'CL.US.S')
 
     def test_get_asset_info_existing_instrument(self):
         deng = DataEngineMongo()

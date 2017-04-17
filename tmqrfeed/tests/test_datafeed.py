@@ -39,9 +39,9 @@ class DataFeedTestCase(unittest.TestCase):
 
     def test_get_asset_info(self):
         dfeed = DataFeed()
-        self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL')
-        self.assertRaises(ValueError, dfeed.get_instrument_info, '')
-        self.assertRaises(ValueError, dfeed.get_instrument_info, 'CL.US.S')
+        self.assertRaises(ArgumentError, dfeed.get_instrument_info, 'CL')
+        self.assertRaises(ArgumentError, dfeed.get_instrument_info, '')
+        self.assertRaises(ArgumentError, dfeed.get_instrument_info, 'CL.US.S')
 
         with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_instrument_info') as eng_ainfo:
             eng_ainfo.return_value = ASSET_INFO

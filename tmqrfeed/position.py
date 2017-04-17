@@ -1,8 +1,9 @@
 from collections import OrderedDict
-from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError
+from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError, PositionReadOnlyError
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
 import pandas as pd
+from datetime import timedelta
 
 
 class Position:
@@ -79,11 +80,12 @@ class Position:
         pass
 
     @staticmethod
-    def deserialize(pos_data):
+    def deserialize(pos_data, as_readonly=False):
         """
         Deserialize position data from MongoDB format
         :param pos_data: 
-        :return: 
+        :param as_readonly: return PositionReadOnlyView instead of the Position instance
+        :return: Position class or PositionReadOnlyView class instance
         """
         pass
 
@@ -373,3 +375,48 @@ class Position:
         df_result['equity_execution'] = df_result['pnl_change_execution'].cumsum()
 
         return df_result
+
+
+class PositionReadOnlyView(Position):
+    """
+    Position read only view used to view precalculated Index position with decision_time_shift
+    this class used as proxy to get position using original decision time of the instrument.
+    Only get_net_position() method allowed, other methods will raise PositionReadOnlyError()
+    """
+
+    def __init__(self, datamanager, position_dict=None, decision_time_shift=0):
+        super().__init__(datamanager, position_dict=position_dict)
+        self.decision_time_shift = decision_time_shift
+        if decision_time_shift < 0:
+            raise ArgumentError("'decision_time_shift' arg must be >= 0")
+
+    def get_net_position(self, date):
+        shifted_date = date - timedelta(minutes=self.decision_time_shift)
+        return super().get_net_position(shifted_date)
+
+    def get_asset_price(self, date, asset):
+        raise PositionQuoteNotFoundError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def get_pnl_series(self):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def serialize(self):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def set_net_position(self, date, net_position_dict):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def add_transaction(self, date, asset, qty):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def add_net_position(self, date, net_position_dict, qty=1.0):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def close(self, date):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def keep_previous_position(self, date):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
+
+    def _prev_day_key(self, date=None):
+        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')

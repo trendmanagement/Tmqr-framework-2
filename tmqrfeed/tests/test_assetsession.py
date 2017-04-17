@@ -195,6 +195,19 @@ class AssetSessionTestCase(unittest.TestCase):
         self.assertEqual(decision, tz.localize(datetime(2011, 1, 1, 12, 40)))
         self.assertEqual(execution, tz.localize(datetime(2011, 1, 1, 12, 45)))
 
+    def test_session_get_item_decision_time_shift(self):
+        tz = pytz.timezone(self.info_dic['timezone'])
+        sess = AssetSession(self.info_dic['trading_session'], tz)
+
+        start, decision, execution, next_sess = sess.get(tz.localize(datetime(2010, 12, 30, 12, 45)),
+                                                         decision_time_shift=5)
+
+        self.assertRaises(ArgumentError, sess.get, tz.localize(datetime(2010, 12, 30, 12, 45)), decision_time_shift=-5)
+
+        self.assertEqual(start, tz.localize(datetime(2010, 12, 30, 0, 32)))
+        self.assertEqual(decision, tz.localize(datetime(2010, 12, 30, 10, 35)))
+        self.assertEqual(execution, tz.localize(datetime(2010, 12, 30, 10, 45)))
+
 
 
     def test_session_get_item_too_early(self):

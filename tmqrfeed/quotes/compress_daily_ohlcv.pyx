@@ -4,19 +4,23 @@ cimport numpy as np
 
 from tmqrfeed.position import Position
 
+
 DTYPE = np.float
 ctypedef np.float64_t DTYPE_t
 import pandas as pd
+from datetime import timedelta
 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-def compress_daily(dfg, asset):
+def compress_daily(dfg, asset, int decision_time_shift=0):
     """
     Calculate OHLCV based on 1-min data from PreProcessor
     :param dfg: DataFrameGetter instance
     :return:
     """
+    if decision_time_shift < 0:
+        raise ValueError("'decision_time_shift' arg must be >= 0")
 
     cdef DTYPE_t _o, _h, _l, _c, _v, _exec_px
 
@@ -40,7 +44,7 @@ def compress_daily(dfg, asset):
     values = []
     values_index = []
 
-    position = Position(asset.dm)
+    position = Position(asset.dm) #, decision_time_shift=decision_time_shift)
 
     # Session filter settings
     asset_session = asset.instrument_info.session
@@ -74,7 +78,8 @@ def compress_daily(dfg, asset):
                 position.set_net_position(dt_sess_decision, {asset: (_c, _exec_px, 1)})
 
             # Calculate trading session params
-            dt_sess_start, dt_sess_decision, dt_sess_exec, dt_sess_next = asset_session.get(dfg.index[i])
+            dt_sess_start, dt_sess_decision, dt_sess_exec, dt_sess_next = asset_session.get(dfg.index[i], decision_time_shift)
+
             sess_start = np.datetime64(dt_sess_start.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)
             sess_decision = np.datetime64(dt_sess_decision.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)
             sess_execution = np.datetime64(dt_sess_exec.replace(tzinfo=None)).astype('datetime64[s]').view(np.uint64)

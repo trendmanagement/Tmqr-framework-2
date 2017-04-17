@@ -22,11 +22,14 @@ class QuoteContFut(QuoteBase):
         self.fut_offset = kwargs.get('fut_offset', 0)
         self.date_start = kwargs.get('date_start', self.dm.datafeed.date_start)
         self.date_end = kwargs.get('date_end', None)
+        self.decision_time_shift = kwargs.get('decision_time_shift', 0)
 
         if self.timeframe is None:
             raise ArgumentError("'timeframe' kwarg is not set")
         if self.timeframe != 'D':
             raise ArgumentError("Only 'D' timeframe supported")
+        if self.decision_time_shift < 0:
+            raise ArgumentError("'decision_time_shift' kwarg must be >= 0")
 
         self.instrument = instrument
 
@@ -75,7 +78,7 @@ class QuoteContFut(QuoteBase):
                 # 2. Get futures raw series
                 series = self.dm.series_get(fut_contract, date_start=date_start, date_end=date_end)
                 # 3. Do resampling (timeframe compression)
-                series, position = compress_daily(DataFrameGetter(series), fut_contract)
+                series, position = compress_daily(DataFrameGetter(series), fut_contract, self.decision_time_shift)
 
 
                 # 4. Append compressed series to continuous futures series

@@ -118,6 +118,11 @@ class PositionQuoteNotFoundError(QuoteNotFoundError):
     pass
 
 
+class PositionReadOnlyError(TMQRError):
+    """
+    Raised for PositionReadOnlyView not allowed position operations
+    """
+
 class CostsNotFoundError(NotFoundError):
     """
     Raised when costs class is not initiated for particular market

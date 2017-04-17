@@ -41,7 +41,7 @@ class DataManagerTestCase(unittest.TestCase):
                 self.assertRaises(DataManagerError, dm.series_primary_set, quote_cls_mock, 'test', kwtest=True)
                 self.assertTrue(quote_cls_mock.called)
                 self.assertEqual(('test',), quote_cls_mock.call_args[0])
-                self.assertEqual({'kwtest': True}, quote_cls_mock.call_args[1])
+                self.assertEqual({'kwtest': True, 'datamanager': dm}, quote_cls_mock.call_args[1])
                 self.assertTrue(quote_mock.build.called)
 
     def test_series_extra_set(self):

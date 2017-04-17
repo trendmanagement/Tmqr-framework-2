@@ -1,7 +1,7 @@
 import re
-from datetime import time
+from datetime import time, timedelta
 
-from tmqr.errors import SettingsError
+from tmqr.errors import SettingsError, ArgumentError
 from tmqr.settings import *
 
 
@@ -88,16 +88,19 @@ class AssetSession:
         mm = int(str_time[3:])
         return time(hh, mm)
 
-    def get(self, date):
+    def get(self, date, decision_time_shift=0):
         """
         Get trading session params for particular date
         :param date: datetime like object
+        :param decision_time_shift: decision time offset in minutes
         :return: tuple of (start, decision, execution, next_sess_date) tz-aware dates for particular date
         """
-        return self._get_sess_params(date)
+        if decision_time_shift < 0:
+            raise ArgumentError("'decision_time_shift' argument must be >= 0")
 
+        return self._get_sess_params(date, decision_time_shift)
 
-    def _get_sess_params(self, date):
+    def _get_sess_params(self, date, decision_time_shift=0):
         if date.tzinfo is None:
             dt = date
         else:
@@ -106,7 +109,8 @@ class AssetSession:
         for i, sess in enumerate(reversed(self.sessions)):
             if dt >= sess['dt']:
                 start = self.tz.localize(datetime.combine(dt, sess['start']))
-                decision = self.tz.localize(datetime.combine(dt, sess['decision']))
+                decision = self.tz.localize(datetime.combine(dt, sess['decision'])) - timedelta(
+                    minutes=decision_time_shift)
                 execution = self.tz.localize(datetime.combine(dt, sess['execution']))
                 if i > 0:
                     next_sess_date = self.tz.localize(self.sessions[len(self.sessions) - i]['dt'])
