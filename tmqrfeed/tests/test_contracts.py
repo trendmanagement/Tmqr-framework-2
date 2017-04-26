@@ -172,3 +172,27 @@ class ContractsTestCase(unittest.TestCase):
 
             option = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
             self.assertEqual(SRC_OPTIONS_EOD, option.data_source)
+
+    def test_deserialize(self):
+        dm = mock.MagicMock(DataManager())
+
+        c = ContractBase.deserialize('US.F.ES.M83.830520', dm)
+        self.assertEqual(type(c), FutureContract)
+        self.assertEqual(c.dm, dm)
+
+        c = ContractBase.deserialize('US.C.F-ZB-H11-110322.110121@89.0', dm)
+        self.assertEqual(type(c), OptionContract)
+        self.assertEqual(c.dm, dm)
+
+        c = ContractBase.deserialize('US.P.F-ZB-H11-110322.110121@89.0', dm)
+        self.assertEqual(type(c), OptionContract)
+        self.assertEqual(c.dm, dm)
+
+        c = ContractBase.deserialize('US.S.AAPL', dm)
+        self.assertEqual(type(c), ContractBase)
+        self.assertEqual(c.dm, dm)
+
+        self.assertRaises(ArgumentError, ContractBase.deserialize, 'US')
+        self.assertRaises(ArgumentError, ContractBase.deserialize, 'US..AAPL')
+        self.assertRaises(ArgumentError, ContractBase.deserialize, 'US.   .AAPL')
+        self.assertRaises(ArgumentError, ContractBase.deserialize, 'US.AAPL')

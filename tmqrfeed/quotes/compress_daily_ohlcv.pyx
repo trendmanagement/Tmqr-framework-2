@@ -44,7 +44,7 @@ def compress_daily(dfg, asset, int decision_time_shift=0):
     values = []
     values_index = []
 
-    position = Position(asset.dm) #, decision_time_shift=decision_time_shift)
+    position = Position(asset.dm, decision_time_shift=decision_time_shift)
 
     # Session filter settings
     asset_session = asset.instrument_info.session

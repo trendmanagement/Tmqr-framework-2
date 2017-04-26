@@ -4,6 +4,7 @@ from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
 import pandas as pd
 from datetime import timedelta
+import pickle
 
 
 class Position:
@@ -11,17 +12,19 @@ class Position:
     Universal position management class for all types of strategies
     """
 
-    def __init__(self, datamanager, position_dict=None):
+    def __init__(self, datamanager, position_dict=None, **kwargs):
         """
         Init the Position instance
         :param datamanager: DataManager class instance
         :param position_dict: position dictionary
+        :param kwargs: position init keyword args
         """
         if position_dict:
             self._position = position_dict
         else:
             self._position = OrderedDict()
         self.dm = datamanager
+        self.kwargs = kwargs
 
     #
     # Private methods
@@ -77,17 +80,47 @@ class Position:
         Serialize position data to compatible for MongoDB format
         :return: 
         """
-        pass
+        result = OrderedDict()
+        for dt, asset_dict in self._position.items():
+            asset_dict_converted = result.setdefault(dt, {})
+
+            asset_keys = tuple(asset_dict.keys())
+            for k in asset_keys:
+                asset_dict_converted[k.ticker] = asset_dict[k]
+
+        res_dict = {
+            'data': pickle.dumps(result),
+            'kwargs': self.kwargs,
+        }
+
+        return res_dict
 
     @staticmethod
-    def deserialize(pos_data, as_readonly=False):
+    def deserialize(pos_data, datamanager=None, as_readonly=False):
         """
         Deserialize position data from MongoDB format
         :param pos_data: 
+        :param datamanager: DataManager instance for position's assets
         :param as_readonly: return PositionReadOnlyView instead of the Position instance
         :return: Position class or PositionReadOnlyView class instance
         """
-        pass
+        deserialized_kwargs = pos_data.get('kwargs', {})
+        pos_dict = pickle.loads(pos_data['data'])
+
+        result = OrderedDict()
+        for dt, asset_dict in pos_dict.items():
+            asset_dict_converted = result.setdefault(dt, {})
+
+            asset_keys = tuple(asset_dict.keys())
+            for k in asset_keys:
+                asset_dict_converted[ContractBase.deserialize(k, datamanager)] = asset_dict[k]
+
+        if as_readonly:
+            return PositionReadOnlyView(datamanager, result, **deserialized_kwargs)
+        else:
+            return Position(datamanager, position_dict=result, **deserialized_kwargs)
+
+
 
     #
     # Position management
@@ -384,10 +417,11 @@ class PositionReadOnlyView(Position):
     Only get_net_position() method allowed, other methods will raise PositionReadOnlyError()
     """
 
-    def __init__(self, datamanager, position_dict=None, decision_time_shift=0):
-        super().__init__(datamanager, position_dict=position_dict)
-        self.decision_time_shift = decision_time_shift
-        if decision_time_shift < 0:
+    def __init__(self, datamanager, position_dict=None, **kwargs):
+        super().__init__(datamanager, position_dict=position_dict, **kwargs)
+        self.decision_time_shift = kwargs.get('decision_time_shift', 0)
+
+        if self.decision_time_shift < 0:
             raise ArgumentError("'decision_time_shift' arg must be >= 0")
 
     def get_net_position(self, date):

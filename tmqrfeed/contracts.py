@@ -188,6 +188,22 @@ class ContractBase:
     def __hash__(self):
         return self.ticker.__hash__()
 
+    @classmethod
+    def deserialize(cls, ticker, datamanager=None):
+        idx_begin = ticker.find('.')
+        idx_end = ticker.find('.', idx_begin + 1)
+        ctype = ticker[idx_begin + 1:idx_end]
+
+        if idx_begin == -1 or idx_end == -1 or ctype.strip() == '':
+            raise ArgumentError(f"Couldn't parse contract type from {ticker}")
+
+        if ctype == 'F':
+            return FutureContract(ticker, datamanager)
+        elif ctype == 'P' or ctype == 'C':
+            return OptionContract(ticker, datamanager)
+        else:
+            return ContractBase(ticker, datamanager)
+
 
 class FutureContract(ContractBase):
     """

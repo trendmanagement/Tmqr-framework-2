@@ -148,8 +148,8 @@ class DataManager:
             try:
                 extra_positions = self._secondary_positions[position_key]
             except KeyError:
-                raise QuoteNotFoundError(f"Couldn't find extra position by 'position_key'='{position_key}',"
-                                         f" run series_extra_set() first or check the 'position_key' validity")
+                raise PositionNotFoundError(f"Couldn't find extra position by 'position_key'='{position_key}',"
+                                            f" run series_extra_set() first or check the 'position_key' validity")
             return extra_positions
 
 

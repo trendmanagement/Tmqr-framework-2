@@ -6,9 +6,11 @@ from unittest.mock import patch, MagicMock
 from tmqr.errors import *
 from tmqrfeed.contracts import ContractBase
 from tmqrfeed.manager import DataManager
-from tmqrfeed.position import Position
+from tmqrfeed.position import Position, PositionReadOnlyView
 import pandas as pd
 import numpy as np
+import pickle
+
 
 class PositionTestCase(unittest.TestCase):
     def test_init(self):
@@ -348,14 +350,63 @@ class PositionTestCase(unittest.TestCase):
         p.close(datetime(2011, 1, 2))
 
     def test_serialize(self):
+        p_dict = OrderedDict()
         dm = MagicMock(DataManager())
-        dm.price_get.return_value = (501, 502)
+        asset = ContractBase("US.S.AAPL", dm)
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
 
-        p = Position(dm)
-        self.assertEqual(None, p.serialize())
+        p = Position(dm, position_dict=p_dict, some_kwarg=1.0)
+        self.assertEqual(p._position, p_dict)
 
-    def test_deserialize(self):
-        self.assertEqual(None, Position.deserialize(None))
+        serialized = p.serialize()
+
+        d = pickle.loads(serialized['data'])
+        self.assertEqual(len(p_dict), len(d))
+        for k, asset_pos in p_dict.items():
+            self.assertTrue(k in d)
+            for asset_key, asset_value in asset_pos.items():
+                self.assertEqual(asset_value, d[k][asset_key.ticker])
+
+    def test_deserialize_position(self):
+        p_dict = OrderedDict()
+        dm = MagicMock(DataManager())
+        asset = ContractBase("US.S.AAPL", dm)
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+
+        p = Position(dm, position_dict=p_dict, some_kwarg=1.0)
+        self.assertEqual(p._position, p_dict)
+        serialized = p.serialize()
+
+        res_pos = Position.deserialize(serialized, dm, as_readonly=False)
+        self.assertEqual(type(res_pos), Position)
+        self.assertEqual({'some_kwarg': 1.0}, res_pos.kwargs)
+
+        for k, asset_pos in p_dict.items():
+            self.assertTrue(k in res_pos._position)
+
+            for asset_key, asset_value in asset_pos.items():
+                self.assertEqual(asset_value, res_pos._position[k][asset_key])
+
+    def test_deserialize_asread_only(self):
+        p_dict = OrderedDict()
+        dm = MagicMock(DataManager())
+        asset = ContractBase("US.S.AAPL", dm)
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+
+        p = Position(dm, position_dict=p_dict, decision_time_shift=1)
+        self.assertEqual(p._position, p_dict)
+        serialized = p.serialize()
+
+        res_pos = Position.deserialize(serialized, dm, as_readonly=True)
+        self.assertEqual(type(res_pos), PositionReadOnlyView)
+        self.assertEqual({'decision_time_shift': 1}, res_pos.kwargs)
+        self.assertEqual(1, res_pos.decision_time_shift)
+
+        for k, asset_pos in p_dict.items():
+            self.assertTrue(k in res_pos._position)
+
+            for asset_key, asset_value in asset_pos.items():
+                self.assertEqual(asset_value, res_pos._position[k][asset_key])
 
     def test__calc_transactions(self):
         with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
