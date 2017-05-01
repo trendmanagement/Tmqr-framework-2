@@ -68,7 +68,8 @@ class DataFeed:
         if instrument not in self._cache_futchain:
             chain_dict = self.data_engine.db_get_futures_chain(instrument, self.date_start - timedelta(days=180))
             asset_info = self.get_instrument_info(instrument)
-            default_fut_months = asset_info.get('futures_months', list(range(1, 12)))
+
+            default_fut_months = asset_info.futures_months
             rollover_days_before = kwargs.pop('rollover_days_before', asset_info.rollover_days_before)
             futures_months = kwargs.pop('futures_months', default_fut_months)
             fut_chain = FutureChain([x['tckr'] for x in chain_dict],

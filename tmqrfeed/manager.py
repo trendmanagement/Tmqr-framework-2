@@ -188,6 +188,11 @@ class DataManager:
         :param date: timestamp for price
         :return: 
         """
+
+        # Check if asset is expired
+        if asset.to_expiration_days(date) < 0:
+            raise AssetExpiredError(f"Trying to get price for already expired asset: {asset} at {date}")
+
         # Trying to search positions cache
         res = self._price_get_positions_cached(asset, date)
         if res[0] is not None:

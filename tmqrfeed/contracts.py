@@ -115,7 +115,7 @@ class ContractBase:
         return (current_price - prev_price) * qty * self.point_value
 
     @staticmethod
-    def to_expiration_days(expiration_date, current_date):
+    def calc_to_expiration_days(expiration_date, current_date):
         """
         Calculates calendar days to expiration
         :param expiration_date: 
@@ -123,6 +123,9 @@ class ContractBase:
         :return: 
         """
         return (expiration_date.date() - current_date.date()).days
+
+    def to_expiration_days(self, date):
+        return 1000000000
 
     def delta(self, date):
         """
@@ -276,6 +279,9 @@ class FutureContract(ContractBase):
     def data_source(self):
         return self.instrument_info.data_futures_src
 
+    def to_expiration_days(self, date):
+        return super().calc_to_expiration_days(self.expiration, date)
+
 
 class OptionContract(ContractBase):
     """
@@ -391,7 +397,7 @@ class OptionContract(ContractBase):
         :param date: 
         :return: 
         """
-        return super().to_expiration_days(self.expiration, date)
+        return super().calc_to_expiration_days(self.expiration, date)
 
     def to_expiration_years_from_days(self, days_to_expiration):
         """

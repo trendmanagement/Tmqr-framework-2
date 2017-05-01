@@ -5,6 +5,7 @@ from tmqr.logs import log
 import pandas as pd
 from datetime import timedelta
 import pickle
+import io
 
 
 class Position:
@@ -95,8 +96,8 @@ class Position:
 
         return res_dict
 
-    @staticmethod
-    def deserialize(pos_data, datamanager=None, as_readonly=False):
+    @classmethod
+    def deserialize(cls, pos_data, datamanager=None, as_readonly=False):
         """
         Deserialize position data from MongoDB format
         :param pos_data: 
@@ -126,6 +127,48 @@ class Position:
     # Position management
     #
     #
+    def almost_expired_ratio(self, date, rollover_days_before_fut=None, rollover_days_before_opt=None):
+        """
+        Return the fraction of contracts in the position 'rollover_days_before' near expiration
+        :param date: current date
+        :param rollover_days_before_fut: Days before futures rollover (default: uses InstrumentInfo values) 
+        :param rollover_days_before_opt: Days before options rollover (default: uses InstrumentInfo values)
+        :return: 0.0 - if no contracts of the position are near expiration, 1.0 - if all contracts about to be expired,
+                 value in range 0.0 < almost_expired_ratio < 1.0 if only part of the position near expiration
+        """
+        rollover_count = 0.0
+        count = 0.0
+
+        pos = self._position.get(date, None)
+        if not pos:
+            return 0.0
+
+        for asset in pos.keys():
+            count += 1.0
+
+            if asset.ctype == 'F':
+                if rollover_days_before_fut:
+                    rollover_fut = rollover_days_before_fut
+                else:
+                    rollover_fut = asset.instrument_info.rollover_days_before
+
+                if asset.to_expiration_days(date) <= rollover_fut:
+                    rollover_count += 1.0
+
+            elif asset.ctype == 'P' or asset.ctype == 'C':
+                if rollover_days_before_opt:
+                    rollover_opt = rollover_days_before_opt
+                else:
+                    rollover_opt = asset.instrument_info.rollover_days_before_options
+
+                if asset.to_expiration_days(date) <= rollover_opt:
+                    rollover_count += 1.0
+
+        if count == 0:
+            return 0.0
+        else:
+            return rollover_count / count
+
 
     def close(self, date):
         """
@@ -173,6 +216,10 @@ class Position:
             updated_position = {}
             prev_position = self.get_net_position(self._prev_day_key(date))
             for asset, pos_rec in prev_position.items():
+                if pos_rec[2] == 0.0:
+                    # Skipping closed position
+                    continue
+
                 # Get actual prices for position
                 decision_price, exec_price = self.dm.price_get(asset, date)
 
@@ -308,6 +355,9 @@ class Position:
 
         raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
 
+    def has_position(self, date):
+        return date in self._position and sum([abs(x[2]) for x in self._position[date].values()]) > 0
+
     def get_net_position(self, date):
         """
         Get net position at given date
@@ -408,6 +458,20 @@ class Position:
         df_result['equity_execution'] = df_result['pnl_change_execution'].cumsum()
 
         return df_result
+
+    def __repr__(self):
+        pos = self.get_net_position(self.last_date)
+
+        with io.StringIO() as txt_buf:
+            txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
+
+            for asset, pos_rec in pos.items():
+                txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format(str(asset), pos_rec[0], pos_rec[1], pos_rec[2]))
+
+            return txt_buf.getvalue()
+
+
+
 
 
 class PositionReadOnlyView(Position):

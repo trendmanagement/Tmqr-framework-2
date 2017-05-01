@@ -205,7 +205,7 @@ class OptionChainList:
             min_days = kwargs.get('min_days', 0)
             start_exp_idx = -1
             for i, exp in enumerate(self._expirations):
-                if ContractBase.to_expiration_days(exp, date) > min_days:
+                if ContractBase.calc_to_expiration_days(exp, date) > min_days:
                     start_exp_idx = i
                     break
             if start_exp_idx == -1:

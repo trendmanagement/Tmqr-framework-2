@@ -26,6 +26,11 @@ class InstrumentInfo:
             self.data_futures_src = self._info_dict['data_futures_src']
             self.data_options_src = self._info_dict['data_options_src']
             self.data_options_use_prev_date = self._info_dict['data_options_use_prev_date']
+            self.rollover_days_before = self._info_dict.get('rollover_days_before', 0)
+            self.rollover_days_before_options = self._info_dict.get('rollover_days_before_options',
+                                                                    self.rollover_days_before)
+            self.futures_months = self._info_dict.get('futures_months', [])
+
             session = self._info_dict['trading_session']
         except KeyError as exc:
             raise InstrumentInfoNotFound("Can't find record in instrument info for {0}. {1}".format(self.instrument,

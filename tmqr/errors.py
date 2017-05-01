@@ -118,6 +118,12 @@ class PositionQuoteNotFoundError(QuoteNotFoundError):
     pass
 
 
+class AssetExpiredError(TMQRError):
+    """
+    Raised when trying to get price for expired asset
+    """
+    pass
+
 class PositionReadOnlyError(TMQRError):
     """
     Raised for PositionReadOnlyView not allowed position operations
