@@ -14,6 +14,7 @@ from tmqrfeed.fast_data_handling import find_quotes
 from tmqr.errors import ArgumentError, OptionsEODQuotesNotFoundError, ChainNotFoundError
 from collections import OrderedDict
 from datetime import datetime, time, timedelta
+from tmqr.logs import log
 
 
 class DataFeed:
@@ -200,6 +201,7 @@ class DataFeed:
             try:
                 return [df.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
             except KeyError:
-                raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
+                return [df.ix[:datetime.combine(d.date(), time(23, 59, 59))].tail(1)['iv'][0] for d in dt_list]
+                # raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
