@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import *
+import lz4
 
 
 class DataEngineTestCase(unittest.TestCase):
@@ -101,7 +102,8 @@ class DataEngineTestCase(unittest.TestCase):
         deng = DataEngineMongo()
 
         with patch('pymongo.collection.Collection.find') as mock_find:
-            mock_find.return_value = [{'ohlc': pickle.dumps('NON_DATAFRAME_OBJECT'), 'dt': '2015-01-01'}]
+            mock_find.return_value = [
+                {'ohlc': lz4.block.compress(pickle.dumps('NON_DATAFRAME_OBJECT')), 'dt': '2015-01-01'}]
 
             self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_INTRADAY)
 
@@ -141,13 +143,14 @@ class DataEngineTestCase(unittest.TestCase):
                               SRC_OPTIONS_EOD)
 
             mock_find_one.reset_mock()
-            mock_find_one.return_value = {'data': pickle.dumps('NON_DATAFRAME_OBJECT')}
+            mock_find_one.return_value = {'data': lz4.block.compress(pickle.dumps('NON_DATAFRAME_OBJECT'))}
 
             self.assertRaises(DBDataCorruptionError, deng.db_get_raw_series, 'US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
 
             mock_find_one.reset_mock()
             mock_find_one.return_value = {
-                'data': pickle.dumps(pd.DataFrame([{'iv': 0.1, 'dt': datetime(2011, 1, 1)}]).set_index('dt'))}
+                'data': lz4.block.compress(
+                    pickle.dumps(pd.DataFrame([{'iv': 0.1, 'dt': datetime(2011, 1, 1)}]).set_index('dt')))}
 
             df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
 
