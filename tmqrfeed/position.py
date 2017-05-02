@@ -143,11 +143,16 @@ class Position:
         if not pos:
             return 0.0
 
-        for asset in pos.keys():
+        for asset, pos_rec in pos.items():
+            if pos_rec[2] == 0:
+                # Skipping closed positions
+                continue
             count += 1.0
 
             if asset.ctype == 'F':
-                if rollover_days_before_fut:
+                if rollover_days_before_fut is not None:
+                    if rollover_days_before_fut < 0:
+                        raise ArgumentError("'rollover_days_before_fut' must be >= 0")
                     rollover_fut = rollover_days_before_fut
                 else:
                     rollover_fut = asset.instrument_info.rollover_days_before
@@ -156,7 +161,9 @@ class Position:
                     rollover_count += 1.0
 
             elif asset.ctype == 'P' or asset.ctype == 'C':
-                if rollover_days_before_opt:
+                if rollover_days_before_opt is not None:
+                    if rollover_days_before_opt < 0:
+                        raise ArgumentError("'rollover_days_before_opt' must be >= 0")
                     rollover_opt = rollover_days_before_opt
                 else:
                     rollover_opt = asset.instrument_info.rollover_days_before_options
@@ -267,6 +274,9 @@ class Position:
         :param qty:
         :return: nothing, changes position in place
         """
+        if qty == 0:
+            raise ArgumentError("Transaction Qty must be non zero")
+
         if self._position and date < self._prev_day_key(date=None):
             # check if 'date' >= last date of the position
             raise ArgumentError(f'Managing position at date less then last available date is not allowed')
@@ -356,7 +366,7 @@ class Position:
         raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
 
     def has_position(self, date):
-        return date in self._position and sum([abs(x[2]) for x in self._position[date].values()]) > 0
+        return date in self._position and sum((abs(x[2]) for x in self._position[date].values())) > 0
 
     def get_net_position(self, date):
         """

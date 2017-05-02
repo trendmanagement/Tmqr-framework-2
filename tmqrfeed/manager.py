@@ -143,14 +143,16 @@ class DataManager:
         :return: pd.DataFrame of series
         """
         if position_key is None:
+            if self._primary_positions is None:
+                raise PositionNotFoundError("Primary position is not initiated, try to run series_primary_set() first"
+                                            " or make sure that Quote algorithm supports position initiation")
             return self._primary_positions
         else:
             try:
-                extra_positions = self._secondary_positions[position_key]
+                return self._secondary_positions[position_key]
             except KeyError:
                 raise PositionNotFoundError(f"Couldn't find extra position by 'position_key'='{position_key}',"
                                             f" run series_extra_set() first or check the 'position_key' validity")
-            return extra_positions
 
 
     def series_align(self, primary_quotes, extra_quotes):

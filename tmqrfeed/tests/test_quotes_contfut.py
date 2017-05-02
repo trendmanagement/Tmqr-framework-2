@@ -82,6 +82,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe=None)
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe="1M")
+        self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe="D", decision_time_shift=-1)
 
     def test_init_errors(self):
         datafeed = MagicMock()

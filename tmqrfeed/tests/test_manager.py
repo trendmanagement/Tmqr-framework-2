@@ -493,6 +493,13 @@ class DataManagerTestCase(unittest.TestCase):
                         self.assertTrue(mock__price_set_cached.called)
                         self.assertEqual((stk, dt, (3, 3)), mock__price_set_cached.call_args[0])
 
+                        #
+                        # Asset expired error
+                        #
+                        fut = FutureContract('US.F.CL.G12.100120')
+                        self.assertRaises(AssetExpiredError, dm.price_get, fut, dt)
+
+
     def test_costs_set_get(self):
         dm = DataManager()
         stk = ContractBase('US.S.AAPL', datamanager=dm)
@@ -508,3 +515,37 @@ class DataManagerTestCase(unittest.TestCase):
         self.assertEqual(cst.calc_costs(stk, 10), dm.costs_get(stk, 10))
 
         self.assertRaises(CostsNotFoundError, dm.costs_get, stk2, 10)
+
+    def test_quotes(self):
+        dm = DataManager()
+
+        self.assertRaises(QuoteNotFoundError, dm.quotes, None)
+
+        prim_quotes = pd.DataFrame()
+        sec_quotes = pd.DataFrame()
+
+        dm._primary_quotes = prim_quotes
+
+        self.assertEqual(id(prim_quotes), id(dm.quotes()))
+
+        self.assertRaises(QuoteNotFoundError, dm.quotes, 'secondary')
+
+        dm._secondary_quotes['secondary'] = sec_quotes
+        self.assertEqual(id(sec_quotes), id(dm.quotes('secondary')))
+
+    def test_position(self):
+        dm = DataManager()
+
+        self.assertRaises(PositionNotFoundError, dm.position, None)
+
+        position1 = 'position1'
+        position_sec = 'position2'
+
+        dm._primary_positions = position1
+
+        self.assertEqual(id(position1), id(dm.position()))
+
+        self.assertRaises(PositionNotFoundError, dm.position, 'secondary')
+
+        dm._secondary_positions['secondary'] = position_sec
+        self.assertEqual(id(position_sec), id(dm.position('secondary')))

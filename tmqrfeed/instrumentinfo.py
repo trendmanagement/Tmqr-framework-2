@@ -53,7 +53,8 @@ class InstrumentInfo:
         :param item:
         :return:
         """
-        if item not in self._info_dict:
+        try:
+            return self._info_dict[item]
+        except KeyError:
             raise InstrumentInfoNotFound(
                 "Value '{0}' is not found in AssetInfo record for {1}".format(item, self.instrument))
-        return self._info_dict[item]

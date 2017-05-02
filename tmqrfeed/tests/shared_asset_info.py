@@ -17,4 +17,6 @@ ASSET_INFO = {
         'decision': '10:40',
         'dt': datetime(1900, 1, 1, 0, 0),
         'execution': '10:45',
-        'start': '00:32'}]}
+        'start': '00:32'}],
+    'extra_key': 'OK'
+}

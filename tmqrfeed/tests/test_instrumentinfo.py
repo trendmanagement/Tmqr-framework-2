@@ -39,3 +39,8 @@ class InstrumentInfoTestCase(unittest.TestCase):
         ai = InstrumentInfo(self.info_dic)
         self.assertEqual(1.0, ai.get('nonexistingkey', 1.0))
         self.assertEqual(None, ai.get('nonexistingkey'))
+
+    def test_dynamic_get_attr(self):
+        ai = InstrumentInfo(self.info_dic)
+        self.assertEqual(ai.extra_key, 'OK')
+        self.assertRaises(InstrumentInfoNotFound, ai.__getattr__, 'nonexistingkey')

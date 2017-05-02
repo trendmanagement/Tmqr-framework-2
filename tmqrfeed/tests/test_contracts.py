@@ -196,3 +196,10 @@ class ContractsTestCase(unittest.TestCase):
         self.assertRaises(ArgumentError, ContractBase.deserialize, 'US..AAPL')
         self.assertRaises(ArgumentError, ContractBase.deserialize, 'US.   .AAPL')
         self.assertRaises(ArgumentError, ContractBase.deserialize, 'US.AAPL')
+
+    def test_to_expiry_days(self):
+        dm = mock.MagicMock(DataManager())
+
+        c = ContractBase('US.S.AAPL', dm)
+
+        self.assertEqual(c.to_expiration_days(datetime.now()), 1000000000)
