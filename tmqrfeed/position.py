@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import timedelta
 import pickle
 import io
+import lz4
 
 
 class Position:
@@ -90,7 +91,7 @@ class Position:
                 asset_dict_converted[k.ticker] = asset_dict[k]
 
         res_dict = {
-            'data': pickle.dumps(result),
+            'data': lz4.block.compress(pickle.dumps(result)),
             'kwargs': self.kwargs,
         }
 
@@ -106,7 +107,7 @@ class Position:
         :return: Position class or PositionReadOnlyView class instance
         """
         deserialized_kwargs = pos_data.get('kwargs', {})
-        pos_dict = pickle.loads(pos_data['data'])
+        pos_dict = pickle.loads(lz4.block.decompress(pos_data['data']))
 
         result = OrderedDict()
         for dt, asset_dict in pos_dict.items():
