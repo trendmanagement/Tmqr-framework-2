@@ -10,6 +10,7 @@ from tmqrfeed.position import Position, PositionReadOnlyView
 import pandas as pd
 import numpy as np
 import pickle
+import lz4
 
 
 class PositionTestCase(unittest.TestCase):
@@ -404,7 +405,7 @@ class PositionTestCase(unittest.TestCase):
 
         serialized = p.serialize()
 
-        d = pickle.loads(serialized['data'])
+        d = pickle.loads(lz4.block.decompress(serialized['data']))
         self.assertEqual(len(p_dict), len(d))
         for k, asset_pos in p_dict.items():
             self.assertTrue(k in d)
