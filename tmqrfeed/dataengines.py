@@ -3,6 +3,7 @@ import pickle
 
 import pandas as pd
 from pymongo import MongoClient
+import pymongo
 
 from tmqr.errors import *
 from tmqr.settings import *
@@ -13,6 +14,7 @@ import lz4
 #
 COLLECTION_ASSET_INDEX = 'asset_index'
 COLLECTION_ASSET_INFO = 'asset_info'
+COLLECTION_INDEX_DATA = 'index_data'
 
 
 class DataEngineBase:
@@ -133,6 +135,22 @@ class DataEngineMongo(DataEngineBase):
                 f"{tckr} data is corrupted in {SRC_OPTIONS_EOD} collection, expected pd.DataFrame, got {type(data['data'])}")
 
         return data, QTYPE_OPTIONS_EOD
+
+    def db_save_index(self, index_data):
+        """
+        Saves index data to the MognoDB
+        :param index_data: 
+        :return: 
+        """
+        self.db[COLLECTION_INDEX_DATA].create_index([('name', pymongo.ASCENDING)])
+        self.db[COLLECTION_INDEX_DATA].replace_one({'name': index_data['name']}, index_data, upsert=True)
+
+    def db_load_index(self, index_name):
+        idx = self.db[COLLECTION_INDEX_DATA].find_one({'name': index_name})
+        if idx is None:
+            raise DataEngineNotFoundError(f"Index '{index_name}' is not found in the DB")
+        return idx
+
 
     def _source_intraday_get_series(self, tckr, **kwargs):
         """

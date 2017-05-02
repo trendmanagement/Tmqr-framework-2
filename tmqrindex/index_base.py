@@ -1,6 +1,10 @@
-from tmqr.errors import SettingsError
+from tmqr.errors import SettingsError, ArgumentError
 import pandas as pd
 from tmqrfeed.manager import DataManager
+from tmqrfeed.position import Position
+
+import lz4
+import pickle
 
 INSTRUMENT_NA = "N/A"
 
@@ -39,6 +43,10 @@ class IndexBase:
         self.position = kwargs.get('position', None)
         """Main index position as tmqrfeed.position.Position (can be None)"""
 
+        self._index_name = kwargs.get('index_name', self._index_name)
+        self._description_long = kwargs.get('description_long', self._description_long)
+        self._description_short = kwargs.get('description_short', self._description_short)
+
     def setup(self):
         """
         Initiate index algorithm
@@ -47,23 +55,8 @@ class IndexBase:
         etc...
         :return: nothing, class instance can populate internal values 
         """
-        pass
+        raise NotImplementedError("You must implement setup() method in child class.")
 
-    def process_data(self):
-        """
-        Process and build main data for index, Index instance must implement data updates explicitly 
-        :return: nothing, changes self.data in place
-        """
-        pass
-
-    def process_position(self, date, index_data):
-        """
-        Process and build main position of index
-        :param date: decision making date
-        :param index_data: self.data slice from beginning to 'date' (prevents future reference)
-        :return: nothing, changes self.position in place
-        """
-        pass
 
     def set_data_and_position(self):
         """
@@ -83,11 +76,7 @@ class IndexBase:
         # Setting data up
         self.setup()
 
-        try:
-            # Try to set data and position
-            self.set_data_and_position()
-        except NotImplementedError:
-            self.process_data()
+        self.set_data_and_position()
 
     @property
     def decision_time_shift(self):
@@ -102,24 +91,10 @@ class IndexBase:
 
     @property
     def index_name(self):
-        return self._index_name
-
-    def serialize(self):
-        """
-        Save index data and position to compatible format for MongoDB serialization
-        :return: 
-        """
-        pass
-
-    @classmethod
-    def deserialize(cls, datamanager, serialized_index_record):
-        """
-        Deserialize index data, position and context from MongoDB serialized format
-        :param datamanager: DataManager instance
-        :param serialized_index_record: MongoDB dict like object
-        :return: new Index cls instance
-        """
-        pass
+        if self.instrument != INSTRUMENT_NA and f"{self.instrument}_" not in self._index_name:
+            return f"{self.instrument}_{self._index_name}"
+        else:
+            return self._index_name
 
     @property
     def fields(self):
@@ -127,7 +102,75 @@ class IndexBase:
         List of the index field names
         :return:
         """
-        if self.data:
-            return self.data.columns
-        else:
+        try:
+            return list(self.data.columns)
+        except:
             return []
+
+
+
+    def serialize(self):
+        """
+        Save index data and position to compatible format for MongoDB serialization
+        :return: 
+        """
+        result_dict = {
+            'name': self.index_name,
+            'instrument': self.instrument,
+            'description_short': self._description_short,
+            'description_long': self._description_long,
+            'fields': self.fields,
+            'data': lz4.block.compress(pickle.dumps(self.data)),
+            'position': self.position.serialize() if self.position is not None else None,
+            'context': self.context,
+        }
+        return result_dict
+
+    @classmethod
+    def deserialize(cls, datamanager, serialized_index_record, as_readonly=False):
+        """
+        Deserialize index data, position and context from MongoDB serialized format
+        :param datamanager: DataManager instance
+        :param serialized_index_record: MongoDB dict like object
+        :param as_readonly: Deserialize position as read only
+        :return: new Index cls instance
+        """
+        if cls._index_name != IndexBase._index_name and cls._index_name not in serialized_index_record['name']:
+            raise ArgumentError(
+                f"Index name {cls._index_name} doesn't match to DB index name {serialized_index_record['name']}")
+
+        pos = None
+        if serialized_index_record['position'] is not None:
+            pos = Position.deserialize(serialized_index_record['position'], as_readonly=as_readonly)
+
+        index_instance = cls(datamanager,
+                             instrument=serialized_index_record['instrument'],
+                             context=serialized_index_record['context'],
+                             data=pickle.loads(lz4.block.decompress(serialized_index_record['data'])),
+                             position=pos,
+                             index_name=serialized_index_record['name'],
+                             description_long=serialized_index_record['description_long'],
+                             description_short=serialized_index_record['description_short'])
+        return index_instance
+
+    def save(self):
+        """
+        Saves index data to database
+        :return: 
+        """
+        self.dm.datafeed.data_engine.db_save_index(self.serialize())
+
+    @classmethod
+    def load(cls, datamanager: DataManager, instrument=INSTRUMENT_NA):
+        """
+        Loads index instance from DB
+        :param datamanager: datamanager class instance
+        :param instrument: instrument name (default: INSTRUMENT_NA)
+        :return: 
+        """
+        if instrument == INSTRUMENT_NA:
+            idx_name = cls._index_name
+        else:
+            idx_name = f"{instrument}_{cls._index_name}"
+
+        return cls.deserialize(datamanager, datamanager.datafeed.data_engine.db_load_index(idx_name))

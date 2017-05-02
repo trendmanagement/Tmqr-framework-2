@@ -27,7 +27,3 @@ class IndexContFut(IndexBase):
         """
         self.data = self.dm.quotes()
         self.position = self.dm.position()
-
-    @property
-    def index_name(self):
-        return f"{self.instrument}_{self._index_name}"
