@@ -157,3 +157,31 @@ class DataEngineTestCase(unittest.TestCase):
             self.assertEqual(dict, type(df))
             self.assertEqual(pd.DataFrame, type(df['data']))
             self.assertEqual(QTYPE_OPTIONS_EOD, qtype)
+
+    def test_db_load_index(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.find_one') as mock_find_one:
+            mock_find_one.return_value = None
+            self.assertRaises(DataEngineNotFoundError, deng.db_load_index, 'SOME_INDEX')
+
+            mock_find_one.return_value = {"index": 'data'}
+            self.assertEqual({"index": 'data'}, deng.db_load_index("index"))
+
+            self.assertEqual({'name': 'index'}, mock_find_one.call_args[0][0])
+
+    def test_db_save_index(self):
+        with patch('pymongo.collection.Collection.create_index') as mock_create_index:
+            with patch('pymongo.collection.Collection.replace_one') as mock_replace_one:
+                deng = DataEngineMongo()
+                idx_dict = {'name': 'index', 'test': 'test'}
+                deng.db_save_index(idx_dict)
+
+                self.assertTrue(mock_create_index.called)
+                self.assertTrue(mock_replace_one.called)
+
+                self.assertEqual([('name', pymongo.ASCENDING)], mock_create_index.call_args[0][0])
+
+                self.assertEqual({'name': 'index'}, mock_replace_one.call_args[0][0])
+                self.assertEqual(idx_dict, mock_replace_one.call_args[0][1])
+                self.assertEqual({'upsert': True}, mock_replace_one.call_args[1])

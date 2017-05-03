@@ -1,10 +1,7 @@
 import numpy as np
 
-try:
-    from tmqr.settings_local import *
-except:
-    pass
 import pyximport
+from tmqr.settings import *
 
 pyximport.install(setup_args={"include_dirs": np.get_include()})
 
@@ -18,6 +15,7 @@ from datetime import datetime
 from tmqrfeed.assetsession import AssetSession
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
 from tmqr.errors import *
+
 
 import pyximport
 
@@ -78,7 +76,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertEqual('D', qcf.timeframe)
         self.assertEqual(0, qcf.fut_offset)
         self.assertEqual(datafeed.date_start, qcf.date_start)
-        self.assertEqual(None, qcf.date_end)
+        self.assertEqual(QDATE_MAX, qcf.date_end)
 
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe=None)
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe="1M")
@@ -182,6 +180,14 @@ class QuoteContFutTestCase(unittest.TestCase):
         for i in range(len(merged_df)):
             self.assertTrue(np.all(merged_df.iloc[i] == target_df.iloc[i]))
 
+    def test_str(self):
+        dm = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
+
+        self.assertEqual('QuoteContFut-US.CL-D', str(qcont_fut))
+        self.assertEqual('QuoteContFut-US.CL-D', f'{qcont_fut}')
+
+
     def test_apply_future_rollover_not_expired_future(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)
@@ -244,3 +250,11 @@ class QuoteContFutTestCase(unittest.TestCase):
         from tmqrfeed.costs import Costs
         dm.costs_set("US", Costs(3, 3))
         position.get_pnl_series()
+
+    def test_build_date_end(self):
+        dm = DataManager()
+        qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D', date_start=datetime(2010, 1, 1),
+                                 date_end=datetime(2016, 1, 1))
+        df, position = qcont_fut.build()
+
+        self.assertEqual(datetime(2015, 12, 31).date(), df.index[-1].date())

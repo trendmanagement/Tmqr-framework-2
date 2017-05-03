@@ -53,3 +53,7 @@ class QuoteBaseTestCase(unittest.TestCase):
     def test_build(self):
         qb = QuoteBase(datamanager='test')
         self.assertRaises(NotImplementedError, qb.build)
+
+    def test_str(self):
+        qb = QuoteBase(datamanager='test')
+        self.assertRaises(NotImplementedError, qb.__str__)

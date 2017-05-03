@@ -150,3 +150,32 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
 
         self.assertEqual(0, len(comp_df))
         self.assertEqual(0, len(holdings._position))
+
+    def test_compress_desicion_time_shift(self):
+        df = pd.read_csv(os.path.abspath(os.path.join(__file__, '../', 'fut_series.csv')), parse_dates=True,
+                         index_col=0)
+        df.index = df.index.tz_localize(pytz.utc).tz_convert(self.tz)
+        asset_mock = MagicMock(ContractBase("US.S.GOOG"))
+        asset_mock.__str__.return_value = "TestAsset"
+        asset_mock.instrument_info.session = self.sess
+        dfg = DataFrameGetter(df)
+
+        comp_df, holdings = compress_daily(dfg, asset_mock, decision_time_shift=7)
+
+        self.assertTrue(type(comp_df) == pd.DataFrame)
+        self.assertTrue(type(holdings) == Position)
+
+        self.assertEqual(1, len(comp_df))
+
+        row = comp_df.iloc[0]
+        self.assertEqual(row.name.date(), datetime(2011, 12, 20).date())
+
+        # TZ trick: date's tzinfo is not equal to pytz.timezone (this is python wide bug), applying workaround
+        self.assertEqual(row.name.tzinfo, self.tz.localize(datetime(2011, 12, 20)).tzinfo)
+        self.assertEqual(row.name, self.tz.localize(datetime(2011, 12, 20, 10, 33, 00)))
+        self.assertEqual(row['o'], 94.77)
+        self.assertEqual(row['h'], 97.61)
+        self.assertEqual(row['l'], 94.75)
+        self.assertEqual(row['c'], 97.44)
+        self.assertEqual(row['v'], 150482)
+        self.assertEqual(row['exec'], 97.39)

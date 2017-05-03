@@ -14,6 +14,9 @@ class QuoteBase:
         if self.dm is None:
             raise ArgumentError("'datamanager' kwarg is not set")
 
+    def __str__(self):
+        raise NotImplementedError("You must implement __str__() method in child QuoteEngine class")
+
     @staticmethod
     def merge_series(series_df_list):
         objs = [obj for obj in series_df_list if obj is not None]

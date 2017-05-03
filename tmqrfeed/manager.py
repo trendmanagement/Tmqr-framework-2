@@ -4,6 +4,9 @@ from tmqrfeed.datafeed import DataFeed
 from datetime import datetime
 from tmqr.settings import QDATE_MIN, QDATE_MAX
 from tmqrfeed.costs import Costs
+from tmqr.logs import log
+import pandas as pd
+
 
 class DataManager:
     """
@@ -113,10 +116,9 @@ class DataManager:
         quotes, pos = quote_engine.build()
 
         # Checking quotes validity
-        self.series_check(quotes)
-
-        # Align and store extra series
-        self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
+        if self.series_check(f"{quote_engine}_{name}", self._primary_quotes, quotes):
+            # Align and store extra series
+            self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
         self._secondary_positions[name] = pos
 
     def quotes(self, series_key=None):
@@ -154,13 +156,31 @@ class DataManager:
                 raise PositionNotFoundError(f"Couldn't find extra position by 'position_key'='{position_key}',"
                                             f" run series_extra_set() first or check the 'position_key' validity")
 
+    @staticmethod
+    def series_align(primary_quotes, extra_quotes):
+        return extra_quotes.reindex(primary_quotes.index, method='ffill')
 
-    def series_align(self, primary_quotes, extra_quotes):
-        # TODO: implement series alignment
-        return extra_quotes
+    @staticmethod
+    def series_check(name, primary_quotes, extra_quotes):
+        if extra_quotes is None:
+            log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes are None")
+            return False
+        if not isinstance(extra_quotes, pd.DataFrame):
+            log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes are not Pandas.DataFrame")
+            return False
 
-    def series_check(self, quotes):
-        # TODO: implement series checks
+        if len(extra_quotes) == 0:
+            log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes are empty")
+            return False
+
+        if primary_quotes.index[0] > extra_quotes.index[-1] or primary_quotes.index[-1] < extra_quotes.index[0]:
+            log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes period doesn't overlap with primary quotes")
+            return False
+
+        if (primary_quotes.index[-1] - extra_quotes.index[-1]).days >= 1:
+            log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes could be delayed. "
+                     f"Primary last date: {primary_quotes.index[-1]} Extra last date: {extra_quotes.index[-1]}")
+
         return True
 
     def series_get(self, asset: ContractBase, **kwargs):

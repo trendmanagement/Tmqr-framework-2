@@ -112,17 +112,213 @@ class DataManagerTestCase(unittest.TestCase):
             self.assertEqual(kwargs['date_start'], QDATE_MAX)
             self.assertEqual(kwargs['date_end'], QDATE_MIN)
 
-    def test_series_align(self):
-        dm = DataManager()
-        # Just mock for 100% coverage
-        # TODO: implement align test
-        self.assertEqual('extra', dm.series_align(None, 'extra'))
+    def test_series_align_previous(self):
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 30), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 30), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 30), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 30), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 30), 'px': 5},
+        ]).set_index('dt')
+
+        result = DataManager.series_align(primary, extra)
+        target = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        self.assertTrue(np.all(result.index == target.index))
+        self.assertTrue(np.all(result.px == target.px))
+
+    def test_series_align_greater(self):
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 50), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 50), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 50), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 50), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 50), 'px': 5},
+        ]).set_index('dt')
+
+        result = DataManager.series_align(primary, extra)
+        target = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': pd.np.nan},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 4},
+        ]).set_index('dt')
+
+        self.assertTrue(np.all(result.index == target.index))
+        self.assertTrue(np.allclose(result.px.values, target.px.values, equal_nan=True))
+
+    def test_series_align_missing_beginning(self):
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            # {'dt': datetime.datetime(2011, 1, 1, 10, 30), 'px': 1},
+            # {'dt': datetime.datetime(2011, 1, 2, 10, 30), 'px': 2},
+            # {'dt': datetime.datetime(2011, 1, 3, 10, 30), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        result = DataManager.series_align(primary, extra)
+        target = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': pd.np.nan},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': pd.np.nan},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': pd.np.nan},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        self.assertTrue(np.all(result.index == target.index))
+        self.assertTrue(np.allclose(result.px.values, target.px.values, equal_nan=True))
+
+    def test_series_align_missing_end(self):
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 30), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 30), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 30), 'px': 3},
+            # {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            # {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        result = DataManager.series_align(primary, extra)
+        target = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 3},
+        ]).set_index('dt')
+
+        self.assertTrue(np.all(result.index == target.index))
+        self.assertTrue(np.allclose(result.px.values, target.px.values, equal_nan=True))
+
+    def test_series_align_intraday(self):
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 30), 'px': 10},
+            {'dt': datetime.datetime(2011, 1, 1, 10, 31), 'px': 11},
+            {'dt': datetime.datetime(2011, 1, 1, 10, 33), 'px': 12},
+
+            {'dt': datetime.datetime(2011, 1, 2, 10, 32), 'px': 20},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 33), 'px': 21},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 34), 'px': 22},
+
+            {'dt': datetime.datetime(2011, 1, 3, 10, 39), 'px': 30},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 31},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 41), 'px': 32},
+
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        result = DataManager.series_align(primary, extra)
+        target = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 12},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 22},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 31},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        self.assertTrue(np.all(result.index == target.index))
+        self.assertTrue(np.allclose(result.px.values, target.px.values, equal_nan=True))
 
     def test_series_check(self):
         dm = DataManager()
-        # Just mock for 100% coverage
-        # TODO: implement check test
-        self.assertEqual(True, dm.series_check(None))
+
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 2, 1, 10, 30), 'px': 1},
+            {'dt': datetime.datetime(2011, 2, 2, 10, 30), 'px': 2},
+            {'dt': datetime.datetime(2011, 2, 3, 10, 30), 'px': 3},
+            {'dt': datetime.datetime(2011, 2, 4, 10, 30), 'px': 4},
+            {'dt': datetime.datetime(2011, 2, 5, 10, 30), 'px': 5},
+        ]).set_index('dt')
+
+        extra2 = pd.DataFrame([
+            {'dt': datetime.datetime(2010, 2, 1, 10, 30), 'px': 1},
+            {'dt': datetime.datetime(2010, 2, 2, 10, 30), 'px': 2},
+            {'dt': datetime.datetime(2010, 2, 3, 10, 30), 'px': 3},
+            {'dt': datetime.datetime(2010, 2, 4, 10, 30), 'px': 4},
+            {'dt': datetime.datetime(2010, 2, 5, 10, 30), 'px': 5},
+        ]).set_index('dt')
+
+        self.assertEqual(False, dm.series_check('test', primary, None))
+        self.assertEqual(False, dm.series_check('test', primary, pd.DataFrame()))
+        self.assertEqual(False, dm.series_check('test', primary, []))
+        self.assertEqual(False, dm.series_check('test', primary, extra))
+        self.assertEqual(False, dm.series_check('test', primary, extra2))
+
+    def test_series_check_delayed(self):
+        dm = DataManager()
+
+        primary = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 40), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 40), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 40), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 40), 'px': 4},
+            {'dt': datetime.datetime(2011, 1, 5, 10, 40), 'px': 5},
+        ]).set_index('dt')
+
+        extra = pd.DataFrame([
+            {'dt': datetime.datetime(2011, 1, 1, 10, 30), 'px': 1},
+            {'dt': datetime.datetime(2011, 1, 2, 10, 30), 'px': 2},
+            {'dt': datetime.datetime(2011, 1, 3, 10, 30), 'px': 3},
+            {'dt': datetime.datetime(2011, 1, 4, 10, 30), 'px': 4},
+            # {'dt': datetime.datetime(2011, 1, 5, 0, 30), 'px': 5},
+        ]).set_index('dt')
+
+        self.assertEqual(True, dm.series_check('test', primary, extra))
 
     def test__price_get_from_datafeed(self):
         dm = DataManager()

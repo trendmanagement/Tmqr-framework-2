@@ -8,6 +8,7 @@ pyximport.install(setup_args={"include_dirs": np.get_include()})
 from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
 from tmqrfeed.position import Position
+from tmqr.settings import QDATE_MAX
 
 
 class QuoteContFut(QuoteBase):
@@ -21,7 +22,7 @@ class QuoteContFut(QuoteBase):
         self.timeframe = kwargs.get('timeframe', None)
         self.fut_offset = kwargs.get('fut_offset', 0)
         self.date_start = kwargs.get('date_start', self.dm.datafeed.date_start)
-        self.date_end = kwargs.get('date_end', None)
+        self.date_end = kwargs.get('date_end', QDATE_MAX)
         self.decision_time_shift = kwargs.get('decision_time_shift', 0)
 
         if self.timeframe is None:
@@ -32,6 +33,9 @@ class QuoteContFut(QuoteBase):
             raise ArgumentError("'decision_time_shift' kwarg must be >= 0")
 
         self.instrument = instrument
+
+    def __str__(self):
+        return f"QuoteContFut-{self.instrument}-{self.timeframe}"
 
     def calculate_fut_offset_series(self, prev_series, new_series):
         try:
@@ -74,9 +78,14 @@ class QuoteContFut(QuoteBase):
             fut_contract = fut_chain_row[0]
             date_start = fut_chain_row[1]
             date_end = fut_chain_row[2]
+
+            if date_start > self.date_end.date():
+                break
+
             try:
                 # 2. Get futures raw series
-                series = self.dm.series_get(fut_contract, date_start=date_start, date_end=date_end)
+                series = self.dm.series_get(fut_contract, date_start=date_start,
+                                            date_end=min(date_end, self.date_end.date()))
                 # 3. Do resampling (timeframe compression)
                 series, position = compress_daily(DataFrameGetter(series), fut_contract, self.decision_time_shift)
 
