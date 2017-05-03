@@ -165,6 +165,8 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)
 
+        self.assertEqual(7, holdings.kwargs['decision_time_shift'])
+
         self.assertEqual(1, len(comp_df))
 
         row = comp_df.iloc[0]

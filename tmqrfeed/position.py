@@ -323,10 +323,28 @@ class Position:
 
         result_pos_dict = OrderedDict()
 
+        decision_time_shifted = False
+        new_pos_kwargs = {}
+
         # Get list of unique dates for all positions
         merged_dates_set = set()
-        for pos in positions_list:
+        for p_i, pos in enumerate(positions_list):
             merged_dates_set.update(pos._position.keys())
+
+            if 'decision_time_shift' in pos.kwargs:
+                decision_time_shifted = True
+
+                if 'decision_time_shift' in new_pos_kwargs:
+                    if new_pos_kwargs['decision_time_shift'] != pos.kwargs['decision_time_shift']:
+                        raise ArgumentError("Trying to merge positions with different decision time shift")
+                elif p_i == 0:
+                    new_pos_kwargs['decision_time_shift'] = pos.kwargs['decision_time_shift']
+                else:
+                    raise ArgumentError("Trying to merge positions with decision time shift and without it")
+            elif decision_time_shifted:
+                raise ArgumentError("Trying to merge positions with decision time shift and without it")
+
+
 
         # Iterate dates in a sorted order
         for date in sorted(merged_dates_set):
@@ -341,7 +359,7 @@ class Position:
                 except KeyError:
                     continue
 
-        return Position(datamanager, position_dict=result_pos_dict)
+        return Position(datamanager, position_dict=result_pos_dict, **new_pos_kwargs)
 
     #
     # Position information
@@ -471,7 +489,7 @@ class Position:
         return df_result
 
     def __repr__(self):
-        pos = self.get_net_position(self.last_date)
+        pos = self._position[self.last_date]
 
         with io.StringIO() as txt_buf:
             txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
@@ -525,7 +543,4 @@ class PositionReadOnlyView(Position):
         raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
 
     def keep_previous_position(self, date):
-        raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')
-
-    def _prev_day_key(self, date=None):
         raise PositionReadOnlyError(f'Operation is not allowed for PositionReadOnlyView instance')

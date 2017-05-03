@@ -47,4 +47,3 @@ class PositionReadOnlyViewTestCase(unittest.TestCase):
         self.assertRaises(PositionReadOnlyError, self.pos_view.add_net_position, None, None)
         self.assertRaises(PositionReadOnlyError, self.pos_view.close, None)
         self.assertRaises(PositionReadOnlyError, self.pos_view.keep_previous_position, None)
-        self.assertRaises(PositionReadOnlyError, self.pos_view._prev_day_key, None)

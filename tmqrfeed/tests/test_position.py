@@ -376,6 +376,89 @@ class PositionTestCase(unittest.TestCase):
         for dt, val in expected_dict.items():
             self.assertEqual(m_pdict[dt], val)
 
+    def test_merge_positions_with_decision_time_shift(self):
+
+        dm = MagicMock(DataManager())
+        asset = MagicMock(ContractBase("US.S.AAPL", dm), name='Asset')
+        asset2 = MagicMock(ContractBase("US.S.GOOG", dm), name='Asset2')
+
+        p_dict = OrderedDict()
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict[datetime(2011, 1, 2)] = {asset: (100, 101, 2)}
+
+        p_dict2 = OrderedDict()
+        p_dict2[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+        p_dict2[datetime(2011, 1, 2)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict2[datetime(2011, 1, 3)] = {asset2: (200, 201, 4)}
+
+        p_dict3 = OrderedDict()
+        p_dict3[datetime(2011, 1, 4)] = {asset: (100, 101, 2)}
+
+        p1 = Position(dm, position_dict=p_dict, decision_time_shift=5)
+        p2 = Position(dm, position_dict=p_dict2, decision_time_shift=5)
+        p3 = Position(dm, position_dict=p_dict3, decision_time_shift=5)
+
+        merged_pos = Position.merge(dm, [p1, p2, p3])
+        self.assertEqual(Position, type(merged_pos))
+
+        m_pdict = merged_pos._position
+
+        self.assertEqual(4, len(m_pdict))
+
+        expected_dict = OrderedDict()
+        expected_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 4), asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 2)] = {asset: (100, 101, 4), asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 3)] = {asset2: (200, 201, 4)}
+        expected_dict[datetime(2011, 1, 4)] = {asset: (100, 101, 2)}
+
+        for dt, val in expected_dict.items():
+            self.assertEqual(m_pdict[dt], val)
+
+        self.assertEqual(merged_pos.kwargs['decision_time_shift'], 5)
+
+    def test_merge_positions_with_decision_time_shift_error_mixed(self):
+
+        dm = MagicMock(DataManager())
+        asset = MagicMock(ContractBase("US.S.AAPL", dm), name='Asset')
+        asset2 = MagicMock(ContractBase("US.S.GOOG", dm), name='Asset2')
+
+        p_dict = OrderedDict()
+        p_dict[datetime(2011, 1, 1)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict[datetime(2011, 1, 2)] = {asset: (100, 101, 2)}
+
+        p_dict2 = OrderedDict()
+        p_dict2[datetime(2011, 1, 1)] = {asset: (100, 101, 2)}
+        p_dict2[datetime(2011, 1, 2)] = {asset: (100, 101, 2), asset2: (200, 201, 4)}
+        p_dict2[datetime(2011, 1, 3)] = {asset2: (200, 201, 4)}
+
+        p_dict3 = OrderedDict()
+        p_dict3[datetime(2011, 1, 4)] = {asset: (100, 101, 2)}
+
+        p1 = Position(dm, position_dict=p_dict, decision_time_shift=3)
+        p2 = Position(dm, position_dict=p_dict2, decision_time_shift=5)
+        p3 = Position(dm, position_dict=p_dict3, decision_time_shift=5)
+
+        self.assertRaises(ArgumentError, Position.merge, dm, [p1, p2, p3])
+
+        p1 = Position(dm, position_dict=p_dict, decision_time_shift=5)
+        p2 = Position(dm, position_dict=p_dict2, decision_time_shift=3)
+        p3 = Position(dm, position_dict=p_dict3, decision_time_shift=5)
+
+        self.assertRaises(ArgumentError, Position.merge, dm, [p1, p2, p3])
+
+        p1 = Position(dm, position_dict=p_dict)
+        p2 = Position(dm, position_dict=p_dict2, decision_time_shift=5)
+        p3 = Position(dm, position_dict=p_dict3, decision_time_shift=5)
+
+        self.assertRaises(ArgumentError, Position.merge, dm, [p1, p2, p3])
+
+        p1 = Position(dm, position_dict=p_dict, decision_time_shift=5)
+        p2 = Position(dm, position_dict=p_dict2)
+        p3 = Position(dm, position_dict=p_dict3, decision_time_shift=5)
+
+        self.assertRaises(ArgumentError, Position.merge, dm, [p1, p2, p3])
+
+
     def test_close(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)

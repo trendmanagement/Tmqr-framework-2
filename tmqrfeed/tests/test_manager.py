@@ -36,7 +36,6 @@ class DataManagerTestCase(unittest.TestCase):
                 dm.series_primary_set(quote_cls_mock, 'test', kwtest=True)
                 self.assertEqual('quotes', dm._primary_quotes)
                 self.assertEqual('pos', dm._primary_positions)
-                self.assertTrue(mock_dm_series_check.called)
 
                 self.assertRaises(DataManagerError, dm.series_primary_set, quote_cls_mock, 'test', kwtest=True)
                 self.assertTrue(quote_cls_mock.called)
@@ -67,7 +66,7 @@ class DataManagerTestCase(unittest.TestCase):
                     self.assertTrue(mock_dm_series_align.called)
                     self.assertTrue(quote_cls_mock.called)
                     self.assertEqual(('test',), quote_cls_mock.call_args[0])
-                    self.assertEqual({'kwtest': True}, quote_cls_mock.call_args[1])
+                    self.assertEqual({'kwtest': True, 'datamanager': dm}, quote_cls_mock.call_args[1])
                     self.assertTrue(quote_mock.build.called)
 
                     self.assertEqual('quotes', dm._secondary_quotes['name1'])

@@ -92,9 +92,6 @@ class DataManager:
         quote_engine = quote_engine_cls(*args, **kwargs)
         self._primary_quotes, self._primary_positions = quote_engine.build()
 
-        # Checking series validity
-        self.series_check(self._primary_quotes)
-
     def series_extra_set(self, name, quote_engine_cls, *args, **kwargs):
         """
         Fetch additional series, align them to primary series and save by 'name'
@@ -112,6 +109,7 @@ class DataManager:
             # Check for 'name' duplicate for extra series
             raise DataManagerError(f"You have already added extra series with name '{name}'")
 
+        kwargs['datamanager'] = self
         quote_engine = quote_engine_cls(*args, **kwargs)
         quotes, pos = quote_engine.build()
 
