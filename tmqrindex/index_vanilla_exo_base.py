@@ -42,12 +42,7 @@ class IndexVanillaEXOBase(IndexBase):
                 fut, opt_chain = self.dm.chains_options_get("US.CL", dt)
                 pos.keep_previous_position(dt)
 
-                if pos.almost_expired_ratio(dt) == 1:
-                    log.debug('Closing almost expired position')
-                    log.debug(f"Date: {dt}")
-                    pos.close(dt)
-                else:
-                    self.manage_position(dt, pos, fut, opt_chain)
+                self.manage_position(dt, pos, fut, opt_chain)
 
                 if not pos.has_position(dt):
                     log.debug('Opening new position')
