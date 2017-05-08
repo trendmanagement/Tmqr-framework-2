@@ -14,6 +14,11 @@ class OptionContractTestCase(unittest.TestCase):
         self.assertEqual(contract.underlying.ticker, 'US.F.ZB.H11.110322')
         self.assertEqual(contract.expiration, datetime(2011, 1, 21))
         self.assertEqual(contract.strike, 89.0)
+        self.assertEqual(contract.opt_code, '')
+
+        contract = OptionContract('US.C.F-ZB-H11-110322.110121.OPTCODE@89.0')
+        self.assertEqual(contract.opt_code, 'OPTCODE')
+        self.assertEqual(contract.strike, 89.0)
 
         self.assertRaises(ArgumentError, OptionContract, 'US.C.F-ZB-H11-110322.XX.110121@89.0')
         self.assertRaises(ArgumentError, OptionContract, 'US.F.F-ZB-H11-110322.110121@89.0')

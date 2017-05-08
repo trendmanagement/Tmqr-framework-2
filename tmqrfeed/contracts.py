@@ -299,11 +299,18 @@ class OptionContract(ContractBase):
         super().__init__(tckr, datamanager)
         if self.ctype != 'P' and self.ctype != 'C':
             raise ArgumentError("Contract type 'C' or 'P' expected, but '{0}' given".format(self.ctype))
-        if len(self._toks) != 5:
-            raise ArgumentError("Option contract must have 5 tokens in ticker, like: US.C.F-ZB-H11-110322.110121@89.0")
+        if len(self._toks) < 5:
+            raise ArgumentError(
+                "Option contract must have 5+ tokens in ticker, like: US.C.F-ZB-H11-110322.110121[.OPTCODE]@89.0")
 
         self.expiration = self._parse_expiration(self._toks[3])
-        self.strike = float(self._toks[4])
+        if len(self._toks) > 5:
+            # Handling case when contract ticker contains OPT_CODE
+            self.strike = float(self._toks[5])
+            self.opt_code = self._toks[4]
+        else:
+            self.strike = float(self._toks[4])
+            self.opt_code = ''
 
         self._underlying = kwargs.get('underlying', None)
         self._pricing_context = None
