@@ -24,7 +24,6 @@ class OptionChainTestCase(unittest.TestCase):
 
 
     def setUp(self):
-
         self.expiration = datetime.datetime(2011, 1, 21, 0, 0)
         self.opt_chain = OptionChain(self.chain_list[self.expiration], self.expiration, self.underlying, self.dm)
 
@@ -35,6 +34,23 @@ class OptionChainTestCase(unittest.TestCase):
                           self.underlying, None)
         self.assertRaises(ChainNotFoundError, OptionChain, {}, self.expiration,
                           self.underlying, self.dm)
+
+    def test_mixed_opt_codes(self):
+        self.expiration = datetime.datetime(2011, 1, 21, 0, 0)
+        opt_dict = self.chain_list[self.expiration].copy()
+        opt_dict[12380.2] = (OptionContract('US.C.F-ZB-H11-110322.110121.OPTCODE@89.0'),
+                             OptionContract('US.P.F-ZB-H11-110322.110121.OPTCODE@89.0'))
+
+        self.assertRaises(ArgumentError, OptionChain, opt_dict, self.expiration, self.underlying, self.dm)
+
+    def test_opt_code(self):
+        self.expiration = datetime.datetime(2011, 1, 21, 0, 0)
+        opt_dict = {}
+        opt_dict[12380.2] = (OptionContract('US.C.F-ZB-H11-110322.110121.OPTCODE@89.0'),
+                             OptionContract('US.P.F-ZB-H11-110322.110121.OPTCODE@89.0'))
+
+        chain = OptionChain(opt_dict, self.expiration, self.underlying, self.dm)
+        self.assertEqual('OPTCODE', chain.opt_code)
 
     def test_repr_and_str(self):
         self.assertEqual(str(self.opt_chain), f'Chain: {self.underlying} {self.expiration.date()}')

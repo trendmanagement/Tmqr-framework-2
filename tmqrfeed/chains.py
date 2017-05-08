@@ -10,7 +10,6 @@ from tmqrfeed.contracts import FutureContract, ContractBase
 import warnings
 import datetime
 
-
 class FutureChain:
     """
     Futures chain class
@@ -193,6 +192,7 @@ class OptionChainList:
         :param kwargs:
             Keywords for SMART chains search:
             - min_days - ignore chains with days to expiration <= min_days
+            - opt_codes - include only option chains in opt_codes list
         :return:
         """
         if isinstance(by, datetime.datetime):
@@ -202,6 +202,10 @@ class OptionChainList:
             return self.chain_list[dt]
         elif isinstance(by, (int, np.int32, np.int64)):
             option_offset = by
+
+            if option_offset < 0:
+                raise ArgumentError("'by' must be >= 0")
+
             min_days = kwargs.get('min_days', 0)
             start_exp_idx = -1
             for i, exp in enumerate(self._expirations):
@@ -218,16 +222,40 @@ class OptionChainList:
                     # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
                     option_offset_skipped=len(self._expirations) - start_exp_idx)
 
-            expiration = self._expirations[start_exp_idx + option_offset]
-            return self.chain_list[expiration]
+            opt_codes = kwargs.get('opt_codes', [])
+            if opt_codes:
+                oc_i = start_exp_idx
+                oc_cnt = 0
+                while True:
+                    if oc_i > len(self.expirations) - 1:
+                        raise ChainNotFoundError(
+                            f"Couldn't find front+{option_offset} options chains, filtered by opt_codes {opt_codes}",
+                            # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
+                            option_offset_skipped=oc_cnt)
+                    expiration = self._expirations[oc_i]
+                    chain = self.chain_list[expiration]
+                    if chain.opt_code in opt_codes:
+                        if oc_cnt == option_offset:
+                            break
+                        oc_cnt += 1
+                    oc_i += 1
+            else:
+                expiration = self._expirations[start_exp_idx + option_offset]
+                chain = self.chain_list[expiration]
+
+            return chain
         else:
-            raise ValueError('Unexpected item type, must be float or int')
+            raise ArgumentError("Unexpected 'by' type, must be float or int")
 
     def __repr__(self):
-        exp_str = ""
+        exp_str = f"{self.underlying} expirations list: \n"
 
         for i, exp in enumerate(self.expirations):
-            exp_str += '{0}: {1}\n'.format(i, exp.date())
+            _opt_code = self.chain_list[exp].opt_code
+            if _opt_code:
+                exp_str += '{0}: {1} (OptCode: {2})\n'.format(i, exp.date(), _opt_code)
+            else:
+                exp_str += '{0}: {1}\n'.format(i, exp.date())
         return exp_str
 
 
@@ -249,6 +277,18 @@ class OptionChain:
 
         if len(self._strike_array) == 0:
             raise ChainNotFoundError(f'Empty option chain for {underlying} at expiration: {expiration}')
+
+        # Setting chain opt code
+        opt_code_set = set()
+        for call, put in self._options.values():
+            opt_code_set.add(call.opt_code)
+            opt_code_set.add(put.opt_code)
+
+        if len(opt_code_set) > 1:
+            raise ArgumentError(
+                f"Mixed options codes for {underlying} option chain at expiration {expiration}: {opt_code_set}")
+
+        self.opt_code = opt_code_set.pop()
 
     @property
     def expiration(self):

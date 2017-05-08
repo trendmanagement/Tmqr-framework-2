@@ -6,7 +6,7 @@ from tmqr.logs import log
 from tmqrfeed.position import Position
 
 
-class IndexVanillaEXOBase(IndexBase):
+class IndexEXOBase(IndexBase):
     _description_short = "EOD continuous futures series produced by QuoteContFut algorithm"
     _description_long = "EOD continuous futures series produced by QuoteContFut algorithm. " \
                         "Quotes and positions are included"
@@ -36,18 +36,27 @@ class IndexVanillaEXOBase(IndexBase):
 
         pos = Position(self.dm, decision_time_shift=self.decision_time_shift)
 
+        exo_df = self.calc_exo_logic()
+
         for dt in self.dm.quotes().index:
 
             try:
-                fut, opt_chain = self.dm.chains_options_get("US.CL", dt)
                 pos.keep_previous_position(dt)
 
-                self.manage_position(dt, pos, fut, opt_chain)
+                # Getting SmartEXO logic data point for current date
+                logic_df = None
+                if exo_df:
+                    try:
+                        logic_df = exo_df[dt]
+                    except KeyError:
+                        pass
+
+                self.manage_position(dt, pos, logic_df)
 
                 if not pos.has_position(dt):
                     log.debug('Opening new position')
                     log.debug(f"Date: {dt}")
-                    self.construct_position(dt, pos, fut, opt_chain)
+                    self.construct_position(dt, pos, logic_df)
                     log.debug(f'Position\n {repr(pos)}')
             except ChainNotFoundError:
                 log.error(f"ChainNotFoundError: {dt}")
@@ -57,10 +66,33 @@ class IndexVanillaEXOBase(IndexBase):
         self.data = pos.get_pnl_series()
         self.position = pos
 
-    def manage_position(self, dt, pos, fut, opt_chain):
+    def calc_exo_logic(self):
+        """
+        Calculates SmartEXO logic.
+        NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key='for_secondary_series') to 
+              calculate SmartEXO logic
+        :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)
+        """
         pass
 
-    def construct_position(self, dt, pos, fut, opt_chain):
+    def manage_position(self, dt, pos, logic_df):
+        """
+        Manages opened position (rollover checks/closing, delta hedging, etc)
+        :param dt: current datetime
+        :param pos: Position instance
+        :param logic_df: result of calc_exo_logic()[dt]  if applicable
+        :return: nothing, manages 'pos' in place
+        """
+        pass
+
+    def construct_position(self, dt, pos, logic_df):
+        """
+        EXO position construction method
+        :param dt: current datetime
+        :param pos: Position instance
+        :param logic_df: result of calc_exo_logic()[dt]  if applicable
+        :return: nothing, manages 'pos' in place
+        """
         pass
 
     @property

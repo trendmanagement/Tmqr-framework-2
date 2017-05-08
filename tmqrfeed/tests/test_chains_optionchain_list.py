@@ -62,7 +62,7 @@ class ChainListTestCase(unittest.TestCase):
         self.assertEqual(self.opt_chain.find(datetime.datetime(2011, 2, 11, 0, 0), expiry).expiration, expiry)
 
     def test_chain_has_get_item_error_unexpected_item_type(self):
-        self.assertRaises(ValueError, self.opt_chain.find, datetime.datetime(2011, 2, 11, 0, 0), 'wrong type')
+        self.assertRaises(ArgumentError, self.opt_chain.find, datetime.datetime(2011, 2, 11, 0, 0), 'wrong type')
 
     def test_chain_get_item_by_offset(self):
         expiry = datetime.datetime(2011, 2, 18, 0, 0)
@@ -79,13 +79,40 @@ class ChainListTestCase(unittest.TestCase):
         except ChainNotFoundError as exc:
             self.assertEqual(exc.option_offset_skipped, 2)
 
+    def test_chain_find_with_optcode(self):
+        fn = os.path.abspath(os.path.join(__file__, '../', 'option_chain_list_es_optcode.pkl'))
+        dm = DataManager()
+        underlying = FutureContract('US.F.ES.Z16.161216')
+        with open(fn, 'rb') as f:
+            chain_list = dm.datafeed._process_raw_options_chains(pickle.load(f), underlying)
+
+        chain = OptionChainList(chain_list, underlying, dm)
+
+        self.assertRaises(ArgumentError, chain.find, datetime.datetime(2016, 11, 11), -1, opt_codes=['EW'])
+
+        opt_chain = chain.find(datetime.datetime(2016, 11, 11), 0, opt_codes=['EW'])
+        self.assertEqual(datetime.datetime(2016, 11, 30), opt_chain.expiration)
+
+        opt_chain = chain.find(datetime.datetime(2016, 11, 11), 1, opt_codes=['EW', ''])
+        self.assertEqual(datetime.datetime(2016, 12, 16), opt_chain.expiration)
+
+        self.assertRaises(ChainNotFoundError, self.opt_chain.find, datetime.datetime(2016, 11, 11, 0, 0), 3)
+
+        try:
+            chain.find(datetime.datetime(2016, 11, 11, 0, 0), 3, opt_codes=['EW', ''])
+        except ChainNotFoundError as exc:
+            self.assertEqual(exc.option_offset_skipped, 2)
+
+
+
+
 
 
 
     def test_chain_repr(self):
-        exp_str = ""
+        self.assertTrue('US.F.ES.H11.110318 expirations' in self.opt_chain.__repr__())
+        self.assertTrue('0: 2011-01-21' in self.opt_chain.__repr__())
 
-        for i, exp in enumerate(self.opt_chain.expirations):
-            exp_str += '{0}: {1}\n'.format(i, exp.date())
-
-        self.assertEqual(self.opt_chain.__repr__(), exp_str)
+        chain = self.opt_chain.chain_list[datetime.datetime(2011, 1, 21)]
+        chain.opt_code = 'OPTCODE'
+        self.assertTrue('0: 2011-01-21 (OptCode: OPTCODE)' in self.opt_chain.__repr__())

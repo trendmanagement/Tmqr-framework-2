@@ -22,6 +22,8 @@ class OptionContractTestCase(unittest.TestCase):
 
         self.assertRaises(ArgumentError, OptionContract, 'US.C.F-ZB-H11-110322.XX.110121@89.0')
         self.assertRaises(ArgumentError, OptionContract, 'US.F.F-ZB-H11-110322.110121@89.0')
+        self.assertRaises(ArgumentError, OptionContract, 'US.C.F-ZB-H11-110322@89.0')
+        self.assertRaises(ArgumentError, OptionContract, 'US.C.F-ZB-H11-110322.110121.OPTCODE.123123@89.0')
 
     def test_optioncontract_underlying(self):
         contract = OptionContract('US.C.S-AAPL.110121@89.0')

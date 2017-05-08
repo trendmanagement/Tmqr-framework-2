@@ -309,13 +309,16 @@ class DataManager:
         :param kwargs: 
             - 'opt_offset' - option expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
             - 'opt_min_days' - minimal days count until option expiration (default: 2)
+            - 'opt_codes' - include options codes only (default: [] i.e. include all)
             - 'error_limit' - ChainNotFoundError error limit, useful to increase when you are trying to get far 'opt_offset' (default: 4)
         :return: (tuple) FutureContract, OptionChain
         """
 
         opt_offset = kwargs.get('opt_offset', 0)
         opt_min_days = kwargs.get('opt_min_days', 2)
+        opt_codes = kwargs.get('opt_codes', [])
         error_limit = kwargs.get('error_limit', 4)
+
 
 
         if not isinstance(opt_offset, int) or opt_offset < 0:
@@ -337,7 +340,7 @@ class DataManager:
                 # Getting options chains list for the future
                 opt_chain_list = self.datafeed.get_option_chains(fut)
                 # Trying to find option with expiration by offset and days_to_exp > opt_min_days
-                option_chain = opt_chain_list.find(date, opt_offset, min_days=opt_min_days)
+                option_chain = opt_chain_list.find(date, opt_offset, min_days=opt_min_days, opt_codes=opt_codes)
                 return fut, option_chain
             except ChainNotFoundError as exc:
                 # Chain is not found, probably few days till expiration or no data
