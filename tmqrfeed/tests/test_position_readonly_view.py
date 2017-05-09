@@ -10,11 +10,11 @@ from tmqr.errors import ArgumentError, PositionReadOnlyError, PositionQuoteNotFo
 class PositionReadOnlyViewTestCase(unittest.TestCase):
     def setUp(self):
         self.dm = MagicMock(DataManager())
-        self.dm.price_get.return_value = (1.0, 2.0)
 
         self.p = Position(self.dm)
         self.dt = datetime(2011, 1, 1, 10, 35)
         self.asset = MagicMock(ContractBase("US.S.AAPL"), self.dm)
+        self.asset.price.return_value = (1.0, 2.0)
         self.p.add_transaction(self.dt, self.asset, 3.0)
 
         self.pos_view = PositionReadOnlyView(self.dm, self.p._position, decision_time_shift=0)

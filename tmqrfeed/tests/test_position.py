@@ -35,6 +35,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         self.assertRaises(ArgumentError, p.add_transaction, dt, asset, 0.0)
 
@@ -51,6 +52,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
         p.add_transaction(dt, asset, -3.0)
@@ -67,6 +69,8 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
         p.add_transaction(dt, asset, 3.0)
 
         pos = p.get_net_position(dt)
@@ -88,15 +92,15 @@ class PositionTestCase(unittest.TestCase):
 
     def test_add_net_position_new(self):
         dm = MagicMock(DataManager())
-        dm.price_get.return_value = (1.0, 2.0)
 
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         self.assertEqual(0, len(p._position))
 
-        new_position = {asset: (1.0, 2.0, 1.0)}
+        new_position = {asset: (5.0, 6.0, 1.0)}
 
         p.add_net_position(dt, new_position, qty=2)
 
@@ -112,6 +116,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -135,6 +140,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -148,6 +154,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -160,6 +167,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         self.assertRaises(PositionNotFoundError, p._prev_day_key, None)
         p.add_transaction(dt, asset, 3.0)
@@ -177,6 +185,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         self.assertRaises(PositionNotFoundError, p._prev_day_key, None)
         p.add_transaction(dt, asset, 3.0)
@@ -207,6 +216,8 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
         self.assertFalse(p.has_position(dt))
         p.add_transaction(dt, asset, 3.0)
 
@@ -230,6 +241,8 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
         with patch('tmqrfeed.position.Position._check_position_validity') as mock__check_position_validity:
             p.add_transaction(dt, asset, 3.0)
 
@@ -273,6 +286,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -280,7 +294,7 @@ class PositionTestCase(unittest.TestCase):
         for i, v in enumerate((1.0, 2.0, 3.0)):
             self.assertEqual(v, p._position[dt][asset][i])
 
-        dm.price_get.return_value = (5.0, 6.0)
+        asset.price.return_value = (5.0, 6.0)
 
         dt2 = datetime(2011, 1, 2)
         p.keep_previous_position(dt2)
@@ -312,6 +326,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -328,6 +343,8 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.ctype = 'F'
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
 
@@ -335,8 +352,17 @@ class PositionTestCase(unittest.TestCase):
         for i, v in enumerate((1.0, 2.0, 3.0)):
             self.assertEqual(v, p._position[dt][asset][i])
 
+        asset2 = MagicMock(ContractBase("US.S.AAPL_NOEXIST"), dm)
+
         self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 2), asset)
-        self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 1), 'not_existing_asset')
+        self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 1), asset2)
+
+        asset2.ctype = 'C'
+        self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 1), asset2)
+
+        asset2.ctype = 'P'
+        self.assertRaises(PositionQuoteNotFoundError, p.get_asset_price, datetime(2011, 1, 1), asset2)
+
 
     def test_merge_positions(self):
 
@@ -466,6 +492,7 @@ class PositionTestCase(unittest.TestCase):
         p = Position(dm)
         dt = datetime(2011, 1, 1)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
         p.close(dt)
@@ -541,52 +568,54 @@ class PositionTestCase(unittest.TestCase):
             mock_instrument_info.ticksize = 1.0
             mock_instrument_info.tickvalue = 1.0
 
+            with patch('tmqrfeed.contracts.ContractBase.price') as mock_price:
+                positions = OrderedDict()
+                fut = ContractBase("US.S.AAPL")
+                fut.ctype = 'F'
 
-            positions = OrderedDict()
-            fut = ContractBase("US.S.AAPL")
-            fut.ctype = 'F'
+                opt1 = ContractBase("US.C.AAPL")
+                opt1.ctype = 'C'
 
-            opt1 = ContractBase("US.C.AAPL")
-            opt1.ctype = 'C'
+                opt2 = ContractBase("US.P.AAPL")
+                opt2.ctype = 'P'
+                positions = OrderedDict()
 
-            opt2 = ContractBase("US.P.AAPL")
-            opt2.ctype = 'P'
-            positions = OrderedDict()
+                positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
+                positions[datetime(2011, 1, 2)] = {
+                    fut: (101, 102, 1.0),
+                    opt1: (201, 202, 3.0),
+                    opt2: (301, 302, -4.0)
+                }
+                positions[datetime(2011, 1, 3)] = {fut: (102, 103, 1.0), opt1: (202, 203, 0.0)}
 
-            positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
-            positions[datetime(2011, 1, 2)] = {
-                fut: (101, 102, 1.0),
-                opt1: (201, 202, 3.0),
-                opt2: (301, 302, -4.0)
-            }
-            positions[datetime(2011, 1, 3)] = {fut: (102, 103, 1.0), opt1: (202, 203, 0.0)}
+                mock_price.return_value = (501, 502)
 
-            dm = MagicMock(DataManager())
-            dm.price_get.return_value = (501, 502)
-            dm.costs_get.return_value = 0.0
+                dm = MagicMock(DataManager())
+                # dm.price_get.return_value = (501, 502)
+                dm.costs_get.return_value = 0.0
 
-            p = Position(dm)
+                p = Position(dm)
 
-            # First transaction
-            trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 1)], None)
-            self.assertEqual(1, len(trans))
-            self.assertEqual({fut: (100, 101, 2, 0.0, 0.0, 0.0)}, trans)
+                # First transaction
+                trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 1)], None)
+                self.assertEqual(1, len(trans))
+                self.assertEqual({fut: (100, 101, 2, 0.0, 0.0, 0.0)}, trans)
 
-            trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 2)],
-                                         positions[datetime(2011, 1, 1)])
-            self.assertEqual(3, len(trans))
-            self.assertEqual({fut: (101, 102, -1, 2.0, 2.0, 0.0),
-                              opt1: (201, 202, 3, 0.0, 0.0, 0.0),
-                              opt2: (301, 302, -4, 0.0, 0.0, 0.0)
-                              }, trans)
+                trans = p._calc_transactions(datetime(2011, 1, 1), positions[datetime(2011, 1, 2)],
+                                             positions[datetime(2011, 1, 1)])
+                self.assertEqual(3, len(trans))
+                self.assertEqual({fut: (101, 102, -1, 2.0, 2.0, 0.0),
+                                  opt1: (201, 202, 3, 0.0, 0.0, 0.0),
+                                  opt2: (301, 302, -4, 0.0, 0.0, 0.0)
+                                  }, trans)
 
-            trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 3)],
-                                         positions[datetime(2011, 1, 2)])
-            self.assertEqual(3, len(trans))
-            self.assertEqual({fut: (102, 103, 0.0, 1.0, 1.0, 0.0),
-                              opt1: (202, 203, -3.0, 3.0, 3.0, 0.0),
-                              opt2: (501, 502, 4.0, -200 * 4, -200 * 4, 0.0)
-                              }, trans)
+                trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 3)],
+                                             positions[datetime(2011, 1, 2)])
+                self.assertEqual(3, len(trans))
+                self.assertEqual({fut: (102, 103, 0.0, 1.0, 1.0, 0.0),
+                                  opt1: (202, 203, -3.0, 3.0, 3.0, 0.0),
+                                  opt2: (501, 502, 4.0, -200 * 4, -200 * 4, 0.0)
+                                  }, trans)
 
     def test__transactions_stats(self):
         with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
@@ -643,12 +672,15 @@ class PositionTestCase(unittest.TestCase):
         positions = OrderedDict()
         fut = MagicMock(ContractBase("US.S.AAPL"))
         fut.ctype = 'F'
+        fut.price.return_value = (501, 502)
 
         opt1 = MagicMock(ContractBase("US.C.AAPL"))
         opt1.ctype = 'C'
+        opt1.price.return_value = (501, 502)
 
         opt2 = MagicMock(ContractBase("US.P.AAPL"))
         opt2.ctype = 'P'
+        opt2.price.return_value = (501, 502)
 
         positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
         positions[datetime(2011, 1, 2)] = {

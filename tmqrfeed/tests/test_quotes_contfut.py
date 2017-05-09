@@ -194,6 +194,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
         p = Position(dm)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(datetime(2011, 1, 1), asset, 3.0)
         p.add_transaction(datetime(2011, 1, 2), asset, 3.0)
@@ -211,6 +212,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
         p = Position(dm)
         asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(datetime(2011, 1, 1), asset, 3.0)
         p.add_transaction(datetime(2011, 1, 2), asset, 3.0)

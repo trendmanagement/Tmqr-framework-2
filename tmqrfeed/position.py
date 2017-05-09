@@ -229,7 +229,7 @@ class Position:
                     continue
 
                 # Get actual prices for position
-                decision_price, exec_price = self.dm.price_get(asset, date)
+                decision_price, exec_price = asset.price(date)
 
                 updated_position[asset] = (decision_price, exec_price, pos_rec[2])
 
@@ -259,13 +259,12 @@ class Position:
         for asset, new_position in net_position_dict.items():
             # Searching existing positions first
             current_position = pos_dict.get(asset, None)
+            decision_price, exec_price = asset.price(date)
+
             if not current_position:
-                pos_dict[asset] = (new_position[0], new_position[1], new_position[2] * qty)
+                pos_dict[asset] = (decision_price, exec_price, new_position[2] * qty)
             else:
-                assert current_position[0] == new_position[0]
-                assert current_position[1] == new_position[1]
-                pos_dict[asset] = (
-                    current_position[0], current_position[1], new_position[2] * qty + current_position[2])
+                pos_dict[asset] = (decision_price, exec_price, new_position[2] * qty + current_position[2])
 
     def add_transaction(self, date, asset, qty):
         """
@@ -284,7 +283,7 @@ class Position:
 
         pos_dict = self._position.setdefault(date, {})
 
-        decision_price, exec_price = self.dm.price_get(asset, date)
+        decision_price, exec_price = asset.price(date)
 
         # Searching existing positions first
         pos_record = pos_dict.get(asset, None)
@@ -372,10 +371,15 @@ class Position:
     def get_asset_price(self, date, asset):
         """
         Get asset prices from position holdings
+        (used for quick price caching, not applicable for options)
         :param date: required date
         :param asset: ContractBase class instance        
         :return: tuple (decision_price, exec_price)
         """
+        if asset.ctype == 'P' or asset.ctype == 'C':
+            raise PositionQuoteNotFoundError("Options prices in position are irrelevant, "
+                                             "use direct data feed price fetch")
+
         assets_dict = self._position.get(date, None)
         if assets_dict:
             pos_tuple = assets_dict.get(asset, None)
@@ -418,7 +422,7 @@ class Position:
             elif curr_values is None:
                 # Skip old closed positions
                 if prev_values[2] != 0:
-                    decision_price, exec_price = self.dm.price_get(asset, date)
+                    decision_price, exec_price = asset.price(date)
                     costs_value = self.dm.costs_get(asset, -prev_values[2])
 
                     pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
@@ -495,7 +499,8 @@ class Position:
             txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
 
             for asset, pos_rec in pos.items():
-                txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format(str(asset), pos_rec[0], pos_rec[1], pos_rec[2]))
+                txt_buf.write(
+                    "{0:<40}{1:>10.3f}{2:>10.3f}{3:>10}\n".format(str(asset), pos_rec[0], pos_rec[1], pos_rec[2]))
 
             return txt_buf.getvalue()
 

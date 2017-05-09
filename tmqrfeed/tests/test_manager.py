@@ -657,9 +657,11 @@ class DataManagerTestCase(unittest.TestCase):
         # No asset
         self.assertEqual((None, None), dm._price_get_positions_cached(fut, datetime.datetime(2012, 1, 1)))
 
-        # Existing assets, working also with options
+        # Existing assets
         self.assertEqual((0.1, 0.2), dm._price_get_positions_cached(stk, datetime.datetime(2012, 1, 1)))
-        self.assertEqual((1, 2), dm._price_get_positions_cached(opt, datetime.datetime(2012, 1, 1)))
+
+        # Options in position are priced once again, and not applicable for caching
+        self.assertEqual((None, None), dm._price_get_positions_cached(opt, datetime.datetime(2012, 1, 1)))
 
     def test__price_get(self):
         with patch('tmqrfeed.manager.DataManager._price_get_positions_cached') as mock__price_get_positions_cached:

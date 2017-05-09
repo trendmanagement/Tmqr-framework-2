@@ -135,6 +135,19 @@ class ContractBase:
         """
         return 1.0
 
+    def price(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
+        """
+        Calculate generic assets's price (also could be used for WhatIF analysis)
+        :param date: 
+        :param ulprice: 
+        :param iv_change: 
+        :param days_to_expiration: 
+        :param riskfreerate: 
+        :return: tuple (decision_price, execution_price)
+        """
+        return self.dm.price_get(self, date)
+
+
     @staticmethod
     def _parse(ticker):
         """
