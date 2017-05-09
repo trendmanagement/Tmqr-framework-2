@@ -108,11 +108,12 @@ class OptionChainTestCase(unittest.TestCase):
 
         self.opt_chain.dm = MagicMock(self.opt_chain.dm)
         self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
+        self.opt_chain.dm.riskfreerate_get.return_value = 0.05
         with patch('tmqrfeed.contracts.OptionContract.set_pricing_context') as mock_set_pricing_context:
             opt = self.opt_chain._find_by_offset(datetime.datetime(2011, 1, 19, 0, 0), 0, 'C', 10)
             self.assertEqual(True, mock_set_pricing_context.called)
 
-            call_args = (datetime.datetime(2011, 1, 19, 0, 0), 500.0, 501.0, 0.25, 0.26)
+            call_args = (datetime.datetime(2011, 1, 19, 0, 0), 500.0, 501.0, 0.25, 0.26, 0.05)
             self.assertEqual(call_args, mock_set_pricing_context.call_args[0])
 
 

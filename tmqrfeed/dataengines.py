@@ -15,6 +15,7 @@ import lz4
 COLLECTION_ASSET_INDEX = 'asset_index'
 COLLECTION_ASSET_INFO = 'asset_info'
 COLLECTION_INDEX_DATA = 'index_data'
+COLLECTION_RFR = 'quotes_riskfreerate'
 
 
 class DataEngineBase:
@@ -150,6 +151,17 @@ class DataEngineMongo(DataEngineBase):
         if idx is None:
             raise DataEngineNotFoundError(f"Index '{index_name}' is not found in the DB")
         return idx
+
+    def db_get_rfr_series(self, market):
+        """
+        Returns risk free rate series for specific market
+        :param market: market name
+        :return: Pandas.Series
+        """
+        rfr = self.db[COLLECTION_RFR].find_one({'market': market})
+        if rfr is None:
+            raise DataEngineNotFoundError(f"RiskFreeRate series is not found in the DB for the '{market}' market")
+        return pickle.loads(lz4.block.decompress(rfr['rfr_series']))
 
 
     def _source_intraday_get_series(self, tckr, **kwargs):

@@ -147,6 +147,9 @@ class ContractBase:
         """
         return self.dm.price_get(self, date)
 
+    def risk_free_rate(self, date):
+        return self.dm.riskfreerate_get(self, date)
+
 
     @staticmethod
     def _parse(ticker):
@@ -405,8 +408,7 @@ class OptionContract(ContractBase):
         # Fetching prices from data manager
         ul_decision_px, ul_exec_px = self.dm.price_get(self.underlying, date)
         option_decision_iv, option_exec_iv = self.dm.price_get(self, date)
-        # TODO: get riskfree rate from DataManager
-        risk_free_rate = 0.0
+        risk_free_rate = self.dm.riskfreerate_get(self, date)
 
         self.set_pricing_context(date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv, risk_free_rate)
         return self._pricing_context

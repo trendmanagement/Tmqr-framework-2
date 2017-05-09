@@ -45,6 +45,7 @@ class DataFeed:
         self._cache_futchain = {}
         self._cache_opt_chain = {}
         self._cache_price_data = {}
+        self._cache_riskfreerate = {}
 
     def get_instrument_info(self, instrument):
         """
@@ -168,6 +169,16 @@ class DataFeed:
             return dfseries
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
+
+    def get_riskfreerate_series(self, market):
+        rfr_series = self._cache_riskfreerate.get(market, None)
+
+        if rfr_series is None:
+            rfr_series = self.data_engine.db_get_rfr_series(market)
+            self._cache_riskfreerate[market] = rfr_series
+
+        return rfr_series
+
 
     def get_raw_prices(self, tckr, source_type, dt_list, **kwargs):
         tz = kwargs.get('timezone', None)

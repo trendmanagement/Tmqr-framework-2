@@ -78,12 +78,14 @@ class OptionContractTestCase(unittest.TestCase):
 
         dm = mock.MagicMock(DataManager())
         dm.price_get.side_effect = dm_price_get_sideeffect
+        dm.riskfreerate_get.return_value = 0.0
 
         contract = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
         self.assertEqual(None, contract._pricing_context)
 
         dt = datetime(2012, 1, 1)
         context = contract.get_pricing_context(dt)
+
         self.assertEqual(context, (datetime(2012, 1, 1), 500, 501, 0.25, 0.26, 0.0))
 
         # Check cached

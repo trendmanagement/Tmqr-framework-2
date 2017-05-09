@@ -467,9 +467,11 @@ class OptionChain:
                 # and populating pricing context for selected option
                 opt_decision_iv, opt_exec_iv = self.dm.price_get(selected_option, dt)
 
+                rfr = self.dm.riskfreerate_get(selected_option, dt)
+
                 # Set pricing context for option, this prevents extra DB calls
                 # Because we expect that selected option will be priced soon in the calling code
-                selected_option.set_pricing_context(dt, ul_decision_px, ul_exec_px, opt_decision_iv, opt_exec_iv)
+                selected_option.set_pricing_context(dt, ul_decision_px, ul_exec_px, opt_decision_iv, opt_exec_iv, rfr)
                 return selected_option
             except NotFoundError:
                 is_not_found = True

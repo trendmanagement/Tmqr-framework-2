@@ -203,3 +203,19 @@ class ContractsTestCase(unittest.TestCase):
         c = ContractBase('US.S.AAPL', dm)
 
         self.assertEqual(c.to_expiration_days(datetime.now()), 1000000000)
+
+    def test_contractbase_price(self):
+        dm = mock.MagicMock(DataManager())
+        dm.price_get.return_value = 100
+
+        c = ContractBase('US.S.AAPL', dm)
+
+        self.assertEqual(c.price(datetime(2011, 1, 1)), 100)
+
+    def test_contractbase_risk_free_rate(self):
+        dm = mock.MagicMock(DataManager())
+        dm.riskfreerate_get.return_value = 100
+
+        c = ContractBase('US.S.AAPL', dm)
+
+        self.assertEqual(c.risk_free_rate(datetime(2011, 1, 1)), 100)

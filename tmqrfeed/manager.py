@@ -201,6 +201,19 @@ class DataManager:
                                             date_end=kw_date_end
                                             )
 
+    def riskfreerate_get(self, asset: ContractBase, date):
+        rfr_series = self.datafeed.get_riskfreerate_series(asset.market)
+
+        try:
+            # Trying to go fastest way
+            return rfr_series[date.date()]
+        except KeyError:
+            # Getting closest risk-free rate
+            closest_rfr = rfr_series.ix[:date.date()].tail(1)
+            if len(closest_rfr) == 0:
+                raise QuoteNotFoundError(f"Risk-free rate data point not found for '{asset.market}' market at {date}")
+            return closest_rfr[0]
+
     def price_get(self, asset: ContractBase, date, **kwargs):
         """
         Get price at decision and execution time for given asset

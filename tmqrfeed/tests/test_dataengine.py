@@ -185,3 +185,20 @@ class DataEngineTestCase(unittest.TestCase):
                 self.assertEqual({'name': 'index'}, mock_replace_one.call_args[0][0])
                 self.assertEqual(idx_dict, mock_replace_one.call_args[0][1])
                 self.assertEqual({'upsert': True}, mock_replace_one.call_args[1])
+
+    def test_db_get_rfr_series(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.find_one') as mock_find:
+            rfr = pd.Series([1, 2],
+                            index=[datetime(2011, 1, 1), datetime(2011, 1, 3)]
+                            )
+            mock_find.return_value = {'rfr_series': lz4.block.compress(pickle.dumps(rfr)),
+                                      'market': 'US'}
+
+            result = deng.db_get_rfr_series('US')
+
+            self.assertTrue(isinstance(result, pd.Series))
+
+            mock_find.return_value = None
+            self.assertRaises(DataEngineNotFoundError, deng.db_get_rfr_series, 'US')

@@ -746,3 +746,19 @@ class DataManagerTestCase(unittest.TestCase):
 
         dm._secondary_positions['secondary'] = position_sec
         self.assertEqual(id(position_sec), id(dm.position('secondary')))
+
+    def test_riskfreerate_get(self):
+        dm = DataManager()
+        stk = ContractBase('US.S.AAPL', datamanager=dm)
+
+        with patch('tmqrfeed.datafeed.DataFeed.get_riskfreerate_series') as mock_rfr:
+            mock_rfr.return_value = pd.Series([1, 2],
+                                              index=[datetime.datetime(2011, 1, 1), datetime.datetime(2011, 1, 3)]
+                                              )
+
+            self.assertEqual(1, dm.riskfreerate_get(stk, datetime.datetime(2011, 1, 1)))
+            self.assertEqual('US', mock_rfr.call_args[0][0])
+
+            self.assertEqual(1, dm.riskfreerate_get(stk, datetime.datetime(2011, 1, 2)))
+
+            self.assertRaises(QuoteNotFoundError, dm.riskfreerate_get, stk, datetime.datetime(2010, 1, 2))

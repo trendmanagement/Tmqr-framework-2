@@ -19,7 +19,8 @@ from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.instrumentinfo import InstrumentInfo
 from tmqrfeed.manager import DataManager
 from tmqrfeed.tests.shared_asset_info import ASSET_INFO
-
+import pickle
+import lz4
 
 class DataFeedTestCase(unittest.TestCase):
     def test_init_default(self):
@@ -390,3 +391,23 @@ class DataFeedTestCase(unittest.TestCase):
                 dfeed.dm = 'DM'
 
                 self.assertRaises(ChainNotFoundError, dfeed.get_option_chains, FutureContract('US.F.ES.H11.110318'))
+
+    def test_get_riskfreerate_series(self):
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_rfr_series') as mock_db_get_rfr_series:
+            rfr = pd.Series([1, 2],
+                            index=[datetime(2011, 1, 1), datetime(2011, 1, 3)]
+                            )
+            mock_db_get_rfr_series.return_value = rfr
+            dfeed = DataFeed()
+
+            rfr_result = dfeed.get_riskfreerate_series('US')
+
+            self.assertTrue(mock_db_get_rfr_series.called)
+            self.assertEqual('US', mock_db_get_rfr_series.call_args[0][0])
+            self.assertTrue('US' in dfeed._cache_riskfreerate)
+
+            self.assertTrue(isinstance(rfr_result, pd.Series))
+
+            mock_db_get_rfr_series.reset_mock()
+            rfr_result = dfeed.get_riskfreerate_series('US')
+            self.assertFalse(mock_db_get_rfr_series.called)
