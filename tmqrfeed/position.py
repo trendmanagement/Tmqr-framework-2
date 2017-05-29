@@ -418,7 +418,10 @@ class Position:
 
             if prev_values is None:
                 costs_value = self.dm.costs_get(asset, curr_values[2])
-                result[asset] = (curr_values[0], curr_values[1], curr_values[2], costs_value, costs_value, costs_value)
+                pnl_decision = 0.0
+                pnl_execution = 0.0
+                result[asset] = (curr_values[0], curr_values[1], curr_values[2],
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             elif curr_values is None:
                 # Skip old closed positions
                 if prev_values[2] != 0:

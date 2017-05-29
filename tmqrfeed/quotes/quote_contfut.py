@@ -84,7 +84,7 @@ class QuoteContFut(QuoteBase):
 
             try:
                 # 2. Get futures raw series
-                series = self.dm.series_get(fut_contract, date_start=date_start,
+                series = self.dm.series_get(fut_contract, date_start=max(date_start, self.date_start.date()),
                                             date_end=min(date_end, self.date_end.date()))
                 # 3. Do resampling (timeframe compression)
                 series, position = compress_daily(DataFrameGetter(series), fut_contract, self.decision_time_shift)

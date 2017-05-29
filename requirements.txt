@@ -8,3 +8,4 @@ bdateutil
 holidays
 pytz
 lz4==0.9.0
+python-dateutil>=2.6.0
