@@ -41,6 +41,10 @@ class DataManager:
         # Secondary dataframes dictionary for secondary series quotes
         self._secondary_quotes = {}
 
+        # Quotes range settings
+        self._quotes_range_start = None
+        self._quotes_range_end = None
+
         # Primary series positions
         self._primary_positions = None
         # Secondary series positions dictionary
@@ -125,16 +129,42 @@ class DataManager:
         :param series_key: extra_series key, or if None - return primary series
         :return: pd.DataFrame of series
         """
+
         if series_key is None:
             if self._primary_quotes is None:
                 raise QuoteNotFoundError("Primary quotes are not initiated, run series_primary_set() first")
-            return self._primary_quotes
+            result_series = self._primary_quotes
         else:
             extra_series = self._secondary_quotes.get(series_key, None)
             if extra_series is None:
                 raise QuoteNotFoundError(f"Couldn't find extra quotes by 'series_key'='{series_key}',"
                                          f" run series_extra_set() first or check the 'series_key' validity")
-            return extra_series
+            result_series = extra_series
+
+        if self._quotes_range_start is not None or self._quotes_range_end is not None:
+            # Apply quote range filters
+            result_series = result_series.ix[self._quotes_range_start:self._quotes_range_end]
+
+        return result_series
+
+    def quotes_range_set(self, range_start=None, range_end=None):
+        """
+        Set quotes date range returned by DataManager.quotes() method
+        :param range_start: starting date
+        :param range_end: end date
+        :return: nothing
+        """
+        if range_start is not None and not isinstance(range_start, datetime):
+            raise ArgumentError(f"'range_start' parameter expected to be datetime, got {type(range_start)}")
+
+        if range_end is not None and not isinstance(range_end, datetime):
+            raise ArgumentError(f"'range_start' parameter expected to be datetime, got {type(range_end)}")
+
+        if range_end is not None and range_start is not None and range_end <= range_start:
+            raise ArgumentError(f"'range_start' must be less than 'range_end'")
+
+        self._quotes_range_start = range_start
+        self._quotes_range_end = range_end
 
     def position(self, position_key=None):
         """

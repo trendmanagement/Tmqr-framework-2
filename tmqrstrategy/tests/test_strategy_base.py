@@ -13,10 +13,19 @@ class StrategyBaseTestCase(unittest.TestCase):
     def test_init(self):
         dm = MagicMock(DataManager())
 
-        strategy = StrategyBase(dm, position='position')
+        self.assertRaises(ArgumentError, StrategyBase, dm, position='position')
+
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params)
+
         self.assertEqual('position', strategy.position)
 
-        strategy = StrategyBase(dm)
+        strategy = StrategyBase(dm, wfo_params=wfo_params)
         self.assertEqual(Position, type(strategy.position))
 
     def test__make_wfo_matrix_rolling_month_1(self):

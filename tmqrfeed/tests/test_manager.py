@@ -762,3 +762,60 @@ class DataManagerTestCase(unittest.TestCase):
             self.assertEqual(1, dm.riskfreerate_get(stk, datetime.datetime(2011, 1, 2)))
 
             self.assertRaises(QuoteNotFoundError, dm.riskfreerate_get, stk, datetime.datetime(2010, 1, 2))
+
+    def test_set_quotes_range_init(self):
+        dm = DataManager()
+
+        self.assertEqual(None, dm._quotes_range_start)
+        self.assertEqual(None, dm._quotes_range_end)
+
+    def test_set_quotes_range_set_both(self):
+        dm = DataManager()
+
+        date_start = datetime.datetime(2011, 1, 1)
+        date_end = datetime.datetime(2012, 1, 1)
+
+        dm.quotes_range_set(date_start, date_end)
+
+        self.assertEqual(date_start, dm._quotes_range_start)
+        self.assertEqual(date_end, dm._quotes_range_end)
+
+    def test_set_quotes_range_type_check(self):
+        dm = DataManager()
+
+        date_start = datetime.datetime(2011, 1, 1)
+        date_end = datetime.datetime(2012, 1, 1)
+
+        # valid calls
+        dm.quotes_range_set(date_start, date_end)
+        dm.quotes_range_set(None, None)
+        dm.quotes_range_set()
+
+        self.assertRaises(ArgumentError, dm.quotes_range_set, '2011-01-01', None)
+        self.assertRaises(ArgumentError, dm.quotes_range_set, None, '2011-01-01')
+
+    def test_set_quotes_range_type_start_less_end(self):
+        dm = DataManager()
+
+        self.assertRaises(ArgumentError, dm.quotes_range_set, datetime.datetime(2012, 1, 1),
+                          datetime.datetime(2011, 1, 1))
+        self.assertRaises(ArgumentError, dm.quotes_range_set, datetime.datetime(2011, 1, 1),
+                          datetime.datetime(2011, 1, 1))
+
+    def test_set_quotes_range__get_quotes(self):
+        dm = DataManager()
+
+        data = pd.Series(np.zeros(100), index=pd.date_range(start=datetime.datetime(2011, 1, 1), periods=100))
+        dm._primary_quotes = data
+
+        dm.quotes_range_set(datetime.datetime(2010, 1, 1), datetime.datetime(2011, 2, 1))
+
+        qdata = dm.quotes()
+        self.assertEqual(qdata.index[0], datetime.datetime(2011, 1, 1))
+        self.assertEqual(qdata.index[-1], datetime.datetime(2011, 2, 1))
+
+        # Reset quotes range
+        dm.quotes_range_set(range_start=datetime.datetime(2011, 2, 1))
+        qdata = dm.quotes()
+        self.assertEqual(qdata.index[0], datetime.datetime(2011, 2, 1))
+        self.assertEqual(qdata.index[-1], datetime.datetime(2011, 4, 10))

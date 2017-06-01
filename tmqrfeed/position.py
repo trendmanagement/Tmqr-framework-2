@@ -8,6 +8,10 @@ import pickle
 import io
 import lz4
 
+# Position tuple constants
+iDPX = 0  # Decision price
+iEPX = 1  # Execution price
+iQTY = 2  # Qty
 
 class Position:
     """
@@ -145,7 +149,7 @@ class Position:
             return 0.0
 
         for asset, pos_rec in pos.items():
-            if pos_rec[2] == 0:
+            if pos_rec[iQTY] == 0:
                 # Skipping closed positions
                 continue
             count += 1.0
@@ -188,7 +192,7 @@ class Position:
             pos_dict = self._position[date]
             for asset, pos_rec in pos_dict.items():
                 # Apply zero-qty to all position records, but keep the prices
-                pos_dict[asset] = (pos_rec[0], pos_rec[1], 0.0)
+                pos_dict[asset] = (pos_rec[iDPX], pos_rec[iEPX], 0.0)
         except KeyError:
             # Nothing to close at 'date', just skipping
             pass
@@ -224,7 +228,7 @@ class Position:
             updated_position = {}
             prev_position = self.get_net_position(self._prev_day_key(date))
             for asset, pos_rec in prev_position.items():
-                if pos_rec[2] == 0.0:
+                if pos_rec[iQTY] == 0.0:
                     # Skipping closed position
                     continue
 
@@ -262,9 +266,9 @@ class Position:
             decision_price, exec_price = asset.price(date)
 
             if not current_position:
-                pos_dict[asset] = (decision_price, exec_price, new_position[2] * qty)
+                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty)
             else:
-                pos_dict[asset] = (decision_price, exec_price, new_position[2] * qty + current_position[2])
+                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty + current_position[iQTY])
 
     def add_transaction(self, date, asset, qty):
         """
@@ -290,9 +294,9 @@ class Position:
         if not pos_record:
             pos_dict[asset] = (decision_price, exec_price, qty)
         else:
-            assert pos_record[0] == decision_price
-            assert pos_record[1] == exec_price
-            pos_dict[asset] = (pos_record[0], pos_record[1], qty + pos_record[2])
+            assert pos_record[iDPX] == decision_price
+            assert pos_record[iEPX] == exec_price
+            pos_dict[asset] = (pos_record[iDPX], pos_record[iEPX], qty + pos_record[iQTY])
 
 
 
@@ -314,11 +318,11 @@ class Position:
                     result_dict[asset] = pos_value
                 else:
                     # Checking the decision and execution prices equality
-                    assert result_value[0] == pos_value[0]
-                    assert result_value[1] == pos_value[1]
+                    assert result_value[iDPX] == pos_value[iDPX]
+                    assert result_value[iEPX] == pos_value[iEPX]
 
                     # Summing the qty of position
-                    result_dict[asset] = (result_value[0], result_value[1], result_value[2] + pos_value[2])
+                    result_dict[asset] = (result_value[iDPX], result_value[iEPX], result_value[iQTY] + pos_value[iQTY])
 
         result_pos_dict = OrderedDict()
 
@@ -417,30 +421,30 @@ class Position:
             curr_values = current_pos.get(asset, None)
 
             if prev_values is None:
-                costs_value = self.dm.costs_get(asset, curr_values[2])
+                costs_value = self.dm.costs_get(asset, curr_values[iQTY])
                 pnl_decision = 0.0
                 pnl_execution = 0.0
-                result[asset] = (curr_values[0], curr_values[1], curr_values[2],
+                result[asset] = (curr_values[iDPX], curr_values[iEPX], curr_values[iQTY],
                                  pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             elif curr_values is None:
                 # Skip old closed positions
-                if prev_values[2] != 0:
+                if prev_values[iQTY] != 0:
                     decision_price, exec_price = asset.price(date)
-                    costs_value = self.dm.costs_get(asset, -prev_values[2])
+                    costs_value = self.dm.costs_get(asset, -prev_values[iQTY])
 
-                    pnl_decision = asset.dollar_pnl(prev_values[0], decision_price, prev_values[2])
-                    pnl_execution = asset.dollar_pnl(prev_values[1], exec_price, prev_values[2])
+                    pnl_decision = asset.dollar_pnl(prev_values[iDPX], decision_price, prev_values[iQTY])
+                    pnl_execution = asset.dollar_pnl(prev_values[iEPX], exec_price, prev_values[iQTY])
 
-                    result[asset] = (decision_price, exec_price, -prev_values[2],
+                    result[asset] = (decision_price, exec_price, -prev_values[iQTY],
                                      pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             else:
                 # Calculating transactions for existing position
-                trans_qty = curr_values[2] - prev_values[2]
+                trans_qty = curr_values[iQTY] - prev_values[iQTY]
                 costs_value = self.dm.costs_get(asset, trans_qty)
-                pnl_decision = asset.dollar_pnl(prev_values[0], curr_values[0], prev_values[2])
-                pnl_execution = asset.dollar_pnl(prev_values[1], curr_values[1], prev_values[2])
+                pnl_decision = asset.dollar_pnl(prev_values[iDPX], curr_values[iDPX], prev_values[iQTY])
+                pnl_execution = asset.dollar_pnl(prev_values[iEPX], curr_values[iEPX], prev_values[iQTY])
 
-                result[asset] = (curr_values[0], curr_values[1], trans_qty,
+                result[asset] = (curr_values[iDPX], curr_values[iEPX], trans_qty,
                                  pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
 
         return result
@@ -503,7 +507,8 @@ class Position:
 
             for asset, pos_rec in pos.items():
                 txt_buf.write(
-                    "{0:<40}{1:>10.3f}{2:>10.3f}{3:>10}\n".format(str(asset), pos_rec[0], pos_rec[1], pos_rec[2]))
+                    "{0:<40}{1:>10.3f}{2:>10.3f}{3:>10}\n".format(str(asset), pos_rec[iDPX], pos_rec[iEPX],
+                                                                  pos_rec[iQTY]))
 
             return txt_buf.getvalue()
 

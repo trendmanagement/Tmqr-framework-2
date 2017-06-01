@@ -5,6 +5,8 @@ from dateutil.rrule import rrule, MONTHLY, WEEKLY
 
 from tmqr.errors import ArgumentError
 from tmqrfeed.position import Position
+from tmqr.errors import PositionNotFoundError
+from tmqr.settings import QDATE_MIN
 
 
 class StrategyBase:
@@ -170,7 +172,37 @@ class StrategyBase:
         Run strategy instance and walk-forward optimization
         :return: 
         """
-        # Code prototype
+        # Initialize quotes
+        self.setup()
+
+        # Calculate WFO matrix for the historical data
+        wfo_matrix = self._make_wfo_matrix()
+
+        try:
+            pos_last_date = self.position.last_date
+        except PositionNotFoundError:
+            pos_last_date = QDATE_MIN
+
+        # Use primary quotes for backtesting
+        ohlc = self.dm.quotes()
+
+        for dt in ohlc.index[ohlc.index > pos_last_date]:
+            pass
+            # Pseudo
+
+            # Find active WFO matrix record
+
+            # Compare OOS/IIS periods to the current
+            # If use new IIS OOS
+            # Run optimization on new IIS period
+            # Save alphas params
+
+            #
+            # Run predefined alphas params
+
+
+
+
 
         # While position last_date < primary quotes last date
         #   If position last_date < next reopt date do:
