@@ -3,14 +3,20 @@ from datetime import datetime, date, time, timedelta
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
 
-from tmqr.errors import ArgumentError
+from tmqr.errors import ArgumentError, WalkForwardOptimizationError
 from tmqrfeed.position import Position
 from tmqr.errors import PositionNotFoundError
 from tmqr.settings import QDATE_MIN
+from tmqrfeed import DataManager
+from tmqrstrategy.optimizers import OptimizerBase
 
+WFO_ACTION_SKIP = 0
+WFO_ACTION_OPTIMIZE = 1
+WFO_ACTION_RUN = 2
+WFO_ACTION_BREAK = 4
 
 class StrategyBase:
-    def __init__(self, datamanager, **kwargs):
+    def __init__(self, datamanager: DataManager, **kwargs):
         self.dm = datamanager
 
         self.position = kwargs.get('position', Position(self.dm))
@@ -18,6 +24,18 @@ class StrategyBase:
 
         if self.wfo_params is None:
             raise ArgumentError("Walk-forward optimization params are not set, check 'wfo_params' kwarg")
+
+        self.wfo_last_period = kwargs.get('last_period', None)
+        self.wfo_selected_alphas = kwargs.get('selected_alphas', [])
+        self.wfo_opt_params = kwargs.get('opt_params', [])
+        self.wfo_optimizer_class = kwargs.get('optimizer_class', None)
+        if self.wfo_optimizer_class is None:
+            raise ArgumentError("'optimizer_class' kwarg is not set.")
+
+        self.wfo_optimizer_class_kwargs = kwargs.get('optimizer_class_kwargs', {})
+
+
+
 
     def setup(self):
         """
@@ -136,10 +154,12 @@ class StrategyBase:
         """
         pass
 
-    def process_position(self, exposure_df_list):
+    def process_position(self, exposure_df_list, oos_start, oos_end):
         """
         Processes positions based on picked swarm members 'exposure_df_list'
         :param exposure_df_list: list of results of 'calculate' method for each picked swarm member
+        :param oos_start: start date of the OOS
+        :param oos_end: end date of the OOS
         :return: nothing, processes position in place 
         """
         pass
@@ -167,6 +187,55 @@ class StrategyBase:
     #
     #  General methods
     #
+    @staticmethod
+    def date_now():
+        return datetime.now().date()
+
+    @staticmethod
+    def get_next_wfo_action(wfo_last_period, wfo_current_period, quotes_index):
+        if len(quotes_index) < 2:
+            raise WalkForwardOptimizationError("Insufficient primary quotes length")
+
+        if wfo_last_period is None:
+            # This is a first run
+            if wfo_current_period['iis_end'].date() > quotes_index[0].date():
+                # Run optimization
+                return WFO_ACTION_OPTIMIZE
+            else:
+                # Searching the WFO period which match quotes range
+                return WFO_ACTION_SKIP
+        else:
+            if wfo_last_period['oos_end'] == wfo_current_period['oos_end']:
+                # This step only possible when previously saved strategy has run once again
+                # Typically is's possible in 2 cases:
+                # 1. Online / daily run (even prior online weekend re-optimization)
+                # 2. When the strategy run is delayed for several days and new OOS window arrived
+                return WFO_ACTION_RUN
+
+            if wfo_last_period['oos_end'] > wfo_current_period['oos_end']:
+                # This step only possible when previously saved strategy has run once again
+                # Skip previous WFO periods before active one
+                return WFO_ACTION_SKIP
+
+            if wfo_current_period['oos_start'].date() > quotes_index[-1].date():
+                if wfo_current_period['oos_start'].date() <= StrategyBase.date_now() <= wfo_current_period[
+                    'oos_end'].date():
+                    #
+                    # Special case for online calculation, when we have last Friday's quotes available
+                    #   and we need to run re-optimization at Saturday/Sunday this will force us to do it
+                    return WFO_ACTION_OPTIMIZE
+
+                # Break calculation when next oos date grater last quotes index
+                return WFO_ACTION_BREAK
+
+            if wfo_last_period['oos_end'].date() < quotes_index[-1].date() and \
+                            wfo_last_period['oos_end'].date() < wfo_current_period['oos_end'].date():
+                # We have the historical data beyond oos_end date
+                # No next step optimization
+                return WFO_ACTION_OPTIMIZE
+
+        raise NotImplementedError('Not expected code flow')
+
     def run(self):
         """
         Run strategy instance and walk-forward optimization
@@ -178,39 +247,41 @@ class StrategyBase:
         # Calculate WFO matrix for the historical data
         wfo_matrix = self._make_wfo_matrix()
 
-        try:
-            pos_last_date = self.position.last_date
-        except PositionNotFoundError:
-            pos_last_date = QDATE_MIN
+        quotes_index = self.dm.quotes().index
 
-        # Use primary quotes for backtesting
-        ohlc = self.dm.quotes()
+        for wfo_period in wfo_matrix:
+            wfo_action = self.get_next_wfo_action(self.wfo_last_period, wfo_period, quotes_index)
 
-        for dt in ohlc.index[ohlc.index > pos_last_date]:
-            pass
-            # Pseudo
+            if wfo_action == WFO_ACTION_SKIP:
+                continue
+            if wfo_action == WFO_ACTION_BREAK:
+                break
 
-            # Find active WFO matrix record
+            if wfo_action == WFO_ACTION_OPTIMIZE:
+                # Set IIS range
+                self.dm.quotes_range_set(wfo_period['iis_start'], wfo_period['iis_end'])
 
-            # Compare OOS/IIS periods to the current
-            # If use new IIS OOS
-            # Run optimization on new IIS period
-            # Save alphas params
+                # Do optimization and picking
+                optimizer = self.wfo_optimizer_class(self, self.wfo_opt_params, **self.wfo_optimizer_class_kwargs)
+                self.wfo_selected_alphas = optimizer.optimize()
 
-            #
+                # Set WFO last period
+                self.wfo_last_period = wfo_period
+
+            # Reset quotes range to OOS
+            self.dm.quotes_range_set(wfo_period['iis_start'], wfo_period['oos_end'])
+
             # Run predefined alphas params
+            oos_exposure_df_list = []
+            for alpha_params in self.wfo_selected_alphas:
+                alpha_exposure_df = self.calculate(*alpha_params)
+                oos_exposure_df_list.append(alpha_exposure_df)
 
+            # Processing strategy position
+            self.process_position(oos_exposure_df_list, wfo_period['oos_start'], wfo_period['oos_end'])
 
-
-
-
-        # While position last_date < primary quotes last date
-        #   If position last_date < next reopt date do:
-        #        For period of 'begin trading window' to 'end reopt window':
-        #        Get active alpha members
-        #        Calculate exposure for each
-        #        Process position of each
-        pass
+            # Reset quotes range
+            self.dm.quotes_range_set()
 
     @classmethod
     def load(cls, dm, strategy_name):

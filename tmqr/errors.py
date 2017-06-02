@@ -134,3 +134,10 @@ class CostsNotFoundError(NotFoundError):
     Raised when costs class is not initiated for particular market
     """
     pass
+
+
+class WalkForwardOptimizationError(TMQRError):
+    """
+    Raised when walk-forward optimization routine has error
+    """
+    pass
