@@ -136,7 +136,14 @@ class CostsNotFoundError(NotFoundError):
     pass
 
 
-class WalkForwardOptimizationError(TMQRError):
+class StrategyError(TMQRError):
+    """
+    Raised when strategy has errors
+    """
+    pass
+
+
+class WalkForwardOptimizationError(StrategyError):
     """
     Raised when walk-forward optimization routine has error
     """

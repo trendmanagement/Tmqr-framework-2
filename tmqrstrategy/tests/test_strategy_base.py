@@ -11,10 +11,13 @@ from tmqrstrategy.optimizers import OptimizerBase
 
 
 class StrategyBaseTestCase(unittest.TestCase):
+    def setUp(self):
+        self.opt_cnt = 0
+
     def test_init(self):
         dm = MagicMock(DataManager())
 
-        self.assertRaises(ArgumentError, StrategyBase, dm, position='position')
+        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -80,7 +83,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, optimizer_class=MagicMock())
 
         wfo_matrix = strategy._make_wfo_matrix()
-        self.assertEqual(2, len(wfo_matrix))
+        self.assertEqual(3, len(wfo_matrix))
 
         self.assertEqual(wfo_matrix[0]['iis_start'], datetime(2016, 12, 25))
         self.assertEqual(wfo_matrix[0]['iis_end'], datetime(2017, 2, 25))
@@ -91,6 +94,11 @@ class StrategyBaseTestCase(unittest.TestCase):
         self.assertEqual(wfo_matrix[1]['iis_end'], datetime(2017, 4, 29))
         self.assertEqual(wfo_matrix[1]['oos_start'], datetime(2017, 4, 29))
         self.assertEqual(wfo_matrix[1]['oos_end'], datetime(2017, 6, 24))
+
+        self.assertEqual(wfo_matrix[2]['iis_start'], datetime(2017, 4, 24))
+        self.assertEqual(wfo_matrix[2]['iis_end'], datetime(2017, 6, 24))
+        self.assertEqual(wfo_matrix[2]['oos_start'], datetime(2017, 6, 24))
+        self.assertEqual(wfo_matrix[2]['oos_end'], datetime(2017, 8, 26))
 
     def test__make_wfo_matrix_expanding_window(self):
         dm = MagicMock(DataManager())
@@ -113,7 +121,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, optimizer_class=MagicMock())
 
         wfo_matrix = strategy._make_wfo_matrix()
-        self.assertEqual(2, len(wfo_matrix))
+        self.assertEqual(3, len(wfo_matrix))
 
         self.assertEqual(wfo_matrix[0]['iis_start'], datetime(2017, 1, 2))  # First business date
         self.assertEqual(wfo_matrix[0]['iis_end'], datetime(2017, 2, 25))
@@ -124,6 +132,11 @@ class StrategyBaseTestCase(unittest.TestCase):
         self.assertEqual(wfo_matrix[1]['iis_end'], datetime(2017, 4, 29))
         self.assertEqual(wfo_matrix[1]['oos_start'], datetime(2017, 4, 29))
         self.assertEqual(wfo_matrix[1]['oos_end'], datetime(2017, 6, 24))
+
+        self.assertEqual(wfo_matrix[2]['iis_start'], datetime(2017, 1, 2))
+        self.assertEqual(wfo_matrix[2]['iis_end'], datetime(2017, 6, 24))
+        self.assertEqual(wfo_matrix[2]['oos_start'], datetime(2017, 6, 24))
+        self.assertEqual(wfo_matrix[2]['oos_end'], datetime(2017, 8, 26))
 
     def test__make_wfo_matrix_weekly(self):
         dm = MagicMock(DataManager())
@@ -205,42 +218,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         self.assertRaises(ArgumentError, strategy._make_wfo_matrix)
 
-    def test_run_wfo_opt(self):
-        dm = MagicMock(DataManager())
 
-        wfo_params = {
-            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
-            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
-            'oos_periods': 2,  # Number of months is OOS period
-            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
-        }
-
-        pos = MagicMock(Position(dm))
-
-        idx = pd.bdate_range('2011-01-01', '2017-06-23')
-
-        df = pd.DataFrame({'close': np.zeros(len(idx))}, index=idx)
-
-        dm.quotes.return_value = df
-
-        optimizer = MagicMock(OptimizerBase)()
-        optimizer.optimize.return_value = []
-
-        with patch('tmqrstrategy.strategy_base.StrategyBase._make_wfo_matrix') as mock_matrix:
-            wfo_last = {
-                'iis_start': datetime(2011, 1, 1),
-                'iis_end': datetime(2011, 2, 1),
-                'oos_start': datetime(2011, 2, 1),
-                'oos_end': datetime(2011, 3, 1),
-            }
-            mock_matrix.return_value = [
-                wfo_last,
-            ]
-
-            strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, optimizer_class=optimizer)
-            strategy.run()
-
-            self.assertEqual(wfo_last, strategy.wfo_last_period)
 
     def test__get_next_wfo_action_new_run(self):
         quotes_index = [datetime(2011, 3, 1), datetime(2011, 6, 1)]
@@ -271,6 +249,8 @@ class StrategyBaseTestCase(unittest.TestCase):
                 'oos_end': datetime(2011, 5, 1),
             },
         ]
+
+        self.assertRaises(WalkForwardOptimizationError, StrategyBase.get_next_wfo_action, None, wfo_matrix[0], [])
 
         self.assertEqual(WFO_ACTION_SKIP, StrategyBase.get_next_wfo_action(None, wfo_matrix[0], quotes_index))
         self.assertEqual(WFO_ACTION_SKIP, StrategyBase.get_next_wfo_action(None, wfo_matrix[1], quotes_index))
@@ -495,9 +475,137 @@ class StrategyBaseTestCase(unittest.TestCase):
             self.assertEqual(WFO_ACTION_BREAK,
                              StrategyBase.get_next_wfo_action(wfo_last, wfo_matrix[3], quotes_index))
 
+    def optimized_params_sideeffect(self):
+        self.opt_cnt += 1
+        return [[self.opt_cnt]]
 
+    def test_run_wfo_opt(self):
+        dm = MagicMock(DataManager())
 
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 1,  # Number of months is OOS period
+            'iis_periods': 1,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
 
+        pos = MagicMock(Position(dm))
+
+        idx = pd.bdate_range('2017-01-01', '2017-06-23')
+
+        df = pd.DataFrame({'close': np.zeros(len(idx))}, index=idx)
+
+        dm.quotes.return_value = df
+
+        opt_cnt = 0
+
+        def calculate_side_effect(*args):
+            return len(args), args[0]
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.setup') as mock_setup:
+            with patch('tmqrstrategy.optimizers.OptimizerBase.optimize') as mock_optimizer:
+                with patch('tmqrstrategy.strategy_base.StrategyBase.calculate') as mock_strategy_calculate:
+                    with patch(
+                            'tmqrstrategy.strategy_base.StrategyBase.process_position') as mock_strategy_process_position:
+                        with patch('tmqrfeed.DataManager.quotes_range_set') as mock_dm_quotes_range_set:
+                            mock_optimizer.side_effect = self.optimized_params_sideeffect
+                            mock_strategy_calculate.side_effect = calculate_side_effect
+
+                            strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params,
+                                                    optimizer_class=OptimizerBase)
+                            strategy.run()
+
+                            self.assertEqual([[5]], strategy.wfo_selected_alphas)
+                            self.assertEqual(5, len(mock_strategy_process_position.call_args_list))
+
+                            wfo_matrix = strategy._make_wfo_matrix()
+                            for i in range(5):
+                                dm_quotes_range_base_i = i * 3
+
+                                # First call - set IIS quotes data range
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 0][0][0],
+                                                 wfo_matrix[i]['iis_start']
+                                                 )
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 0][0][1],
+                                                 wfo_matrix[i]['iis_end']
+                                                 )
+
+                                # Second call - set OOS quotes data range
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 1][0][0],
+                                                 wfo_matrix[i]['iis_start']
+                                                 )
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 1][0][1],
+                                                 wfo_matrix[i]['oos_end']
+                                                 )
+
+                                # Third call - reset quotes range
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 2][0],
+                                                 ()
+                                                 )
+                                self.assertEqual(dm.quotes_range_set.call_args_list[dm_quotes_range_base_i + 2][0],
+                                                 ()
+                                                 )
+
+                                # Process position called with calculate results and OOS period
+                                self.assertEqual([(1, i + 1)], mock_strategy_process_position.call_args_list[i][0][0])
+                                self.assertEqual(wfo_matrix[i]['oos_start'],
+                                                 mock_strategy_process_position.call_args_list[i][0][1])
+                                self.assertEqual(wfo_matrix[i]['oos_end'],
+                                                 mock_strategy_process_position.call_args_list[i][0][2])
+
+                            #
+                            # Running the strategy once again
+                            mock_strategy_process_position.reset_mock()
+                            dm.quotes_range_set.reset_mock()
+                            mock_optimizer.reset_mock()
+                            mock_strategy_calculate.reset_mock()
+                            self.opt_cnt = 0
+                            strategy.run()
+
+                            self.assertEqual(False, mock_optimizer.called)
+                            self.assertEqual(True, mock_strategy_calculate.called)
+                            self.assertEqual(2, len(dm.quotes_range_set.call_args_list))
+
+                            # First call - set IIS quotes data range
+                            self.assertEqual(dm.quotes_range_set.call_args_list[0][0][0],
+                                             wfo_matrix[4]['iis_start']
+                                             )
+                            self.assertEqual(dm.quotes_range_set.call_args_list[0][0][1],
+                                             wfo_matrix[4]['oos_end']
+                                             )
+
+                            # Second call - reset quotes range
+                            self.assertEqual(dm.quotes_range_set.call_args_list[1][0],
+                                             ()
+                                             )
+                            self.assertEqual(dm.quotes_range_set.call_args_list[1][0],
+                                             ()
+                                             )
+
+                            # Process position called with calculate results and OOS period
+                            self.assertEqual(1, mock_strategy_process_position.call_count)
+
+                            self.assertEqual([(1, 5)], mock_strategy_process_position.call_args_list[0][0][0])
+                            self.assertEqual(wfo_matrix[4]['oos_start'],
+                                             mock_strategy_process_position.call_args_list[0][0][1])
+                            self.assertEqual(wfo_matrix[4]['oos_end'],
+                                             mock_strategy_process_position.call_args_list[0][0][2])
+
+    def test_run_walkforward_error_no_quotes(self):
+        dm = DataManager()
+
+        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
+
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params, optimizer_class=MagicMock())
+
+        self.assertRaises(StrategyError, StrategyBase, dm, position='position', wfo_params=wfo_params)
+        self.assertRaises(StrategyError, strategy.run)
 
 if __name__ == '__main__':
     unittest.main()

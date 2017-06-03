@@ -1,19 +1,15 @@
-from datetime import datetime, date, time, timedelta
-
+from datetime import datetime, date, time
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
-
-from tmqr.errors import ArgumentError, WalkForwardOptimizationError
+from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError
 from tmqrfeed.position import Position
-from tmqr.errors import PositionNotFoundError
-from tmqr.settings import QDATE_MIN
 from tmqrfeed import DataManager
-from tmqrstrategy.optimizers import OptimizerBase
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
 WFO_ACTION_RUN = 2
 WFO_ACTION_BREAK = 4
+
 
 class StrategyBase:
     def __init__(self, datamanager: DataManager, **kwargs):
@@ -23,14 +19,14 @@ class StrategyBase:
         self.wfo_params = kwargs.get('wfo_params', None)
 
         if self.wfo_params is None:
-            raise ArgumentError("Walk-forward optimization params are not set, check 'wfo_params' kwarg")
+            raise StrategyError("Walk-forward optimization params are not set, check 'wfo_params' kwarg")
 
         self.wfo_last_period = kwargs.get('last_period', None)
         self.wfo_selected_alphas = kwargs.get('selected_alphas', [])
         self.wfo_opt_params = kwargs.get('opt_params', [])
         self.wfo_optimizer_class = kwargs.get('optimizer_class', None)
         if self.wfo_optimizer_class is None:
-            raise ArgumentError("'optimizer_class' kwarg is not set.")
+            raise StrategyError("'optimizer_class' kwarg is not set.")
 
         self.wfo_optimizer_class_kwargs = kwargs.get('optimizer_class_kwargs', {})
 
@@ -125,7 +121,7 @@ class StrategyBase:
                 'oos_end': period_end
             })
 
-            if period_end.date() > end_date:
+            if prev_period.date() > end_date:
                 break
 
             prev_period = period_end
@@ -244,10 +240,14 @@ class StrategyBase:
         # Initialize quotes
         self.setup()
 
+        try:
+            quotes_index = self.dm.quotes().index
+        except QuoteNotFoundError:
+            raise StrategyError("You should call 'self.dm.series_primary_set(...)' in strategy setup() "
+                                "method to initialize quotes data")
+
         # Calculate WFO matrix for the historical data
         wfo_matrix = self._make_wfo_matrix()
-
-        quotes_index = self.dm.quotes().index
 
         for wfo_period in wfo_matrix:
             wfo_action = self.get_next_wfo_action(self.wfo_last_period, wfo_period, quotes_index)
