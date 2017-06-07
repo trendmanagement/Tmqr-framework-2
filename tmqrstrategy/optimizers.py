@@ -2,6 +2,9 @@ import itertools
 from tmqr.errors import SettingsError, ArgumentError
 import bisect
 import math
+import random
+from deap import creator, base, tools, algorithms
+import numpy as np
 
 
 class OptimizerBase:
@@ -122,3 +125,117 @@ class OptimizerBase:
                                      fitness_direction=1 if self.nbest_fitness_method == 'max' else -1)
 
         return self.strategy.pick(scoreboard_params)
+
+
+class OptimizerGenetic(OptimizerBase):
+    """
+    Simple genetic optimized based on DEAP genetic library
+    """
+
+    def __init__(self, strategy, opt_params, **kwargs):
+        """
+        Initialize optimizer base
+        :param strategy: strategy instance
+        :param opt_params: optimization params list
+        :param kwargs:
+            # Parent class kwargs
+            * nbest_count - number of best swarm members to store (default: 30)
+            * nbest_fitness_method - how to select best members (default: 'max')
+
+            # Genetic specific params
+            * rand_seed - set random seed to fix genetic algorithm repeatability (default: None - i.e. no fixation)
+            * population_size - size of initial population of genetic (default: 200)
+            * cross_prob - cross-over probability (default: 0.5)
+            * mut_prob - mutation probability (default: 0.1)
+            * number_generations - number of generations (default: 30)
+        """
+        super().__init__(strategy, opt_params, **kwargs)
+
+        if self.nbest_count is None:
+            # Overwrite default value
+            self.nbest_count = 30
+
+        # Fixing random sequences
+        random.seed(kwargs.get('rand_seed', None))
+
+        # Creating params universe
+        self.params_universe = list(itertools.product(*[x[1] for x in self.opt_params]))
+
+        # Genetic algo settings
+        self.population_size = kwargs.get('population_size', 200)
+        self.cross_prob = kwargs.get('cross_prob', 0.5)
+        self.mut_prob = kwargs.get('mut_prob', 0.1)
+        self.number_generations = kwargs.get('number_generations', 30)
+
+    @staticmethod
+    def mutate(individual, params_uni):
+        """
+        Mutation of alpha member. Randomly select opt params set from params universe and replace one randomly
+        chosen parameter of the individual
+        :param individual: individual alpha strategy params
+        :param params_uni: parameters universe
+        :return:
+        """
+        rnd_gene_idx = random.randint(0, len(individual) - 1)
+        new_gene = random.choice(params_uni)
+        individual[rnd_gene_idx] = new_gene[rnd_gene_idx]
+        return individual,
+
+    @staticmethod
+    def mate(ind1, ind2):
+        """
+        Alpha strategies cross-over, change opt params of ind1 by randomly set of params of the ind2
+        :param ind1: individual alpha strategy params 1
+        :param ind2: individual alpha strategy params 2
+        :return: crossed-over alpha strategy params
+        """
+        return tools.cxOnePoint(ind1, ind2)
+
+    def evaluate(self, individual):
+        """
+        Alpha strategy score function evaluation
+        :param individual:
+        :return:
+        """
+        strategy_exposure = self.strategy.calculate(*individual)
+        score = self.strategy.score(strategy_exposure)
+        return (score,)
+
+    def optimize(self):
+        """
+        Main optimization routine
+        :return:
+        """
+        if self.nbest_fitness_method == 'max':
+            fitness_direction = 1.0
+        elif self.nbest_fitness_method == 'min':
+            fitness_direction = -1.0
+        else:
+            raise SettingsError(f"Unknown 'nbest_fitness_method' expected 'max' or 'min',"
+                                f" got {self.nbest_fitness_method}")
+
+        # Init DEAP genetic library
+        creator.create("Fitness", base.Fitness, weights=(fitness_direction,))
+        creator.create("Individual", list, fitness=creator.Fitness)
+
+        toolbox = base.Toolbox()
+        toolbox.register("rules", random.choice, self.params_universe)
+        toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.rules)
+        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+        toolbox.register("evaluate", self.evaluate)
+        toolbox.register("mate", self.mate)
+        toolbox.register("mutate", self.mutate, params_uni=self.params_universe)
+        toolbox.register("select", tools.selTournament, tournsize=5)
+
+        pop = toolbox.population(n=self.population_size)
+
+        stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats.register("avg", np.mean)
+
+        self.hof = tools.HallOfFame(self.nbest_count)
+        self.pop, self.logbook = algorithms.eaSimple(pop, toolbox,
+                                                     cxpb=self.cross_prob, mutpb=self.mut_prob,
+                                                     ngen=self.number_generations, verbose=False,
+                                                     stats=stats, halloffame=self.hof)
+        return list(self.hof)
