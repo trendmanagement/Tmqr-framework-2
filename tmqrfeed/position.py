@@ -220,9 +220,13 @@ class Position:
         :param date: current date
         :return:  nothing, changes position in place
         """
-        if self._position and date < self._prev_day_key(date=None):
-            # check if 'date' >= last date of the position
-            raise ArgumentError(f'Managing position at date less then last available date is not allowed')
+        if self._position:
+            if date < self._prev_day_key(date=None):
+                # check if 'date' >= last date of the position
+                raise ArgumentError(f'Managing position at date less then last available date is not allowed')
+            if date in self._position:
+                raise ArgumentError(f"Position already has record at {date}, you should call "
+                                    f"position.keep_previous_position() before all position actions and only once.")
 
         try:
             updated_position = {}
@@ -235,7 +239,7 @@ class Position:
                 # Get actual prices for position
                 decision_price, exec_price = asset.price(date)
 
-                updated_position[asset] = (decision_price, exec_price, pos_rec[2])
+                updated_position[asset] = (decision_price, exec_price, pos_rec[iQTY])
 
             # Add updated position record at specified date
             self.add_net_position(date, updated_position, qty=1.0)

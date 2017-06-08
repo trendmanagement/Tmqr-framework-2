@@ -310,13 +310,34 @@ class PositionTestCase(unittest.TestCase):
 
         self.assertRaises(ArgumentError, p.keep_previous_position, datetime(2010, 1, 2))
 
-        def mock_get_net_position_side(*args, **kwargs):
-            raise PositionNotFoundError('PositionNotFoundError raised')
+    def test_keep_previous_position_existing_not_allowed(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        p.add_transaction(dt, asset, 3.0)
+        self.assertRaises(ArgumentError, p.keep_previous_position, dt)
+
+        dt2 = datetime(2011, 1, 2)
+        p.keep_previous_position(dt2)
+
+        self.assertRaises(ArgumentError, p.keep_previous_position, datetime(2010, 1, 2))
+
+    def test_keep_previous_position_not_exists_warn(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+
 
         with patch('tmqrfeed.position.Position.get_net_position') as mock_get_net_position:
-            mock_get_net_position.side_effect = mock_get_net_position_side
             with patch('tmqr.logs.log.warn') as mock_log:
-                p.keep_previous_position(dt2)
+                p.keep_previous_position(dt)
                 self.assertEqual(True, mock_log.called)
 
     def test_get_asset_price(self):
