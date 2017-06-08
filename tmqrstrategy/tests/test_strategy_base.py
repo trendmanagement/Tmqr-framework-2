@@ -598,3 +598,134 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         self.assertRaises(StrategyError, StrategyBase, dm, position='position', wfo_params=wfo_params)
         self.assertRaises(StrategyError, strategy.run)
+
+    def test_process_position_exposure_df_integrity_checks(self):
+
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2012, 1, 10))
+
+        exp_df = pd.DataFrame({'exposure': np.ones(len(date_idx)), 'some_value': np.ones(len(date_idx))},
+                              index=date_idx)
+
+        exp_df2 = pd.DataFrame({'exposure': np.ones(len(date_idx)) * 2, 'some_value': np.ones(len(date_idx))},
+                               index=date_idx)
+
+        exp_df3 = pd.DataFrame({'exposure': np.ones(len(date_idx)) * 3, 'some_value': np.ones(len(date_idx))},
+                               index=date_idx)
+
+        exp_df_list = [exp_df, exp_df2, exp_df3]
+
+        dm = MagicMock(DataManager)()
+
+        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
+
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params, optimizer_class=MagicMock())
+
+        #
+        # Check list members must be pandas.DataFrames
+        #
+        self.assertRaises(ArgumentError, strategy.process_position, [None], date_idx[0], date_idx[-1])
+        #
+        # Check list members must have equal lengths
+        #
+        date_idx2 = pd.date_range(datetime(2011, 1, 1), datetime(2012, 1, 12))
+        exp_df_diff_length = pd.DataFrame({
+            'exposure': np.ones(len(date_idx2)),
+            'some_value': np.ones(len(date_idx2))}, index=date_idx2)
+        self.assertRaises(ArgumentError, strategy.process_position, [exp_df, exp_df_diff_length], date_idx[0],
+                          date_idx[-1])
+
+        #
+        # Check list members must have equal index datapoints
+        #
+        date_idx2 = pd.date_range(datetime(2011, 1, 2), datetime(2012, 1, 11))
+        exp_df_diff_idx = pd.DataFrame({
+            'exposure': np.ones(len(date_idx2)),
+            'some_value': np.ones(len(date_idx2))}, index=date_idx2)
+
+        self.assertRaises(ArgumentError, strategy.process_position, [exp_df, exp_df_diff_idx], date_idx[0],
+                          date_idx[-1])
+
+        #
+        # Check list members must have equal index datapoints
+        #
+        exp_df_col_names = pd.DataFrame({
+            'exposure': np.ones(len(date_idx)),
+            'some_value2': np.ones(len(date_idx))}, index=date_idx)
+
+        self.assertRaises(ArgumentError, strategy.process_position, [exp_df, exp_df_col_names], date_idx[0],
+                          date_idx[-1])
+
+    def test_process_position_valid_new_position(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exp_df = pd.DataFrame({'exposure': np.ones(len(date_idx)), 'some_value': np.ones(len(date_idx))},
+                              index=date_idx)
+
+        exp_df2 = pd.DataFrame({'exposure': np.ones(len(date_idx)) * 2, 'some_value': np.ones(len(date_idx))},
+                               index=date_idx)
+
+        exp_df_list_valid = [exp_df, exp_df2]
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, optimizer_class=MagicMock())
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
+            with patch('tmqrfeed.position.Position.keep_previous_position') as mock_keep_previous_position:
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+
+                self.assertEqual(1, mock_calculate_position.call_count)
+                self.assertEqual(1, mock_keep_previous_position.call_count)
+
+                self.assertEqual(datetime(2011, 1, 6), mock_keep_previous_position.call_args[0][0])
+                self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
+                self.assertEqual(Position, type(mock_calculate_position.call_args[0][1]))
+                self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][2]))
+
+                pos_df = mock_calculate_position.call_args[0][2]
+
+                self.assertEqual(2, len(pos_df))
+                self.assertEqual(3, pos_df['exposure'].sum())
+                self.assertEqual(2, pos_df['some_value'].sum())
+
+    def test_process_position_valid_existing_position(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exp_df = pd.DataFrame({'exposure': np.ones(len(date_idx)), 'some_value': np.ones(len(date_idx))},
+                              index=date_idx)
+
+        exp_df2 = pd.DataFrame({'exposure': np.ones(len(date_idx)) * 2, 'some_value': np.ones(len(date_idx))},
+                               index=date_idx)
+
+        exp_df_list_valid = [exp_df, exp_df2]
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, optimizer_class=MagicMock())
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
+            with patch('tmqrfeed.position.Position.keep_previous_position') as mock_keep_previous_position:
+                strategy.position._position[datetime(2011, 1, 6)] = {}
+
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+
+                self.assertEqual(0, mock_calculate_position.call_count)
+                self.assertEqual(0, mock_keep_previous_position.call_count)

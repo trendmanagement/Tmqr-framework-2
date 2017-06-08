@@ -1,9 +1,18 @@
 from datetime import datetime, date, time
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
-from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError
+from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError, \
+    PositionNotFoundError
 from tmqrfeed.position import Position
 from tmqrfeed import DataManager
+import pandas as pd
+import numpy as np
+from tmqr.settings import QDATE_MIN
+
+import pyximport
+
+pyximport.install()
+from tmqrstrategy.fast_scoring import score_netprofit, exposure
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
@@ -24,6 +33,7 @@ class StrategyBase:
         self.wfo_last_period = kwargs.get('last_period', None)
         self.wfo_selected_alphas = kwargs.get('selected_alphas', [])
         self.wfo_opt_params = kwargs.get('opt_params', [])
+        self.wfo_scoring_type = kwargs.get('scoring_type', 'netprofit')
         self.wfo_optimizer_class = kwargs.get('optimizer_class', None)
         if self.wfo_optimizer_class is None:
             raise StrategyError("'optimizer_class' kwarg is not set.")
@@ -128,6 +138,22 @@ class StrategyBase:
 
         return result
 
+    def exposure(self, entry_rule, exit_rule, direction):
+        """
+        Calculates entry/exit rule based exposure, uses DataManager's primary quotes to calculate exposure
+        :param entry_rule: strategy entry rule
+        :param exit_rule: strategy exit rule
+        :param direction: direction of the trade (1 - long, -1 - short)
+        :return: pandas DataFrame with 'exposure' column
+        """
+        # Use fast Cythonized method to calculate exposure
+        exposure_series = exposure(self.dm.quotes()['c'],
+                                   entry_rule,
+                                   exit_rule,
+                                   direction)
+        return pd.DataFrame({'exposure': exposure_series}, index=exposure_series.index)
+
+
     #
     #  Strategy calculation
     #
@@ -140,25 +166,7 @@ class StrategyBase:
         """
         raise NotImplementedError("You must implement 'calculate' method in child strategy class")
 
-    def calculate_position(self, date, position, exposure_record):
-        """
-        Build position for current 'date' and 'exposure_record' of single alpha member
-        :param date: date of the analysis
-        :param position: position instance
-        :param exposure_record: slice of 'exposure_df' at 'date'
-        :return: nothing, processes position in place
-        """
-        pass
 
-    def process_position(self, exposure_df_list, oos_start, oos_end):
-        """
-        Processes positions based on picked swarm members 'exposure_df_list'
-        :param exposure_df_list: list of results of 'calculate' method for each picked swarm member
-        :param oos_start: start date of the OOS
-        :param oos_end: end date of the OOS
-        :return: nothing, processes position in place 
-        """
-        pass
 
     #
     #  Strategy optimization
@@ -170,7 +178,12 @@ class StrategyBase:
         :param exposure_df: 'calculate' method exposure Pandas.DataFrame
         :return: float number
         """
-        pass
+        if self.wfo_scoring_type == 'netprofit':
+            return score_netprofit(self.dm.quotes()['c'],
+                                   exposure_df['exposure'],
+                                   )
+        else:
+            raise StrategyError(f"Unsupported 'scoring_type' = {self.wfo_scoring_type}")
 
     def pick(self, calculate_args_list):
         """
@@ -178,6 +191,7 @@ class StrategyBase:
         :param calculate_args_list: list of optimization arguments of 'calculate' method
         :return: List of the best performing 'calculate' args (i.e. swarm members)
         """
+        # TODO: implement simple N-best pick for base strategy
         pass
 
     #
@@ -282,6 +296,87 @@ class StrategyBase:
 
             # Reset quotes range
             self.dm.quotes_range_set()
+
+    def calculate_position(self, date, position, exposure_record):
+        """
+        Build position for current 'date' and 'exposure_record' for all alpha members
+        :param date: date of the analysis
+        :param position: position instance
+        :param exposure_record: slice of 'exposure_df' at 'date' for all members (pd.DataFrame)
+        :return: nothing, processes position in place
+        """
+        raise NotImplementedError("You must implement 'calculate_position' method in child strategy class")
+
+    @staticmethod
+    def _check_exposure_df_list_integrity(exposure_df_list):
+
+        # Check exposure df list index integrity
+        for i, exp_df in enumerate(exposure_df_list):
+            if not isinstance(exp_df, pd.DataFrame):
+                raise ArgumentError("'exposure_df_list' members must be pandas.DataFrame, "
+                                    "check strategy.calculate() method's return values")
+
+            if i == 0:
+                continue
+            prev_exp_df = exposure_df_list[i - 1]
+
+            # Check lengths equality
+            if len(exp_df) != len(prev_exp_df):
+                raise ArgumentError("'exposure_df_list' DataFrames' lengths are not equal")
+
+            # Check datetime index equality
+            if not np.all(exp_df.index == prev_exp_df.index):
+                raise ArgumentError("'exposure_df_list' DataFrames' indexes values are not equal")
+
+            # Check column names equality
+            if not set(exp_df.columns) == set(prev_exp_df.columns):
+                raise ArgumentError("'exposure_df_list' DataFrames' column names doesn't match each other")
+
+    def process_position(self, exposure_df_list, oos_start, oos_end):
+        """
+        Processes positions based on picked swarm members 'exposure_df_list'
+        :param exposure_df_list: list of results of 'calculate' method for each picked swarm member
+        :param oos_start: start date of the OOS
+        :param oos_end: end date of the OOS
+        :return: nothing, processes position in place
+        """
+        if not exposure_df_list:
+            # In case then self.pick() returned nothing, i.e. turn all systems off
+            # the position automatically will be closed next day because self.position.keep_previous_position() not
+            # called.
+            # TODO: check how position equity will behave when position is closed (expected to see flat equity line)
+            return
+        #
+        # Checking exposure_df_list for errors
+        #
+        self._check_exposure_df_list_integrity(exposure_df_list)
+
+        # Get dates range between oos_start and oos_end
+        # Get last position date
+        try:
+            position_last_date = self.position.last_date
+        except PositionNotFoundError:
+            position_last_date = QDATE_MIN
+
+        date_idx = exposure_df_list[0].index
+        date_start = max(oos_start, position_last_date)
+        for dt in date_idx:
+            if dt <= date_start:
+                # Skip all days before new data
+                continue
+
+            # Keep previous position
+            self.position.keep_previous_position(dt)
+
+            # Create exposure DataFrame slice at date 'dt' for all alpha members
+            exposure_series = []
+            for exp_df in exposure_df_list:
+                exposure_series.append(exp_df.loc[dt])
+
+            # Run strategy position management
+            self.calculate_position(dt, self.position, pd.DataFrame(exposure_series))
+
+
 
     @classmethod
     def load(cls, dm, strategy_name):
