@@ -12,7 +12,7 @@ from tmqr.settings import QDATE_MIN
 import pyximport
 
 pyximport.install()
-from tmqrstrategy.fast_scoring import score_netprofit, exposure
+from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
@@ -35,6 +35,8 @@ class StrategyBase:
         self.wfo_opt_params = kwargs.get('opt_params', [])
         self.wfo_scoring_type = kwargs.get('scoring_type', 'netprofit')
         self.wfo_optimizer_class = kwargs.get('optimizer_class', None)
+        self.wfo_costs_per_contract = kwargs.get('costs_per_contract', 0.0)
+
         if self.wfo_optimizer_class is None:
             raise StrategyError("'optimizer_class' kwarg is not set.")
 
@@ -138,20 +140,25 @@ class StrategyBase:
 
         return result
 
-    def exposure(self, entry_rule, exit_rule, direction):
+    def exposure(self, entry_rule, exit_rule, direction, position_size=None, nbar_stop=0):
         """
         Calculates entry/exit rule based exposure, uses DataManager's primary quotes to calculate exposure
         :param entry_rule: strategy entry rule
         :param exit_rule: strategy exit rule
         :param direction: direction of the trade (1 - long, -1 - short)
+        :param position_size: position size (integer/float/ or pandas.Series)
+        :param nbar_stop: N-bar stop exit
         :return: pandas DataFrame with 'exposure' column
         """
         # Use fast Cythonized method to calculate exposure
-        exposure_series = exposure(self.dm.quotes()['c'],
-                                   entry_rule,
-                                   exit_rule,
-                                   direction)
-        return pd.DataFrame({'exposure': exposure_series}, index=exposure_series.index)
+        price_series = self.dm.quotes()['c']
+        exposure_series = exposure(price_series.values,
+                                   entry_rule.values,
+                                   exit_rule.values,
+                                   direction,
+                                   size_exposure=position_size,
+                                   nbar_stop=nbar_stop)
+        return pd.DataFrame({'exposure': exposure_series}, index=price_series.index)
 
 
     #
@@ -166,8 +173,6 @@ class StrategyBase:
         """
         raise NotImplementedError("You must implement 'calculate' method in child strategy class")
 
-
-
     #
     #  Strategy optimization
     #
@@ -179,8 +184,14 @@ class StrategyBase:
         :return: float number
         """
         if self.wfo_scoring_type == 'netprofit':
-            return score_netprofit(self.dm.quotes()['c'],
-                                   exposure_df['exposure'],
+            return score_netprofit(self.dm.quotes()['c'].values,
+                                   exposure_df['exposure'].values,
+                                   costs=self.wfo_costs_per_contract
+                                   )
+        elif self.wfo_scoring_type == 'modsharpe':
+            return score_modsharpe(self.dm.quotes()['c'].values,
+                                   exposure_df['exposure'].values,
+                                   costs=self.wfo_costs_per_contract
                                    )
         else:
             raise StrategyError(f"Unsupported 'scoring_type' = {self.wfo_scoring_type}")
