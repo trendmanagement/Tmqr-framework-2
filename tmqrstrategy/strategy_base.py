@@ -7,12 +7,14 @@ from tmqrfeed.position import Position
 from tmqrfeed import DataManager
 import pandas as pd
 import numpy as np
+from typing import List, Callable
 from tmqr.settings import QDATE_MIN
 
 import pyximport
 
 pyximport.install()
 from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe
+from tmqrstrategy.optimizers import OptimizerBase
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
@@ -22,9 +24,9 @@ WFO_ACTION_BREAK = 4
 
 class StrategyBase:
     def __init__(self, datamanager: DataManager, **kwargs):
-        self.dm = datamanager
+        self.dm = datamanager  # type: DataManager
 
-        self.position = kwargs.get('position', Position(self.dm))
+        self.position = kwargs.get('position', Position(self.dm))  # type: Position
         self.wfo_params = kwargs.get('wfo_params', None)
 
         if self.wfo_params is None:
@@ -34,8 +36,9 @@ class StrategyBase:
         self.wfo_selected_alphas = kwargs.get('selected_alphas', [])
         self.wfo_opt_params = kwargs.get('opt_params', [])
         self.wfo_scoring_type = kwargs.get('scoring_type', 'netprofit')
-        self.wfo_optimizer_class = kwargs.get('optimizer_class', None)
+        self.wfo_optimizer_class = kwargs.get('optimizer_class', None)  # type: Callable
         self.wfo_costs_per_contract = kwargs.get('costs_per_contract', 0.0)
+        self.wfo_members_count = kwargs.get('members_count', 1)
 
         if self.wfo_optimizer_class is None:
             raise StrategyError("'optimizer_class' kwarg is not set.")
@@ -140,7 +143,8 @@ class StrategyBase:
 
         return result
 
-    def exposure(self, entry_rule, exit_rule, direction, position_size=None, nbar_stop=0):
+    def exposure(self, entry_rule: pd.Series, exit_rule: pd.Series, direction: int, position_size=None,
+                 nbar_stop: int = 0) -> pd.DataFrame:
         """
         Calculates entry/exit rule based exposure, uses DataManager's primary quotes to calculate exposure
         :param entry_rule: strategy entry rule
@@ -164,7 +168,7 @@ class StrategyBase:
     #
     #  Strategy calculation
     #
-    def calculate(self, *args):
+    def calculate(self, *args: list) -> pd.DataFrame:
         """
         Calculate strategy logics
         :param args: optional strategy params (like MA periods, direction, etc)
@@ -176,7 +180,7 @@ class StrategyBase:
     #
     #  Strategy optimization
     #
-    def score(self, exposure_df):
+    def score(self, exposure_df: pd.DataFrame) -> float:
         """
         Optimization scoring method, produces a float number metric of strategy member performance, uses 'calculate'
         results (i.e. exposure_df) to calculate score number based on primary quotes 
@@ -196,14 +200,14 @@ class StrategyBase:
         else:
             raise StrategyError(f"Unsupported 'scoring_type' = {self.wfo_scoring_type}")
 
-    def pick(self, calculate_args_list):
+    def pick(self, calculate_args_list: list) -> list:
         """
         Selection method from the list of strategy members' params in 'calculate_args_list'
         :param calculate_args_list: list of optimization arguments of 'calculate' method
         :return: List of the best performing 'calculate' args (i.e. swarm members)
         """
-        # TODO: implement simple N-best pick for base strategy
-        pass
+        return calculate_args_list[:self.wfo_members_count]
+
 
     #
     #  General methods
@@ -308,11 +312,10 @@ class StrategyBase:
             # Reset quotes range
             self.dm.quotes_range_set()
 
-    def calculate_position(self, date, position, exposure_record):
+    def calculate_position(self, date: datetime, exposure_record: pd.DataFrame) -> None:
         """
         Build position for current 'date' and 'exposure_record' for all alpha members
         :param date: date of the analysis
-        :param position: position instance
         :param exposure_record: slice of 'exposure_df' at 'date' for all members (pd.DataFrame)
         :return: nothing, processes position in place
         """
@@ -343,7 +346,7 @@ class StrategyBase:
             if not set(exp_df.columns) == set(prev_exp_df.columns):
                 raise ArgumentError("'exposure_df_list' DataFrames' column names doesn't match each other")
 
-    def process_position(self, exposure_df_list, oos_start, oos_end):
+    def process_position(self, exposure_df_list: List[pd.DataFrame], oos_start: datetime, oos_end: datetime):
         """
         Processes positions based on picked swarm members 'exposure_df_list'
         :param exposure_df_list: list of results of 'calculate' method for each picked swarm member
@@ -375,9 +378,8 @@ class StrategyBase:
             if dt <= date_start:
                 # Skip all days before new data
                 continue
-
-            # Keep previous position
-            self.position.keep_previous_position(dt)
+            if dt >= oos_end:
+                break
 
             # Create exposure DataFrame slice at date 'dt' for all alpha members
             exposure_series = []
@@ -385,7 +387,7 @@ class StrategyBase:
                 exposure_series.append(exp_df.loc[dt])
 
             # Run strategy position management
-            self.calculate_position(dt, self.position, pd.DataFrame(exposure_series))
+            self.calculate_position(dt, pd.DataFrame(exposure_series))
 
 
 

@@ -1,13 +1,16 @@
+from .contracts import ContractBase
+
+
 class Costs:
     """
     Generic fixed costs calculation class
     """
 
-    def __init__(self, per_contract=0.0, per_option=0.0):
+    def __init__(self, per_contract: float = 0.0, per_option: float = 0.0):
         self.per_contract = per_contract
         self.per_option = per_option
 
-    def calc_costs(self, asset, qty):
+    def calc_costs(self, asset: ContractBase, qty: float) -> float:
         """
         Calculate costs based on asset and qty
         :param asset: ContractBase instance

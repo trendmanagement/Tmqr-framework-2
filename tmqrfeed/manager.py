@@ -6,6 +6,9 @@ from tmqr.settings import QDATE_MIN, QDATE_MAX
 from tmqrfeed.costs import Costs
 from tmqr.logs import log
 import pandas as pd
+from typing import Dict, List, Tuple
+from tmqrfeed import Position
+from tmqrfeed.chains import FutureChain, OptionChain, OptionChainList
 
 
 class DataManager:
@@ -33,13 +36,13 @@ class DataManager:
             datafeed_cls = kwargs.pop('datafeed_cls', DataFeed)
             feed = datafeed_cls(**kwargs, datamanager=self)
 
-        self.datafeed: DataFeed = feed
+        self.datafeed: DataFeed = feed  # type: DataFeed
         """DataFeed instance for low-level data fetching"""
 
         # Quotes dataframe for primary series
-        self._primary_quotes = None
+        self._primary_quotes = None  # type: pd.DataFrame
         # Secondary dataframes dictionary for secondary series quotes
-        self._secondary_quotes = {}
+        self._secondary_quotes = {}  # type: Dict[str, pd.DataFrame]
 
         # Quotes range settings
         self._quotes_range_start = None
@@ -53,9 +56,9 @@ class DataManager:
         # Internal price cache for getting single quotes
         self._cache_single_price = {}
 
-        self._cache_costs = {}
+        self._cache_costs = {}  # type: Dict[str, Costs]
 
-    def costs_set(self, market, costs):
+    def costs_set(self, market: str, costs: Costs) -> None:
         """
         Initiate costs settings for position PnL calculations
         :param market: market name
@@ -66,7 +69,7 @@ class DataManager:
             raise ArgumentError("'costs' argument must be instance/or derived from tmqrfeed.costs.Costs class")
         self._cache_costs[market] = costs
 
-    def costs_get(self, asset, qty):
+    def costs_get(self, asset: ContractBase, qty: float) -> float:
         """
         Calculate costs based on 'asset'.market and qty
         :param asset: ContractBase instance
@@ -79,8 +82,7 @@ class DataManager:
                                      f"Try call datamanager.costs_set('market_name', costs_class_instance first.")
         return costs.calc_costs(asset, qty)
 
-
-    def series_primary_set(self, quote_engine_cls, *args, **kwargs):
+    def series_primary_set(self, quote_engine_cls, *args, **kwargs) -> None:
         """
         Fetch main series used for algorithm and strategy calculations
         :param quote_engine_cls: Quote* class
@@ -96,7 +98,7 @@ class DataManager:
         quote_engine = quote_engine_cls(*args, **kwargs)
         self._primary_quotes, self._primary_positions = quote_engine.build()
 
-    def series_extra_set(self, name, quote_engine_cls, *args, **kwargs):
+    def series_extra_set(self, name, quote_engine_cls, *args, **kwargs) -> None:
         """
         Fetch additional series, align them to primary series and save by 'name'
         :param name: Extra series name for further access
@@ -123,7 +125,7 @@ class DataManager:
             self._secondary_quotes[name] = self.series_align(self._primary_quotes, quotes)
         self._secondary_positions[name] = pos
 
-    def quotes(self, series_key=None):
+    def quotes(self, series_key: str = None) -> pd.DataFrame:
         """
         Get aligned primary or extra quotes data
         :param series_key: extra_series key, or if None - return primary series
@@ -147,7 +149,7 @@ class DataManager:
 
         return result_series
 
-    def quotes_range_set(self, range_start=None, range_end=None):
+    def quotes_range_set(self, range_start: datetime = None, range_end: datetime = None) -> None:
         """
         Set quotes date range returned by DataManager.quotes() method
         :param range_start: starting date
@@ -166,7 +168,7 @@ class DataManager:
         self._quotes_range_start = range_start
         self._quotes_range_end = range_end
 
-    def position(self, position_key=None):
+    def position(self, position_key: str = None) -> Position:
         """
         Get aligned primary or extra position instance
         :param position_key: extra_series key, or if None - return primary series
@@ -185,11 +187,11 @@ class DataManager:
                                             f" run series_extra_set() first or check the 'position_key' validity")
 
     @staticmethod
-    def series_align(primary_quotes, extra_quotes):
+    def series_align(primary_quotes: pd.DataFrame, extra_quotes: pd.DataFrame):
         return extra_quotes.reindex(primary_quotes.index, method='ffill')
 
     @staticmethod
-    def series_check(name, primary_quotes, extra_quotes):
+    def series_check(name: str, primary_quotes: pd.DataFrame, extra_quotes: pd.DataFrame) -> bool:
         if extra_quotes is None:
             log.warn(f"ExtraSeriesSanityCheck: '{name}' - extra quotes are None")
             return False
@@ -211,7 +213,7 @@ class DataManager:
 
         return True
 
-    def series_get(self, asset: ContractBase, **kwargs):
+    def series_get(self, asset: ContractBase, **kwargs) -> pd.DataFrame:
         """
         Get asset's raw series from the DB
         :param asset: asset instance
@@ -231,7 +233,7 @@ class DataManager:
                                             date_end=kw_date_end
                                             )
 
-    def riskfreerate_get(self, asset: ContractBase, date):
+    def riskfreerate_get(self, asset: ContractBase, date: datetime) -> float:
         rfr_series = self.datafeed.get_riskfreerate_series(asset.market)
 
         try:
@@ -244,12 +246,12 @@ class DataManager:
                 raise QuoteNotFoundError(f"Risk-free rate data point not found for '{asset.market}' market at {date}")
             return closest_rfr[0]
 
-    def price_get(self, asset: ContractBase, date, **kwargs):
+    def price_get(self, asset: ContractBase, date: datetime, **kwargs) -> Tuple[float, float]:
         """
         Get price at decision and execution time for given asset
         :param asset: Contract class instance
         :param date: timestamp for price
-        :return: 
+        :return: Tuple of [decision_px, exec_px]
         """
 
         # Check if asset is expired
@@ -270,7 +272,7 @@ class DataManager:
         self._price_set_cached(asset, date, res)
         return res
 
-    def _price_get_positions_cached(self, asset: ContractBase, date):
+    def _price_get_positions_cached(self, asset: ContractBase, date: datetime):
 
         # Looking for primary positions
         if self._primary_positions is not None:
@@ -333,7 +335,7 @@ class DataManager:
 
         return decision_px, exec_px
 
-    def chains_futures_get(self, instrument: str, date: datetime, offset: int = 0):
+    def chains_futures_get(self, instrument: str, date: datetime, offset: int = 0) -> FutureContract:
         """
         Get future contract from futures chains
         :param instrument: Full-qualified instrument name
@@ -344,7 +346,7 @@ class DataManager:
         fut_chain = self.datafeed.get_fut_chain(instrument)
         return fut_chain.get_contract(date, offset)
 
-    def chains_options_get(self, instrument: str, date: datetime, **kwargs):
+    def chains_options_get(self, instrument: str, date: datetime, **kwargs) -> Tuple[FutureContract, OptionChain]:
         """
         Find future+option chain by given criteria
         :param instrument: Full-qualified instrument name

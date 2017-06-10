@@ -3,10 +3,11 @@ from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFo
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
 import pandas as pd
-from datetime import timedelta
+from datetime import timedelta, datetime
 import pickle
 import io
 import lz4
+from typing import Dict, Tuple, List
 
 # Position tuple constants
 iDPX = 0  # Decision price
@@ -18,7 +19,7 @@ class Position:
     Universal position management class for all types of strategies
     """
 
-    def __init__(self, datamanager, position_dict=None, **kwargs):
+    def __init__(self, datamanager, position_dict: OrderedDict = None, **kwargs):
         """
         Init the Position instance
         :param datamanager: DataManager class instance
@@ -132,7 +133,10 @@ class Position:
     # Position management
     #
     #
-    def almost_expired_ratio(self, date, rollover_days_before_fut=None, rollover_days_before_opt=None):
+    def almost_expired_ratio(self,
+                             date: datetime,
+                             rollover_days_before_fut: int = None,
+                             rollover_days_before_opt: int = None) -> float:
         """
         Return the fraction of contracts in the position 'rollover_days_before' near expiration
         :param date: current date
@@ -181,8 +185,8 @@ class Position:
         else:
             return rollover_count / count
 
-
-    def close(self, date):
+    def close(self,
+              date: datetime) -> None:
         """
         Close all position at given date
         :param date: 
@@ -197,15 +201,16 @@ class Position:
             # Nothing to close at 'date', just skipping
             pass
 
-
-    def set_net_position(self, date, net_position_dict):
+    def set_net_position(self,
+                         date: datetime,
+                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]]) -> None:
         """
         Set net position at given date (overwrites old position if it exists). This method intended to be used
         by low-level Quote* algorithms to initiate positions, generic strategies should use add_net_position() method.
         
         This method allow to change position at the previous date, use with care this could ruin data validity.
-        :param date: 
-        :param net_position_dict: dict of {asset: (decision_px, exec_px, qty), ... }
+        :param date: datetime
+        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
         :return: nothing, changes position in place
         """
         # Do sanity checks
@@ -214,7 +219,8 @@ class Position:
         # Overwrite the position
         self._position[date] = net_position_dict
 
-    def keep_previous_position(self, date):
+    def keep_previous_position(self,
+                               date: datetime) -> None:
         """
         Keeps position at previous day 
         :param date: current date
@@ -246,12 +252,15 @@ class Position:
         except PositionNotFoundError as exc:
             log.warn(f'keep_previous_position: {str(exc)}')
 
-    def add_net_position(self, date, net_position_dict, qty=1.0):
+    def add_net_position(self,
+                         date: datetime,
+                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]],
+                         qty: float = 1.0) -> None:
         """
         Add net position at given date. 
         This method adds to current position holdings, and calculates required transactions to maintain the new position.
-        :param date: 
-        :param net_position_dict:
+        :param date: datetime
+        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
         :param qty: qty times of the net_position, negative values allowed
         :return: nothing, changes position in place
         """
@@ -274,12 +283,15 @@ class Position:
             else:
                 pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty + current_position[iQTY])
 
-    def add_transaction(self, date, asset, qty):
+    def add_transaction(self,
+                        date: datetime,
+                        asset: ContractBase,
+                        qty: float) -> None:
         """
         Add new transaction for the position at given date
-        :param date: 
-        :param asset: 
-        :param qty:
+        :param date: transaction date
+        :param asset: ContractBase derived class instance
+        :param qty: transaction qty
         :return: nothing, changes position in place
         """
         if qty == 0:
@@ -305,7 +317,7 @@ class Position:
 
 
     @staticmethod
-    def merge(datamanager, positions_list):
+    def merge(datamanager, positions_list: list):
         """
         Merges list of Positions to single Position class instance. Useful for campaign position building, alpha members position, etc.
         :param datamanager: DataManager instance
@@ -376,7 +388,9 @@ class Position:
     def last_date(self):
         return self._prev_day_key(date=None)
 
-    def get_asset_price(self, date, asset):
+    def get_asset_price(self,
+                        date: datetime,
+                        asset: ContractBase) -> Tuple[float, float]:
         """
         Get asset prices from position holdings
         (used for quick price caching, not applicable for options)
@@ -396,10 +410,17 @@ class Position:
 
         raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
 
-    def has_position(self, date):
-        return date in self._position and sum((abs(x[2]) for x in self._position[date].values())) > 0
+    def has_position(self,
+                     date: datetime) -> bool:
+        """
+        Return True is position has recorded position values at 'date'
+        :param date:
+        :return: boolean
+        """
+        return date in self._position and sum((abs(x[iQTY]) for x in self._position[date].values())) > 0
 
-    def get_net_position(self, date):
+    def get_net_position(self,
+                         date: datetime) -> Dict[ContractBase, Tuple[float, float, float]]:
         """
         Get net position at given date
         :param date: date of position slice
@@ -410,7 +431,18 @@ class Position:
         except KeyError:
             raise PositionNotFoundError(f'No positions records found at {date}')
 
-    def _calc_transactions(self, date, current_pos, prev_pos):
+    def _calc_transactions(self,
+                           date: datetime,
+                           current_pos: Dict[ContractBase, Tuple[float, float, float]],
+                           prev_pos: Dict[ContractBase, Tuple[float, float, float]]) -> Dict[
+        ContractBase, Tuple[float, float, float, float, float, float]]:
+        """
+        Calculate transactions based on current and previous positions records
+        :param date:
+        :param current_pos: current position record
+        :param prev_pos: previous position record
+        :return: transaction dictionary record
+        """
         result = {}
 
         assert current_pos is not None, 'current_pos must be initialized'
@@ -453,7 +485,12 @@ class Position:
 
         return result
 
-    def _transactions_stats(self, trans_dict):
+    def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float]]):
+        """
+        Calculate transactions stats
+        :param trans_dict:
+        :return:
+        """
         pnl_change_decision = 0.0
         pnl_change_execution = 0.0
         ncontracts_executed = 0.0
@@ -480,7 +517,7 @@ class Position:
             'costs': costs
         }
 
-    def get_pnl_series(self):
+    def get_pnl_series(self) -> pd.DataFrame:
         """
         Calculates position PnL series for all transactions, also additional execution info provided
         :return: pandas.DataFrame

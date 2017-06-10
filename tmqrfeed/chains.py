@@ -6,9 +6,10 @@ from pandas.tseries.offsets import BDay
 
 from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError
 from tmqr.settings import *
-from tmqrfeed.contracts import FutureContract, ContractBase
+from tmqrfeed.contracts import FutureContract, ContractBase, OptionContract
 import warnings
 import datetime
+from typing import List, Tuple
 
 class FutureChain:
     """
@@ -41,9 +42,10 @@ class FutureChain:
         if self.datamanager is None:
             raise ArgumentError("'datamanager' is None")
 
-        self._futchain = self._generatechain_list(fut_tckr_list)
+        self._futchain = self._generatechain_list(
+            fut_tckr_list)  # type: List[Tuple[FutureContract, datetime, datetime]]
 
-    def _generatechain_list(self, raw_futures):
+    def _generatechain_list(self, raw_futures: List[str]) -> List[Tuple[FutureContract, datetime, datetime]]:
         """
         Creates historical chains
         :param raw_futures:
@@ -73,7 +75,9 @@ class FutureChain:
 
         return chain
 
-    def bisect_right(self, fut_chain, end_date):
+    def bisect_right(self,
+                     fut_chain: List[Tuple[FutureContract, datetime, datetime]],
+                     end_date: datetime) -> int:
         """Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.
 
         The return value i is such that all e in fut_chain[:i] have e <= end_date, and all e in
@@ -94,13 +98,14 @@ class FutureChain:
                 lo = mid + 1
         return lo
 
-    def get_list(self, date: datetime.datetime, offset: int = 0, limit: int = 0):
+    def get_list(self, date: datetime.datetime, offset: int = 0, limit: int = 0) -> List[
+        Tuple[FutureContract, datetime, datetime]]:
         """
         Returns list of actual futures contracts for particular date
         :param date: actual date
         :param offset: chain offset, 0 - front chain, +1 - front+1, etc.
         :param limit: Number contracts to return (0 - all)
-        :return: pd.DataFrame with chain information
+        :return: List[Tuple[FutureContract, start_datetime, end_datetime]]
         """
         idx_start = self.bisect_right(self._futchain, date.date())
 
@@ -121,7 +126,7 @@ class FutureChain:
 
         return result
 
-    def get_contract(self, date, offset=0):
+    def get_contract(self, date: datetime, offset: int = 0) -> FutureContract:
         """
         Returns future contract for particular date
         :param date: actual date
@@ -131,10 +136,10 @@ class FutureChain:
         df = self.get_list(date, offset, limit=1)
         return df[0][0]
 
-    def get_all(self):
+    def get_all(self) -> List[Tuple[FutureContract, datetime, datetime]]:
         """
         Get futures contracts list sorted by expiration date
-        :return: 
+        :return: List[Tuple[FutureContract, datetime, datetime]]
         """
         return self._futchain
 
@@ -161,13 +166,13 @@ class OptionChainList:
         for expiration, chain in chain_list.items():
             self.chain_list[expiration] = OptionChain(chain, expiration, underlying, datamanager=self.dm)
 
-        self._expirations = sorted(list(self.chain_list.keys()))
+        self._expirations = sorted(list(self.chain_list.keys()))  # type: List[datetime]
 
     def __len__(self):
         return len(self.chain_list)
 
     @property
-    def expirations(self):
+    def expirations(self) -> List[datetime]:
         """
         List of available expirations for options chains
         :return: 
@@ -182,7 +187,7 @@ class OptionChainList:
         for k, v in self.chain_list.items():
             yield k, v
 
-    def find(self, date: datetime, by, **kwargs):
+    def find(self, date: datetime, by, **kwargs) -> OptionChain:
         """
         Find option chain by datetime, date, or offset
         If no **kwargs are set, performs exact match by datetime, date, or offset
@@ -291,14 +296,19 @@ class OptionChain:
         self.opt_code = opt_code_set.pop()
 
     @property
-    def expiration(self):
+    def expiration(self) -> datetime:
         """
         Expiration date for option chain
         :return: 
         """
         return self._expiration
 
-    def find(self, dt: datetime.datetime, item, opttype: str, how='offset', **kwargs):
+    def find(self,
+             dt: datetime.datetime,
+             item,
+             opttype: str,
+             how='offset',
+             **kwargs) -> OptionContract:
         """
         Find option contract in chain using 'how' criteria
         :param dt: analysis date
@@ -342,7 +352,7 @@ class OptionChain:
         else:
             raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
 
-    def _get_atm_index(self, ulprice: float):
+    def _get_atm_index(self, ulprice: float) -> int:
         """
         Find ATM index of strike array based on underlying price
         :param ulprice: underlying price
@@ -350,7 +360,12 @@ class OptionChain:
         """
         return int(np.argmin(np.abs(self._strike_array - ulprice)))
 
-    def _find_by_delta(self, dt: datetime, delta: float, opttype: str, error_limit: int = 5, strike_limit: int = 30):
+    def _find_by_delta(self,
+                       dt: datetime,
+                       delta: float,
+                       opttype: str,
+                       error_limit: int = 5,
+                       strike_limit: int = 30) -> OptionContract:
         """
         Search option contract by delta value:
         If delta ==  0.5 - returns ATM call/put
@@ -418,8 +433,13 @@ class OptionChain:
 
         return last_contract
 
-    def _find_by_offset(self, dt: datetime, item: int, opttype: str, error_limit: int = 5, ul_decision_px=None,
-                        ul_exec_px=None):
+    def _find_by_offset(self,
+                        dt: datetime,
+                        item: int,
+                        opttype: str,
+                        error_limit: int = 5,
+                        ul_decision_px=None,
+                        ul_exec_px=None) -> OptionContract:
         """
         Find option contract by offset from ATM
         :param dt: current datetime
