@@ -102,6 +102,8 @@ class PositionTestCase(unittest.TestCase):
 
         new_position = {asset: (5.0, 6.0, 1.0)}
 
+        self.assertRaises(ArgumentError, p.add_net_position, dt, new_position, qty=0.0)
+
         p.add_net_position(dt, new_position, qty=2)
 
         self.assertEqual(1, len(p._position))

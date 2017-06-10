@@ -43,9 +43,11 @@ class FutureChain:
             raise ArgumentError("'datamanager' is None")
 
         self._futchain = self._generatechain_list(
-            fut_tckr_list)  # type: List[Tuple[FutureContract, datetime, datetime]]
+            fut_tckr_list)  # type: List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]
 
-    def _generatechain_list(self, raw_futures: List[str]) -> List[Tuple[FutureContract, datetime, datetime]]:
+    def _generatechain_list(self,
+                            raw_futures: List[str]) -> List[
+        Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Creates historical chains
         :param raw_futures:
@@ -76,8 +78,8 @@ class FutureChain:
         return chain
 
     def bisect_right(self,
-                     fut_chain: List[Tuple[FutureContract, datetime, datetime]],
-                     end_date: datetime) -> int:
+                     fut_chain: List[Tuple[FutureContract, datetime.datetime, datetime.datetime]],
+                     end_date: datetime.datetime) -> int:
         """Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.
 
         The return value i is such that all e in fut_chain[:i] have e <= end_date, and all e in
@@ -98,8 +100,10 @@ class FutureChain:
                 lo = mid + 1
         return lo
 
-    def get_list(self, date: datetime.datetime, offset: int = 0, limit: int = 0) -> List[
-        Tuple[FutureContract, datetime, datetime]]:
+    def get_list(self,
+                 date: datetime.datetime,
+                 offset: int = 0,
+                 limit: int = 0) -> List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Returns list of actual futures contracts for particular date
         :param date: actual date
@@ -126,7 +130,7 @@ class FutureChain:
 
         return result
 
-    def get_contract(self, date: datetime, offset: int = 0) -> FutureContract:
+    def get_contract(self, date: datetime.datetime, offset: int = 0) -> FutureContract:
         """
         Returns future contract for particular date
         :param date: actual date
@@ -136,7 +140,7 @@ class FutureChain:
         df = self.get_list(date, offset, limit=1)
         return df[0][0]
 
-    def get_all(self) -> List[Tuple[FutureContract, datetime, datetime]]:
+    def get_all(self) -> List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Get futures contracts list sorted by expiration date
         :return: List[Tuple[FutureContract, datetime, datetime]]
@@ -144,132 +148,12 @@ class FutureChain:
         return self._futchain
 
 
-class OptionChainList:
-    """
-    This class stores list of options chains with many expiration dates
-    """
-
-    def __init__(self, chain_list, underlying: ContractBase, datamanager):
-        if chain_list is None or len(chain_list) == 0:
-            raise ArgumentError("Empty 'chain_list' argument")
-
-        self.dm = datamanager
-        if self.dm is None:
-            raise ArgumentError("DataManager instance must be set")
-
-        self.underlying = underlying
-
-        if self.underlying is None:
-            raise ArgumentError("Underlying asset in None")
-
-        self.chain_list = OrderedDict()
-        for expiration, chain in chain_list.items():
-            self.chain_list[expiration] = OptionChain(chain, expiration, underlying, datamanager=self.dm)
-
-        self._expirations = sorted(list(self.chain_list.keys()))  # type: List[datetime]
-
-    def __len__(self):
-        return len(self.chain_list)
-
-    @property
-    def expirations(self) -> List[datetime]:
-        """
-        List of available expirations for options chains
-        :return: 
-        """
-        return self._expirations
-
-    def __iter__(self):
-        for k, v in self.chain_list.items():
-            yield v
-
-    def items(self):
-        for k, v in self.chain_list.items():
-            yield k, v
-
-    def find(self, date: datetime, by, **kwargs) -> OptionChain:
-        """
-        Find option chain by datetime, date, or offset
-        If no **kwargs are set, performs exact match by datetime, date, or offset
-        Otherwise if **kwargs are set, performs SMART search where 'by' must be current datetime
-        :param date: current date
-        :param by: lookup criteria
-        :param kwargs:
-            Keywords for SMART chains search:
-            - min_days - ignore chains with days to expiration <= min_days
-            - opt_codes - include only option chains in opt_codes list
-        :return:
-        """
-        if isinstance(by, datetime.datetime):
-            return self.chain_list[by]
-        elif isinstance(by, datetime.date):
-            dt = datetime.datetime.combine(by, datetime.time(0, 0, 0))
-            return self.chain_list[dt]
-        elif isinstance(by, (int, np.int32, np.int64)):
-            option_offset = by
-
-            if option_offset < 0:
-                raise ArgumentError("'by' must be >= 0")
-
-            min_days = kwargs.get('min_days', 0)
-            start_exp_idx = -1
-            for i, exp in enumerate(self._expirations):
-                if ContractBase.calc_to_expiration_days(exp, date) > min_days:
-                    start_exp_idx = i
-                    break
-            if start_exp_idx == -1:
-                raise ChainNotFoundError(
-                    f"Couldn't find not expired options chains, with days to expiration > {min_days}")
-
-            if start_exp_idx + option_offset > len(self._expirations) - 1:
-                raise ChainNotFoundError(
-                    f"Couldn't find front+{option_offset} options chains, try to look next futures series",
-                    # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
-                    option_offset_skipped=len(self._expirations) - start_exp_idx)
-
-            opt_codes = kwargs.get('opt_codes', [])
-            if opt_codes:
-                oc_i = start_exp_idx
-                oc_cnt = 0
-                while True:
-                    if oc_i > len(self.expirations) - 1:
-                        raise ChainNotFoundError(
-                            f"Couldn't find front+{option_offset} options chains, filtered by opt_codes {opt_codes}",
-                            # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
-                            option_offset_skipped=oc_cnt)
-                    expiration = self._expirations[oc_i]
-                    chain = self.chain_list[expiration]
-                    if chain.opt_code in opt_codes:
-                        if oc_cnt == option_offset:
-                            break
-                        oc_cnt += 1
-                    oc_i += 1
-            else:
-                expiration = self._expirations[start_exp_idx + option_offset]
-                chain = self.chain_list[expiration]
-
-            return chain
-        else:
-            raise ArgumentError("Unexpected 'by' type, must be float or int")
-
-    def __repr__(self):
-        exp_str = f"{self.underlying} expirations list: \n"
-
-        for i, exp in enumerate(self.expirations):
-            _opt_code = self.chain_list[exp].opt_code
-            if _opt_code:
-                exp_str += '{0}: {1} (OptCode: {2})\n'.format(i, exp.date(), _opt_code)
-            else:
-                exp_str += '{0}: {1}\n'.format(i, exp.date())
-        return exp_str
-
-
 class OptionChain:
     """
     Main class for option chains data management.
     """
 
-    def __init__(self, option_chain_record, expiration: datetime, underlying: ContractBase, datamanager):
+    def __init__(self, option_chain_record, expiration: datetime.datetime, underlying: ContractBase, datamanager):
         self._expiration = expiration
         self.dm = datamanager
         self.underlying = underlying
@@ -296,10 +180,10 @@ class OptionChain:
         self.opt_code = opt_code_set.pop()
 
     @property
-    def expiration(self) -> datetime:
+    def expiration(self) -> datetime.datetime:
         """
         Expiration date for option chain
-        :return: 
+        :return:
         """
         return self._expiration
 
@@ -317,14 +201,14 @@ class OptionChain:
         :param how: search method
                     - 'offset' - by strike offset from ATM
                     - 'strike' - by strike absolute value
-                    - 'delta'  - by delta        
+                    - 'delta'  - by delta
                         Search option contract by delta value:
                         If delta ==  0.5 - returns ATM call/put
                         If delta > 0.5 - returns ITM call/put near target delta
                         If delta < 0.5 - returns OTM call/put near target delta
         :param kwargs:
             * how == 'offset' kwargs:
-                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5) 
+                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
             * how == 'delta' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
                 - strike_limit - how many strikes to analyse from ATM (default: 30)
@@ -376,7 +260,7 @@ class OptionChain:
         :param opttype: option type 'C' or 'P'
         :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised
         :param strike_limit: how many strikes to analyse from ATM
-        :return: Option contract instance 
+        :return: Option contract instance
         """
 
         delta = abs(delta)
@@ -447,7 +331,7 @@ class OptionChain:
         :param opttype: option type 'P' or 'C'
         :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised
         :return: OptionContract instance
-        :rtype: OptionContract 
+        :rtype: OptionContract
         """
 
         # Fetching underlying price
@@ -525,3 +409,125 @@ class OptionChain:
 
     def __repr__(self):
         return self.__str__()
+
+class OptionChainList:
+    """
+    This class stores list of options chains with many expiration dates
+    """
+
+    def __init__(self, chain_list, underlying: ContractBase, datamanager):
+        if chain_list is None or len(chain_list) == 0:
+            raise ArgumentError("Empty 'chain_list' argument")
+
+        self.dm = datamanager
+        if self.dm is None:
+            raise ArgumentError("DataManager instance must be set")
+
+        self.underlying = underlying
+
+        if self.underlying is None:
+            raise ArgumentError("Underlying asset in None")
+
+        self.chain_list = OrderedDict()
+        for expiration, chain in chain_list.items():
+            self.chain_list[expiration] = OptionChain(chain, expiration, underlying, datamanager=self.dm)
+
+        self._expirations = sorted(list(self.chain_list.keys()))  # type: List[datetime.datetime]
+
+    def __len__(self):
+        return len(self.chain_list)
+
+    @property
+    def expirations(self) -> List[datetime.datetime]:
+        """
+        List of available expirations for options chains
+        :return: 
+        """
+        return self._expirations
+
+    def __iter__(self):
+        for k, v in self.chain_list.items():
+            yield v
+
+    def items(self):
+        for k, v in self.chain_list.items():
+            yield k, v
+
+    def find(self, date: datetime.datetime, by, **kwargs) -> OptionChain:
+        """
+        Find option chain by datetime, date, or offset
+        If no **kwargs are set, performs exact match by datetime, date, or offset
+        Otherwise if **kwargs are set, performs SMART search where 'by' must be current datetime
+        :param date: current date
+        :param by: lookup criteria
+        :param kwargs:
+            Keywords for SMART chains search:
+            - min_days - ignore chains with days to expiration <= min_days
+            - opt_codes - include only option chains in opt_codes list
+        :return:
+        """
+        if isinstance(by, datetime.datetime):
+            return self.chain_list[by]
+        elif isinstance(by, datetime.date):
+            dt = datetime.datetime.combine(by, datetime.time(0, 0, 0))
+            return self.chain_list[dt]
+        elif isinstance(by, (int, np.int32, np.int64)):
+            option_offset = by
+
+            if option_offset < 0:
+                raise ArgumentError("'by' must be >= 0")
+
+            min_days = kwargs.get('min_days', 0)
+            start_exp_idx = -1
+            for i, exp in enumerate(self._expirations):
+                if ContractBase.calc_to_expiration_days(exp, date) > min_days:
+                    start_exp_idx = i
+                    break
+            if start_exp_idx == -1:
+                raise ChainNotFoundError(
+                    f"Couldn't find not expired options chains, with days to expiration > {min_days}")
+
+            if start_exp_idx + option_offset > len(self._expirations) - 1:
+                raise ChainNotFoundError(
+                    f"Couldn't find front+{option_offset} options chains, try to look next futures series",
+                    # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
+                    option_offset_skipped=len(self._expirations) - start_exp_idx)
+
+            opt_codes = kwargs.get('opt_codes', [])
+            if opt_codes:
+                oc_i = start_exp_idx
+                oc_cnt = 0
+                while True:
+                    if oc_i > len(self.expirations) - 1:
+                        raise ChainNotFoundError(
+                            f"Couldn't find front+{option_offset} options chains, filtered by opt_codes {opt_codes}",
+                            # IMPORTANT: add valid series count here, this will help to handle next future chains by offset
+                            option_offset_skipped=oc_cnt)
+                    expiration = self._expirations[oc_i]
+                    chain = self.chain_list[expiration]
+                    if chain.opt_code in opt_codes:
+                        if oc_cnt == option_offset:
+                            break
+                        oc_cnt += 1
+                    oc_i += 1
+            else:
+                expiration = self._expirations[start_exp_idx + option_offset]
+                chain = self.chain_list[expiration]
+
+            return chain
+        else:
+            raise ArgumentError("Unexpected 'by' type, must be float or int")
+
+    def __repr__(self):
+        exp_str = f"{self.underlying} expirations list: \n"
+
+        for i, exp in enumerate(self.expirations):
+            _opt_code = self.chain_list[exp].opt_code
+            if _opt_code:
+                exp_str += '{0}: {1} (OptCode: {2})\n'.format(i, exp.date(), _opt_code)
+            else:
+                exp_str += '{0}: {1}\n'.format(i, exp.date())
+        return exp_str
+
+
+

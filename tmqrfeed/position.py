@@ -269,6 +269,9 @@ class Position:
             # check if 'date' >= last date of the position
             raise ArgumentError(f'Managing position at date less then last available date is not allowed')
 
+        if qty == 0:
+            raise ArgumentError("'qty' must be non-zero")
+
         # Do sanity checks
         self._check_position_validity(net_position_dict)
 

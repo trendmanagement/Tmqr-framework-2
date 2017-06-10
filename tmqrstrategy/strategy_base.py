@@ -302,6 +302,7 @@ class StrategyBase:
 
             # Run predefined alphas params
             oos_exposure_df_list = []
+            tz = None
             for alpha_params in self.wfo_selected_alphas:
                 alpha_exposure_df = self.calculate(*alpha_params)
                 oos_exposure_df_list.append(alpha_exposure_df)
@@ -373,12 +374,12 @@ class StrategyBase:
             position_last_date = QDATE_MIN
 
         date_idx = exposure_df_list[0].index
-        date_start = max(oos_start, position_last_date)
+        date_start = max(oos_start.date(), position_last_date.date())
         for dt in date_idx:
-            if dt <= date_start:
+            if dt.date() <= date_start:
                 # Skip all days before new data
                 continue
-            if dt >= oos_end:
+            if dt.date() >= oos_end.date():
                 break
 
             # Create exposure DataFrame slice at date 'dt' for all alpha members
