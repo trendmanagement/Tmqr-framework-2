@@ -91,4 +91,4 @@ if __name__ == '__main__':
 
     alpha.run()
 
-    alpha.position
+    equity = alpha.position.get_pnl_series()

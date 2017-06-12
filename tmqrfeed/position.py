@@ -1,5 +1,6 @@
 from collections import OrderedDict
-from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError, PositionReadOnlyError
+from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError, PositionReadOnlyError, \
+    AssetExpiredError
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
 import pandas as pd
@@ -192,14 +193,10 @@ class Position:
         :param date: 
         :return: nothing, changes position in place
         """
-        try:
-            pos_dict = self._position[date]
-            for asset, pos_rec in pos_dict.items():
-                # Apply zero-qty to all position records, but keep the prices
-                pos_dict[asset] = (pos_rec[iDPX], pos_rec[iEPX], 0.0)
-        except KeyError:
-            # Nothing to close at 'date', just skipping
-            pass
+        pos_dict = self._position.setdefault(date, {})
+        for asset, pos_rec in pos_dict.items():
+            # Apply zero-qty to all position records, but keep the prices
+            pos_dict[asset] = (pos_rec[iDPX], pos_rec[iEPX], 0.0)
 
     def set_net_position(self,
                          date: datetime,
@@ -468,7 +465,13 @@ class Position:
             elif curr_values is None:
                 # Skip old closed positions
                 if prev_values[iQTY] != 0:
-                    decision_price, exec_price = asset.price(date)
+                    try:
+                        decision_price, exec_price = asset.price(date)
+                    except AssetExpiredError as exc:
+                        # TODO: Check real ES data for data holes and decide
+                        decision_price, exec_price = prev_values[iDPX], prev_values[iEPX]
+                        log.warn(f"{exc}. Possible data hole detected, asset is not closed before expiration.")
+
                     costs_value = self.dm.costs_get(asset, -prev_values[iQTY])
 
                     pnl_decision = asset.dollar_pnl(prev_values[iDPX], decision_price, prev_values[iQTY])

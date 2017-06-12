@@ -310,7 +310,51 @@ class PositionTestCase(unittest.TestCase):
         for i, v in enumerate((5.0, 6.0, 3.0)):
             self.assertEqual(v, p._position[dt2][asset][i])
 
+    def test_keep_previous_position_existing_double_call_error(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        p.add_transaction(dt, asset, 3.0)
+
+        self.assertEqual(1, len(p._position))
+        for i, v in enumerate((1.0, 2.0, 3.0)):
+            self.assertEqual(v, p._position[dt][asset][i])
+
+        asset.price.return_value = (5.0, 6.0)
+
+        dt2 = datetime(2011, 1, 2)
+        p.keep_previous_position(dt2)
         self.assertRaises(ArgumentError, p.keep_previous_position, datetime(2010, 1, 2))
+
+    def test_keep_previous_position_existing_but_empty(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        p.add_transaction(dt, asset, 3.0)
+
+        self.assertEqual(1, len(p._position))
+        for i, v in enumerate((1.0, 2.0, 3.0)):
+            self.assertEqual(v, p._position[dt][asset][i])
+
+        asset.price.return_value = (5.0, 6.0)
+        p.close(dt)
+
+        dt2 = datetime(2011, 1, 2)
+        p.keep_previous_position(dt2)
+
+        self.assertEqual(2, len(p._position))
+        self.assertEqual(0, len(p._position[dt2]))
+
 
     def test_keep_previous_position_existing_not_allowed(self):
         dm = MagicMock(DataManager())

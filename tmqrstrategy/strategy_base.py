@@ -1,4 +1,5 @@
-from datetime import datetime, date, time
+from datetime import datetime, date
+from datetime import time as dttime
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
 from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError, \
@@ -9,6 +10,8 @@ import pandas as pd
 import numpy as np
 from typing import List, Callable
 from tmqr.settings import QDATE_MIN
+from tmqr.logs import log
+import time
 
 import pyximport
 
@@ -124,7 +127,7 @@ class StrategyBase:
 
             if wfo_window_type == 'expanding':
                 # Setting the IIS start period to the beginning of the quote history
-                iis_start_dt = datetime.combine(first_date.date(), time(0, 0, 0))
+                iis_start_dt = datetime.combine(first_date.date(), dttime(0, 0, 0))
             else:
                 # Setting rolling window IIS period
                 iis_start_dt = prev_period - rdelta_window
@@ -150,18 +153,44 @@ class StrategyBase:
         :param entry_rule: strategy entry rule
         :param exit_rule: strategy exit rule
         :param direction: direction of the trade (1 - long, -1 - short)
-        :param position_size: position size (integer/float/ or pandas.Series)
-        :param nbar_stop: N-bar stop exit
+        :param position_size: position size (integer/float/ or pandas.Series) (default: 1.0)
+        :param nbar_stop: N-bar stop exit (default: no bar stop)
         :return: pandas DataFrame with 'exposure' column
         """
         # Use fast Cythonized method to calculate exposure
         price_series = self.dm.quotes()['c']
+
+        if len(price_series) != len(entry_rule) or not np.all(price_series.index == entry_rule.index):
+            raise StrategyError("Entry rule index doesn't match primary price series index")
+
+        if len(price_series) != len(exit_rule) or not np.all(price_series.index == exit_rule.index):
+            raise StrategyError("Exit rule index doesn't match primary price series index")
+
+        if direction not in [1, -1]:
+            raise StrategyError("'direction' must be 1 or -1")
+
+        if nbar_stop < 0:
+            raise StrategyError("N-bar stop must be >= 0")
+
+        if position_size is not None:
+            if isinstance(position_size, (float, int, np.float, np.int)):
+                if position_size == 0:
+                    raise StrategyError("'position_size' is permanently zero")
+            else:
+                if isinstance(position_size, pd.Series):
+                    if len(price_series) != len(position_size) or not np.all(price_series.index == position_size.index):
+                        raise StrategyError("Position size index doesn't match primary price series index")
+                else:
+                    raise StrategyError("Position size must be pandas.Series type")
+
+
         exposure_series = exposure(price_series.values,
                                    entry_rule.values,
                                    exit_rule.values,
                                    direction,
                                    size_exposure=position_size,
                                    nbar_stop=nbar_stop)
+
         return pd.DataFrame({'exposure': exposure_series}, index=price_series.index)
 
 
@@ -206,6 +235,7 @@ class StrategyBase:
         :param calculate_args_list: list of optimization arguments of 'calculate' method
         :return: List of the best performing 'calculate' args (i.e. swarm members)
         """
+        # TODO: make more sophisticated best members picks
         return calculate_args_list[:self.wfo_members_count]
 
 
@@ -266,6 +296,9 @@ class StrategyBase:
         Run strategy instance and walk-forward optimization
         :return: 
         """
+        log.info(f'Starting strategy {self}. Date now: {datetime.now()}')
+        total_time_begin = time.time()
+
         # Initialize quotes
         self.setup()
 
@@ -275,8 +308,13 @@ class StrategyBase:
             raise StrategyError("You should call 'self.dm.series_primary_set(...)' in strategy setup() "
                                 "method to initialize quotes data")
 
+        log.debug(f'Quotes range: {quotes_index[0].date()} - {quotes_index[-1].date()}')
+
         # Calculate WFO matrix for the historical data
         wfo_matrix = self._make_wfo_matrix()
+
+        timings_opimize = []
+        timings_position = []
 
         for wfo_period in wfo_matrix:
             wfo_action = self.get_next_wfo_action(self.wfo_last_period, wfo_period, quotes_index)
@@ -287,6 +325,9 @@ class StrategyBase:
                 break
 
             if wfo_action == WFO_ACTION_OPTIMIZE:
+                log.debug(f"Optimizing IIS: {wfo_period['iis_start'].date()} - {wfo_period['iis_end'].date()}")
+                time_optimize_begin = time.time()
+
                 # Set IIS range
                 self.dm.quotes_range_set(wfo_period['iis_start'], wfo_period['iis_end'])
 
@@ -297,6 +338,10 @@ class StrategyBase:
                 # Set WFO last period
                 self.wfo_last_period = wfo_period
 
+                timings_opimize.append(time.time() - time_optimize_begin)
+
+            log.debug(f"Processing OOS: {wfo_period['oos_start'].date()} - {wfo_period['oos_end'].date()}")
+            time_process_position_begin = time.time()
             # Reset quotes range to OOS
             self.dm.quotes_range_set(wfo_period['iis_start'], wfo_period['oos_end'])
 
@@ -312,6 +357,19 @@ class StrategyBase:
 
             # Reset quotes range
             self.dm.quotes_range_set()
+
+            timings_position.append(time.time() - time_process_position_begin)
+
+        avg_opt_time = 0.0
+        if timings_opimize:
+            avg_opt_time = sum(timings_opimize) / len(timings_opimize)
+
+        avg_pos_time = 0.0
+        if timings_position:
+            avg_pos_time = sum(timings_position) / len(timings_position)
+
+        log.info(
+            f'Finished in {time.time() - total_time_begin:0.2f} seconds. Avg. optimize time: {avg_opt_time:0.2f}sec Avg. process time: {avg_pos_time:0.2f}sec')
 
     def calculate_position(self, date: datetime, exposure_record: pd.DataFrame) -> None:
         """
@@ -355,16 +413,16 @@ class StrategyBase:
         :param oos_end: end date of the OOS
         :return: nothing, processes position in place
         """
-        if not exposure_df_list:
-            # In case then self.pick() returned nothing, i.e. turn all systems off
-            # the position automatically will be closed next day because self.position.keep_previous_position() not
-            # called.
-            # TODO: check how position equity will behave when position is closed (expected to see flat equity line)
-            return
         #
         # Checking exposure_df_list for errors
         #
         self._check_exposure_df_list_integrity(exposure_df_list)
+
+        if not exposure_df_list:
+            log.warn(f"No swarm members selected for OOS period {oos_start.date()} - {oos_end.date()}")
+            date_idx = self.dm.quotes().index
+        else:
+            date_idx = exposure_df_list[0].index
 
         # Get dates range between oos_start and oos_end
         # Get last position date
@@ -373,22 +431,29 @@ class StrategyBase:
         except PositionNotFoundError:
             position_last_date = QDATE_MIN
 
-        date_idx = exposure_df_list[0].index
+        # TODO: not decided is it's properly to use date(), because we have intraday systems to, NEED CHECK
         date_start = max(oos_start.date(), position_last_date.date())
         for dt in date_idx:
             if dt.date() <= date_start:
                 # Skip all days before new data
                 continue
-            if dt.date() >= oos_end.date():
-                break
 
-            # Create exposure DataFrame slice at date 'dt' for all alpha members
-            exposure_series = []
-            for exp_df in exposure_df_list:
-                exposure_series.append(exp_df.loc[dt])
+            assert dt.date() < oos_end.date(), "unexpected behaviour"
 
-            # Run strategy position management
-            self.calculate_position(dt, pd.DataFrame(exposure_series))
+            if not exposure_df_list:
+                # In case then self.pick() returned nothing, i.e. turn all systems off
+                # the position automatically will be closed
+
+                # Close position to maintain flat equity line for a skipped period
+                self.position.close(dt)
+            else:
+                # Create exposure DataFrame slice at date 'dt' for all alpha members
+                exposure_series = []
+                for exp_df in exposure_df_list:
+                    exposure_series.append(exp_df.loc[dt])
+
+                # Run strategy position management
+                self.calculate_position(dt, pd.DataFrame(exposure_series))
 
 
 
