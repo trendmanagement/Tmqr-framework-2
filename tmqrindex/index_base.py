@@ -1,7 +1,8 @@
-from tmqr.errors import SettingsError, ArgumentError
+from tmqr.errors import SettingsError, ArgumentError, IndexReadOnlyError
 import pandas as pd
 from tmqrfeed.manager import DataManager
 from tmqrfeed.position import Position
+from datetime import timedelta
 
 import lz4
 import pickle
@@ -43,9 +44,24 @@ class IndexBase:
         self.position = kwargs.get('position', None)
         """Main index position as tmqrfeed.position.Position (can be None)"""
 
+        self.as_readonly = kwargs.get('as_readonly', False)
+        """Make index read-only, only properties and field access allowed, call of methods will raise exception"""
+
         self._index_name = kwargs.get('index_name', self._index_name)
         self._description_long = kwargs.get('description_long', self._description_long)
         self._description_short = kwargs.get('description_short', self._description_short)
+
+        if self.as_readonly:
+            # Adjust index data by decision_time_shift
+            assert self.data is not None, 'Unexpected: self.data is None'
+            assert isinstance(self.data.index,
+                              pd.DatetimeIndex), 'Unexpected: self.data.index must be pandas.DatetimeIndex'
+
+            # Shifting index data by decision_time_shift (only in read-only mode, to fit actual decision time)
+            self.data.set_index(self.data.index + timedelta(minutes=self.decision_time_shift),
+                                inplace=True)
+
+
 
     def setup(self):
         """
@@ -72,6 +88,8 @@ class IndexBase:
         Run index calculation or update
         :return: 
         """
+        if self.as_readonly:
+            raise IndexReadOnlyError("Only property and attribute access allowed when index in read-only mode")
 
         # Setting data up
         self.setup()
@@ -141,7 +159,9 @@ class IndexBase:
 
         pos = None
         if serialized_index_record['position'] is not None:
-            pos = Position.deserialize(serialized_index_record['position'], as_readonly=as_readonly)
+            pos = Position.deserialize(serialized_index_record['position'],
+                                       datamanager=datamanager,
+                                       as_readonly=as_readonly)
 
         index_instance = cls(datamanager,
                              instrument=serialized_index_record['instrument'],
@@ -150,7 +170,8 @@ class IndexBase:
                              position=pos,
                              index_name=serialized_index_record['name'],
                              description_long=serialized_index_record['description_long'],
-                             description_short=serialized_index_record['description_short'])
+                             description_short=serialized_index_record['description_short'],
+                             as_readonly=as_readonly)
         return index_instance
 
     def save(self):
@@ -158,6 +179,9 @@ class IndexBase:
         Saves index data to database
         :return: 
         """
+        if self.as_readonly:
+            raise IndexReadOnlyError("Only property and attribute access allowed when index in read-only mode")
+
         self.dm.datafeed.data_engine.db_save_index(self.serialize())
 
     @classmethod

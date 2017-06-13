@@ -124,6 +124,7 @@ class Position:
                 asset_dict_converted[ContractBase.deserialize(k, datamanager)] = asset_dict[k]
 
         if as_readonly:
+            # TODO: check the position records for exec_time for online-index calculation (in online mode exec_px is unreliable)
             return PositionReadOnlyView(datamanager, result, **deserialized_kwargs)
         else:
             return Position(datamanager, position_dict=result, **deserialized_kwargs)
@@ -266,13 +267,16 @@ class Position:
             # check if 'date' >= last date of the position
             raise ArgumentError(f'Managing position at date less then last available date is not allowed')
 
-        if qty == 0:
-            raise ArgumentError("'qty' must be non-zero")
-
         # Do sanity checks
         self._check_position_validity(net_position_dict)
 
         pos_dict = self._position.setdefault(date, {})
+
+        if qty == 0.0:
+            # If qty is 0.0, just skip position calculation (assumming that position is zero)
+            # but keep date record for empty position, that will allow maintain flat equity line of the position
+            return
+
         for asset, new_position in net_position_dict.items():
             # Searching existing positions first
             current_position = pos_dict.get(asset, None)
@@ -468,9 +472,9 @@ class Position:
                     try:
                         decision_price, exec_price = asset.price(date)
                     except AssetExpiredError as exc:
-                        # TODO: Check real ES data for data holes and decide
                         decision_price, exec_price = prev_values[iDPX], prev_values[iEPX]
-                        log.warn(f"{exc}. Possible data hole detected, asset is not closed before expiration.")
+                        log.warn(f"{exc}. Possible data hole detected, asset is not closed before expiration."
+                                 f" Or you are skipping zero exposures in strategy/index")
 
                     costs_value = self.dm.costs_get(asset, -prev_values[iQTY])
 

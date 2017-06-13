@@ -1,5 +1,6 @@
 from tmqrfeed.manager import DataManager
-from tmqrfeed.quotes.quote_contfut import QuoteContFut
+from tmqrfeed.quotes import QuoteContFut
+from tmqrfeed.quotes import QuoteIndex
 from tmqrfeed.costs import Costs
 from datetime import datetime
 import pandas as pd
@@ -28,8 +29,11 @@ class AlphaGeneric(StrategyBase):
         self.temp = datetime.now()  # type: pd.DataFrame
 
     def setup(self):
-        self.dm.series_primary_set(QuoteContFut, 'US.ES',
-                                   timeframe='D')
+        # Load pre-saved EXO index ES ContFut instead of rebuild each time
+        self.dm.series_primary_set(QuoteIndex, 'US.ES_ContFutEOD')
+
+        self.dm.series_extra_set('fut', QuoteContFut, 'US.ES',
+                                 timeframe='D')
         self.dm.costs_set('US', Costs())
 
     def calculate(self, *args):
@@ -61,6 +65,7 @@ class AlphaGeneric(StrategyBase):
 
         # Just replicate primary quotes position
         self.position.add_net_position(date, primary_quotes_position.get_net_position(date), qty=exposure)
+
 
 if __name__ == '__main__':
     dm = DataManager()

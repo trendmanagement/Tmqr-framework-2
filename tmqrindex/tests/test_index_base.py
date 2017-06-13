@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 from tmqr.errors import *
 from tmqrfeed.position import Position, PositionReadOnlyView
-from datetime import datetime
+from datetime import datetime, timedelta
 from tmqrfeed.contracts import *
 from collections import OrderedDict
 import pickle
@@ -198,14 +198,16 @@ class IndexBaseTestCase(unittest.TestCase):
         self.assertEqual(IndexContFut._description_short, idx2._description_short)
         self.assertEqual(IndexContFut._description_long, idx2._description_long)
 
-    def test_deserialize_readonly_position(self):
+    def test_deserialize_readonly_index(self):
         dm = MagicMock()
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([
             {'a': 1, 'b': 2},
             {'a': 4, 'b': 5}
-        ])
+        ],
+            index=[datetime(2011, 1, 1, 12, 40), datetime(2011, 1, 2, 12, 40)]
+        )
 
         p_dict = OrderedDict()
         asset = ContractBase("US.S.AAPL", dm)
@@ -223,6 +225,43 @@ class IndexBaseTestCase(unittest.TestCase):
 
         self.assertEqual(kwposition.get_net_position(datetime(2011, 1, 1, 12, 40)),
                          idx2.position.get_net_position(datetime(2011, 1, 1, 12, 45)))
+
+        self.assertTrue(
+            np.all(pd.Series([datetime(2011, 1, 1, 12, 45), datetime(2011, 1, 2, 12, 45)]) == idx2.data.index))
+
+        # Check that position asset has DataManager instance initiated
+        p = idx2.position.get_net_position(datetime(2011, 1, 1, 12, 45))
+        for asset, pos_rec in p.items():
+            self.assertEqual(dm, asset.dm)
+
+    def test_deserialize_readonly_index_fail_to_call_methods(self):
+        dm = MagicMock()
+        kwinstrument = 'TEST'
+        kwcontext = {'TEST': True}
+        kwdata = pd.DataFrame([
+            {'a': 1, 'b': 2},
+            {'a': 4, 'b': 5}
+        ],
+            index=[datetime(2011, 1, 1, 12, 40), datetime(2011, 1, 2, 12, 40)]
+        )
+
+        p_dict = OrderedDict()
+        asset = ContractBase("US.S.AAPL", dm)
+        p_dict[datetime(2011, 1, 1, 12, 40)] = {asset: (100, 101, 2)}
+
+        kwposition = Position(dm, position_dict=p_dict, decision_time_shift=5)
+
+        idx = IndexBase(dm, instrument=kwinstrument, context=kwcontext, data=kwdata, position=kwposition)
+
+        serialized_idx = idx.serialize()
+
+        idx2 = IndexBase.deserialize(dm, serialized_idx, as_readonly=True)
+
+        self.assertEqual(True, idx2.as_readonly)
+
+        self.assertRaises(IndexReadOnlyError, idx2.run)
+        self.assertRaises(IndexReadOnlyError, idx2.save)
+
 
     def test_save_load_realdb(self):
         dm = DataManager()

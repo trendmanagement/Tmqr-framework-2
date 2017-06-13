@@ -79,8 +79,6 @@ class StrategyBase:
         first_date = dt_idx[0]
         last_date = dt_idx[-1]
 
-        # TODO: implement online recalculation and test
-
         start_date = date(first_date.year, 1, 1)
         end_date = last_date.date()
         if wfo_period == 'm':

@@ -11,7 +11,6 @@ ctypedef np.uint8_t DTYPE_t_uint8
 
 np.import_array()
 
-# TODO: unittest this module!
 
 @cython.cdivision(True)
 @cython.boundscheck(False)

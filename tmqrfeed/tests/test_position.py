@@ -102,7 +102,11 @@ class PositionTestCase(unittest.TestCase):
 
         new_position = {asset: (5.0, 6.0, 1.0)}
 
-        self.assertRaises(ArgumentError, p.add_net_position, dt, new_position, qty=0.0)
+        # zero-qty is skipped, but added position record for date
+        # to maintain flat equity line
+        p.add_net_position(dt, new_position, qty=0.0)
+        self.assertEqual(1, len(p._position))
+        self.assertEqual(0, len(p._position[dt]))
 
         p.add_net_position(dt, new_position, qty=2)
 
@@ -683,6 +687,46 @@ class PositionTestCase(unittest.TestCase):
                                   opt1: (202, 203, -3.0, 3.0, 3.0, 0.0),
                                   opt2: (501, 502, 4.0, -200 * 4, -200 * 4, 0.0)
                                   }, trans)
+
+    def test__calc_transactions_asset_expired_error(self):
+        with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            mock_instrument_info.ticksize = 1.0
+            mock_instrument_info.tickvalue = 1.0
+
+            with patch('tmqrfeed.contracts.ContractBase.price') as mock_price:
+                positions = OrderedDict()
+                fut = ContractBase("US.S.AAPL")
+                fut.ctype = 'F'
+
+                opt1 = ContractBase("US.C.AAPL")
+                opt1.ctype = 'C'
+
+                opt2 = ContractBase("US.P.AAPL")
+                opt2.ctype = 'P'
+                positions = OrderedDict()
+
+                positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
+                positions[datetime(2011, 1, 2)] = {}
+                positions[datetime(2011, 1, 3)] = {fut: (102, 103, 1.0), opt1: (202, 203, 0.0)}
+
+                def price_side_effect(date):
+                    raise AssetExpiredError()
+
+                mock_price.side_effect = price_side_effect
+
+                dm = MagicMock(DataManager())
+                # dm.price_get.return_value = (501, 502)
+                dm.costs_get.return_value = 0.0
+
+                p = Position(dm)
+
+                # In case when position is about expired and we don't have the price data at this point
+                # Use previous position price to close transaction (trade off)
+                trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 2)],
+                                             positions[datetime(2011, 1, 1)])
+                self.assertEqual(1, len(trans))
+                self.assertEqual({fut: (100, 101, -2, 0.0, 0.0, 0.0)}, trans)
+
 
     def test__transactions_stats(self):
         with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:

@@ -128,6 +128,15 @@ class PositionReadOnlyError(TMQRError):
     """
     Raised for PositionReadOnlyView not allowed position operations
     """
+    pass
+
+
+class IndexReadOnlyError(TMQRError):
+    """
+    Raised for Index with 'as_readonly'=True when someone tried to call any index non-readonly method
+    """
+    pass
+
 
 class CostsNotFoundError(NotFoundError):
     """
