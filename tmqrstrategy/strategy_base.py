@@ -18,6 +18,7 @@ import pyximport
 pyximport.install()
 from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe
 from tmqrstrategy.optimizers import OptimizerBase
+from tmqrstrategy.serialization import object_from_path, object_to_full_path
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
@@ -30,6 +31,10 @@ class StrategyBase:
         self.dm = datamanager  # type: DataManager
 
         self.position = kwargs.get('position', Position(self.dm))  # type: Position
+
+        if not isinstance(self.position, Position):
+            raise StrategyError(f"Expected to get Position type for kwarg['position'], got {type(self.position)}")
+
         self.wfo_params = kwargs.get('wfo_params', None)
 
         if self.wfo_params is None:
@@ -471,3 +476,49 @@ class StrategyBase:
         :return: 
         """
         pass
+
+    def serialize(self):
+        """
+        Save strategy data and position to compatible format for MongoDB serialization
+        :return:
+        """
+        result_dict = {
+            'strategy_class': object_to_full_path(self),
+            'wfo_params': self.wfo_params,
+            'last_period': self.wfo_last_period,
+            'selected_alphas': self.wfo_selected_alphas,
+            'opt_params': self.wfo_opt_params,
+            'scoring_type': self.wfo_scoring_type,
+            'costs_per_contract': self.wfo_costs_per_contract,
+            'members_count': self.wfo_members_count,
+            'optimizer_class_kwargs': self.wfo_optimizer_class_kwargs,
+            'optimizer_class': object_to_full_path(self.wfo_optimizer_class),
+            'position': self.position.serialize(),
+        }
+        return result_dict
+
+    @classmethod
+    def deserialize(cls, datamanager, serialized_strategy_record):
+        """
+        Deserialize strategy data, position and context from MongoDB serialized format
+        :param datamanager: DataManager instance
+        :param serialized_strategy_record: MongoDB dict like object
+        :return: new Strategy cls instance
+        """
+        strategy_class = cls
+        if strategy_class == StrategyBase:
+            # The case when we try to load alpha dynamically using StrategyBase class
+            # Getting strategy class from full-qualified class string
+            strategy_class = object_from_path(serialized_strategy_record['strategy_class'])
+        else:
+            if object_to_full_path(cls) != serialized_strategy_record['strategy_class']:
+                raise ArgumentError(f"Strategy class {object_to_full_path(cls)} doesn't match strategy class in the "
+                                    f"serialized strategy record {serialized_strategy_record['strategy_class']}, try "
+                                    f"to check strategy class or call StrategyBase.deserialize() to load dynamically")
+
+        serialized_strategy_record['position'] = Position.deserialize(serialized_strategy_record['position'],
+                                                                      datamanager)
+
+        serialized_strategy_record['optimizer_class'] = object_from_path(serialized_strategy_record['optimizer_class'])
+
+        return strategy_class(datamanager, **serialized_strategy_record)

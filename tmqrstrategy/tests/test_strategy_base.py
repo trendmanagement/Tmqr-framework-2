@@ -10,14 +10,17 @@ from tmqr.errors import *
 from tmqrstrategy.optimizers import OptimizerBase
 
 
+
 class StrategyBaseTestCase(unittest.TestCase):
     def setUp(self):
         self.opt_cnt = 0
 
     def test_init(self):
         dm = MagicMock(DataManager())
+        pos = Position(dm)
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
+        self.assertRaises(StrategyError, StrategyBase, dm, position=pos)
+
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -25,9 +28,14 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params, optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, optimizer_class=MagicMock())
 
-        self.assertEqual('position', strategy.position)
+        # Wrong position type
+
+        self.assertRaises(StrategyError, StrategyBase, dm, position='wrong_pos_type', wfo_params=wfo_params,
+                          optimizer_class=MagicMock())
+
+        self.assertEqual(pos, strategy.position)
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, optimizer_class=MagicMock())
         self.assertEqual(Position, type(strategy.position))
@@ -586,7 +594,7 @@ class StrategyBaseTestCase(unittest.TestCase):
     def test_run_walkforward_error_no_quotes(self):
         dm = DataManager()
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm))
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -594,9 +602,9 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params, optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, optimizer_class=MagicMock())
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position='position', wfo_params=wfo_params)
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm), wfo_params=wfo_params)
         self.assertRaises(StrategyError, strategy.run)
 
     def test_process_position_exposure_df_integrity_checks(self):
@@ -616,7 +624,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm = MagicMock(DataManager)()
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position='position')
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm))
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -624,7 +632,7 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position='position', wfo_params=wfo_params, optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, optimizer_class=MagicMock())
 
         #
         # Check list members must be pandas.DataFrames

@@ -551,9 +551,14 @@ class Position:
         return df_result
 
     def __repr__(self):
+        """
+        Return text-formatted position at last date
+        :return:
+        """
         pos = self._position[self.last_date]
 
         with io.StringIO() as txt_buf:
+            txt_buf.write(f'Position last date: {self.last_date}\n')
             txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
 
             for asset, pos_rec in pos.items():
@@ -562,6 +567,16 @@ class Position:
                                                                   pos_rec[iQTY]))
 
             return txt_buf.getvalue()
+
+    def __eq__(self, other):
+        """Override the default Equals behavior"""
+        if isinstance(other, self.__class__):
+            return self._position == other._position
+        return False
+
+    def __ne__(self, other):
+        """Define a non-equality test"""
+        return not self.__eq__(other)
 
 
 

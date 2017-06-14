@@ -943,3 +943,32 @@ class PositionTestCase(unittest.TestCase):
             for txt in ['Asset', 'DecisionPx', 'ExecPx', 'Qty', 'US.C.F-ZB-H11-110322.110121@89.0',
                         'US.F.CL.M83.110121']:
                 self.assertTrue(txt in repr_text)
+
+    def test_eq(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        p2 = Position(dm)
+        p3 = Position(dm)
+        dt = datetime(2011, 1, 1)
+
+        with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            mock_instrument_info.rollover_days_before_options = 0
+            mock_instrument_info.rollover_days_before = 0
+
+            stk = ContractBase("US.S.AAPL", dm)
+            opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+            fut = FutureContract('US.F.CL.M83.110121', dm)
+
+            p.add_transaction(dt, opt, 1)
+            p.add_transaction(dt, fut, 1)
+
+            p2.add_transaction(dt, opt, 1)
+            p2.add_transaction(dt, fut, 1)
+
+            p3.add_transaction(dt, opt, 1)
+
+            self.assertEqual(p, p2)
+            self.assertNotEqual(p, p3)
+            self.assertNotEqual('test', p)

@@ -22,7 +22,7 @@ class QuoteContFut(QuoteBase):
         self.timeframe = kwargs.get('timeframe', None)
         self.fut_offset = kwargs.get('fut_offset', 0)
         self.date_start = kwargs.get('date_start', self.dm.datafeed.date_start)
-        self.date_end = kwargs.get('date_end', QDATE_MAX)
+        self.date_end = kwargs.get('date_end', self.dm.datafeed.date_end)
         self.decision_time_shift = kwargs.get('decision_time_shift', 0)
 
         if self.timeframe is None:

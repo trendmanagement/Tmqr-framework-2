@@ -27,16 +27,19 @@ class DataFeedTestCase(unittest.TestCase):
         dfeed = DataFeed()
         self.assertEqual(True, isinstance(dfeed.data_engine, DataEngineMongo))
         self.assertEqual(dfeed.data_engine_settings, {})
-        self.assertEqual(dfeed.date_start, datetime(1900, 1, 1))
+        self.assertEqual(dfeed.date_start, QDATE_MIN)
+        self.assertEqual(dfeed.date_end, QDATE_MAX)
         self.assertEqual(dfeed._cache_instrument_info, {})
 
     def test_init_kwargs(self):
         dfeed = DataFeed(data_engine_settings={'test': 'ok'},
                          date_start=datetime(2011, 1, 1),
+                         date_end=datetime(2012, 1, 1),
                          )
         self.assertEqual(True, isinstance(dfeed.data_engine, DataEngineMongo))
         self.assertEqual(dfeed.data_engine_settings, {'test': 'ok'})
         self.assertEqual(dfeed.date_start, datetime(2011, 1, 1))
+        self.assertEqual(dfeed.date_end, datetime(2012, 1, 1))
 
     def test_get_asset_info(self):
         dfeed = DataFeed()

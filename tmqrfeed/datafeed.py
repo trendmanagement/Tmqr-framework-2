@@ -38,6 +38,7 @@ class DataFeed:
 
         # Initializing common datafeed settings
         self.date_start = kwargs.get('date_start', QDATE_MIN)
+        self.date_end = kwargs.get('date_end', QDATE_MAX)
 
         # Cache setup
         self._cache_instrument_info = {}

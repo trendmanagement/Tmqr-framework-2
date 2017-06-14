@@ -68,6 +68,7 @@ class QuoteContFutTestCase(unittest.TestCase):
     def test_init_defaults(self):
         datafeed = MagicMock()
         datafeed.date_start = datetime(2012, 1, 1)
+        datafeed.date_end = datetime(2013, 1, 1)
         dm = DataManager(datafeed=datafeed)
 
         qcf = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
@@ -76,7 +77,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertEqual('D', qcf.timeframe)
         self.assertEqual(0, qcf.fut_offset)
         self.assertEqual(datafeed.date_start, qcf.date_start)
-        self.assertEqual(QDATE_MAX, qcf.date_end)
+        self.assertEqual(datafeed.date_end, qcf.date_end)
 
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe=None)
         self.assertRaises(ArgumentError, QuoteContFut, 'US.CL', datamanager=dm, timeframe="1M")
