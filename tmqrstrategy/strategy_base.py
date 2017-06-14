@@ -31,30 +31,73 @@ class StrategyBase:
         self.dm = datamanager  # type: DataManager
 
         self.position = kwargs.get('position', Position(self.dm))  # type: Position
-
+        """Strategy position"""
         if not isinstance(self.position, Position):
             raise StrategyError(f"Expected to get Position type for kwarg['position'], got {type(self.position)}")
 
+        self.name = kwargs.get('name', self.__class__.__name__)  # type: str
+        """Explicit strategy name set in constructor (by default: uses strategy class name)"""
+
         self.wfo_params = kwargs.get('wfo_params', None)
+        """ Walk-forward optimization parameters dictionary
+        Example:
+            wfo_params = {
+                'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+                'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+                'oos_periods': 2,  # Number of months is OOS period
+                'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+            }
+        """
 
         if self.wfo_params is None:
             raise StrategyError("Walk-forward optimization params are not set, check 'wfo_params' kwarg")
 
-        self.wfo_last_period = kwargs.get('last_period', None)
-        self.wfo_selected_alphas = kwargs.get('selected_alphas', [])
-        self.wfo_opt_params = kwargs.get('opt_params', [])
-        self.wfo_scoring_type = kwargs.get('scoring_type', 'netprofit')
-        self.wfo_optimizer_class = kwargs.get('optimizer_class', None)  # type: Callable
-        self.wfo_costs_per_contract = kwargs.get('costs_per_contract', 0.0)
-        self.wfo_members_count = kwargs.get('members_count', 1)
+        self.wfo_last_period = kwargs.get('wfo_last_period', None)
+        """Last WFO period IIS/OOS start/end dated information"""
+
+        self.wfo_selected_alphas = kwargs.get('wfo_selected_alphas', [])
+        """Selected alphas parameters for last OOS step"""
+
+        self.wfo_opt_params = kwargs.get('wfo_opt_params', [])
+        """
+        Alpha strategy optimization parameters list
+        Example:
+        # Format: list of tuples ('param_name', param_values_list)
+        opt_params = [
+            ('period_slow', [10, 30, 40, 50, 70, 90, 110]),
+            ('period_fast', [1, 3, 10, 15, 20, 30])
+        ]
+        """
+
+        self.wfo_scoring_type = kwargs.get('wfo_scoring_type', 'netprofit')
+        """Scoring algorithm for swarm members estimation"""
+
+        self.wfo_optimizer_class = kwargs.get('wfo_optimizer_class', None)  # type: Callable
+        """OptimizerBase derived class (must be type, not the instance of the class!)"""
+
+        self.wfo_costs_per_contract = kwargs.get('wfo_costs_per_contract', 0.0)
+        """Costs per contract in $ used in scoring functions"""
+
+        self.wfo_members_count = kwargs.get('wfo_members_count', 1)
+        """Number of swarm members to select and trade at OOS stage of the WFO"""
 
         if self.wfo_optimizer_class is None:
-            raise StrategyError("'optimizer_class' kwarg is not set.")
+            raise StrategyError("'wfo_optimizer_class' kwarg is not set.")
 
-        self.wfo_optimizer_class_kwargs = kwargs.get('optimizer_class_kwargs', {})
+        self.wfo_optimizer_class_kwargs = kwargs.get('wfo_optimizer_class_kwargs', {})
+        """Optimizer class extra parameters"""
 
+        self.context = kwargs.get('context', {})
+        """Extra strategy options (if required)"""
 
-
+    @property
+    def strategy_name(self):
+        """
+        Strategy name, pass 'name' kwarg to strategy's constructor, or override this method.
+        NOTE: This method could be overridden by child class to generate more sophisticated naming logic
+        :return:
+        """
+        return self.name
 
     def setup(self):
         """
@@ -230,7 +273,7 @@ class StrategyBase:
                                    costs=self.wfo_costs_per_contract
                                    )
         else:
-            raise StrategyError(f"Unsupported 'scoring_type' = {self.wfo_scoring_type}")
+            raise StrategyError(f"Unsupported 'wfo_scoring_type' = {self.wfo_scoring_type}")
 
     def pick(self, calculate_args_list: list) -> list:
         """
@@ -292,7 +335,8 @@ class StrategyBase:
                 # No next step optimization
                 return WFO_ACTION_OPTIMIZE
 
-        raise NotImplementedError('Not expected code flow')
+                # TODO: check if this code flow is available
+                # raise NotImplementedError('Not expected code flow')
 
     def run(self):
         """
@@ -461,21 +505,21 @@ class StrategyBase:
 
 
     @classmethod
-    def load(cls, dm, strategy_name):
+    def load(cls, datamanager, strategy_name):
         """
         Loads strategy instance from DB
         :param dm: DataManager instance
         :param strategy_name: name of the strategy
         :return: StrategyClass instance
         """
-        pass
+        return cls.deserialize(datamanager, datamanager.datafeed.data_engine.db_load_alpha(strategy_name))
 
     def save(self):
         """
         Saves strategy instance to the DB
         :return: 
         """
-        pass
+        self.dm.datafeed.data_engine.db_save_alpha(self.serialize())
 
     def serialize(self):
         """
@@ -483,16 +527,17 @@ class StrategyBase:
         :return:
         """
         result_dict = {
+            'name': self.strategy_name,
             'strategy_class': object_to_full_path(self),
             'wfo_params': self.wfo_params,
-            'last_period': self.wfo_last_period,
-            'selected_alphas': self.wfo_selected_alphas,
-            'opt_params': self.wfo_opt_params,
-            'scoring_type': self.wfo_scoring_type,
-            'costs_per_contract': self.wfo_costs_per_contract,
-            'members_count': self.wfo_members_count,
-            'optimizer_class_kwargs': self.wfo_optimizer_class_kwargs,
-            'optimizer_class': object_to_full_path(self.wfo_optimizer_class),
+            'wfo_last_period': self.wfo_last_period,
+            'wfo_selected_alphas': self.wfo_selected_alphas,
+            'wfo_opt_params': self.wfo_opt_params,
+            'wfo_scoring_type': self.wfo_scoring_type,
+            'wfo_costs_per_contract': self.wfo_costs_per_contract,
+            'wfo_members_count': self.wfo_members_count,
+            'wfo_optimizer_class_kwargs': self.wfo_optimizer_class_kwargs,
+            'wfo_optimizer_class': object_to_full_path(self.wfo_optimizer_class),
             'position': self.position.serialize(),
         }
         return result_dict
@@ -519,6 +564,7 @@ class StrategyBase:
         serialized_strategy_record['position'] = Position.deserialize(serialized_strategy_record['position'],
                                                                       datamanager)
 
-        serialized_strategy_record['optimizer_class'] = object_from_path(serialized_strategy_record['optimizer_class'])
+        serialized_strategy_record['wfo_optimizer_class'] = object_from_path(
+            serialized_strategy_record['wfo_optimizer_class'])
 
         return strategy_class(datamanager, **serialized_strategy_record)

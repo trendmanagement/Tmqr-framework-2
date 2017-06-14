@@ -73,18 +73,18 @@ if __name__ == '__main__':
             'iis_periods': 12,
         # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         },
-        'optimizer_class': OptimizerBase,
-        'optimizer_class_kwargs': {
+        'wfo_optimizer_class': OptimizerBase,
+        'wfo_optimizer_class_kwargs': {
             'nbest_count': 3,
             'nbest_fitness_method': 'max'
         },
-        'opt_params': [
+        'wfo_opt_params': [
             ('period_slow', [10, 30, 40, 50, 70, 90, 110]),
             ('period_fast', [1, 3, 10, 15, 20, 30])
         ],
-        'members_count': 1,
-        'costs_per_contract': 0.0,
-        'scoring_type': 'netprofit'
+        'wfo_members_count': 1,
+        'wfo_costs_per_contract': 0.0,
+        'wfo_scoring_type': 'netprofit'
     }
 
     alpha = AlphaGeneric(dm, **ALPHA_CONTEXT)
@@ -94,3 +94,6 @@ if __name__ == '__main__':
     equity = alpha.position.get_pnl_series()
 
     alpha.position
+
+
+    # TODO: create load/save test to compare alpha results in full history calculation and online

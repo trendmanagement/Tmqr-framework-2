@@ -15,6 +15,7 @@ import lz4
 COLLECTION_ASSET_INDEX = 'asset_index'
 COLLECTION_ASSET_INFO = 'asset_info'
 COLLECTION_INDEX_DATA = 'index_data'
+COLLECTION_ALPHA_DATA = 'alpha_data'
 COLLECTION_RFR = 'quotes_riskfreerate'
 
 
@@ -139,17 +140,42 @@ class DataEngineMongo(DataEngineBase):
 
     def db_save_index(self, index_data):
         """
-        Saves index data to the MognoDB
-        :param index_data: 
+        Saves index data to the MongoDB
+        :param index_data: serialized index dictionary see. IndexBase.serialize()
         :return: 
         """
         self.db[COLLECTION_INDEX_DATA].create_index([('name', pymongo.ASCENDING)])
         self.db[COLLECTION_INDEX_DATA].replace_one({'name': index_data['name']}, index_data, upsert=True)
 
     def db_load_index(self, index_name):
+        """
+        Loads index data from the MongoDB
+        :param index_name:
+        :return:
+        """
         idx = self.db[COLLECTION_INDEX_DATA].find_one({'name': index_name})
         if idx is None:
             raise DataEngineNotFoundError(f"Index '{index_name}' is not found in the DB")
+        return idx
+
+    def db_save_alpha(self, alpha_data):
+        """
+        Saves index data to the MongoDB
+        :param alpha_data: serialized alpha dictionary see. StrategyBase.serialize()
+        :return:
+        """
+        self.db[COLLECTION_ALPHA_DATA].create_index([('name', pymongo.ASCENDING)])
+        self.db[COLLECTION_ALPHA_DATA].replace_one({'name': alpha_data['name']}, alpha_data, upsert=True)
+
+    def db_load_alpha(self, alpha_name):
+        """
+        Loads index data from the MongoDB
+        :param alpha_name:
+        :return:
+        """
+        idx = self.db[COLLECTION_ALPHA_DATA].find_one({'name': alpha_name})
+        if idx is None:
+            raise DataEngineNotFoundError(f"Alpha '{alpha_name}' is not found in the DB")
         return idx
 
     def db_get_rfr_series(self, market):
