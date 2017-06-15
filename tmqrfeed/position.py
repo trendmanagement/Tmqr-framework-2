@@ -544,9 +544,11 @@ class Position:
             pnl_result.append(res)
             prev_pos = pos_list
 
-        df_result = pd.DataFrame(pnl_result).set_index('dt')
-        df_result['equity_decision'] = df_result['pnl_change_decision'].cumsum()
-        df_result['equity_execution'] = df_result['pnl_change_execution'].cumsum()
+        df_result = pd.DataFrame(pnl_result)
+        if len(df_result) > 0:
+            df_result.set_index('dt', inplace=True)
+            df_result['equity_decision'] = df_result['pnl_change_decision'].cumsum()
+            df_result['equity_execution'] = df_result['pnl_change_execution'].cumsum()
 
         return df_result
 

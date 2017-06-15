@@ -62,8 +62,15 @@ class AlphaGeneric(StrategyBase):
         # Just replicate primary quotes position
         self.position.add_net_position(date, primary_quotes_position.get_net_position(date), qty=exposure)
 
+    def date_now(self):
+        """
+        ONLY FOR TEST PURPOSES
+        :return:
+        """
+        return self.dm.datafeed.date_end
+
 if __name__ == '__main__':
-    dm = DataManager()
+    dm = DataManager(date_end=datetime(2012, 1, 1))
 
     ALPHA_CONTEXT = {
         'wfo_params': {

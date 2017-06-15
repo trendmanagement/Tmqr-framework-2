@@ -508,7 +508,7 @@ class StrategyBase:
     def load(cls, datamanager, strategy_name):
         """
         Loads strategy instance from DB
-        :param dm: DataManager instance
+        :param datamanager: DataManager instance
         :param strategy_name: name of the strategy
         :return: StrategyClass instance
         """
