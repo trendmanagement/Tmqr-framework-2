@@ -3,6 +3,7 @@ import pandas as pd
 from tmqrfeed.manager import DataManager
 from tmqrfeed.position import Position
 from datetime import timedelta
+from tmqr.serialization import object_load_decompress, object_save_compress
 
 import lz4
 import pickle
@@ -138,7 +139,7 @@ class IndexBase:
             'description_short': self._description_short,
             'description_long': self._description_long,
             'fields': self.fields,
-            'data': lz4.block.compress(pickle.dumps(self.data)),
+            'data': object_save_compress(self.data),
             'position': self.position.serialize() if self.position is not None else None,
             'context': self.context,
         }
@@ -166,7 +167,7 @@ class IndexBase:
         index_instance = cls(datamanager,
                              instrument=serialized_index_record['instrument'],
                              context=serialized_index_record['context'],
-                             data=pickle.loads(lz4.block.decompress(serialized_index_record['data'])),
+                             data=object_load_decompress(serialized_index_record['data']),
                              position=pos,
                              index_name=serialized_index_record['name'],
                              description_long=serialized_index_record['description_long'],

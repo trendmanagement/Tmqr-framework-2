@@ -1,24 +1,24 @@
+import time
 from datetime import datetime, date
 from datetime import time as dttime
+from typing import List, Callable
+
+import numpy as np
+import pandas as pd
+import pyximport
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
+
 from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError, \
     PositionNotFoundError
-from tmqrfeed.position import Position
-from tmqrfeed import DataManager
-import pandas as pd
-import numpy as np
-from typing import List, Callable
-from tmqr.settings import QDATE_MIN
 from tmqr.logs import log
-import time
-
-import pyximport
+from tmqr.settings import QDATE_MIN
+from tmqrfeed import DataManager
+from tmqrfeed.position import Position
 
 pyximport.install()
 from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe
-from tmqrstrategy.optimizers import OptimizerBase
-from tmqrstrategy.serialization import object_from_path, object_to_full_path
+from tmqr.serialization import object_from_path, object_to_full_path, object_load_decompress, object_save_compress
 
 WFO_ACTION_SKIP = 0
 WFO_ACTION_OPTIMIZE = 1
@@ -89,6 +89,12 @@ class StrategyBase:
 
         self.context = kwargs.get('context', {})
         """Extra strategy options (if required)"""
+
+        self.exposure_series = kwargs.get('exposure_series', None)  # type: pd.DataFrame
+        """Historical exposure values for OOS periods"""
+
+        self.stats = kwargs.get('stats', {})
+        """Alpha strategy backtest stats"""
 
     @property
     def strategy_name(self):
@@ -338,6 +344,41 @@ class StrategyBase:
                 # TODO: check if this code flow is available
                 # raise NotImplementedError('Not expected code flow')
 
+    def process_stats(self):
+        """
+        Calculate alpha strategy statistics
+        :return: stats dictionary
+        """
+        equity_df = self.position.get_pnl_series()
+
+        if len(equity_df) == 0:
+            return
+        equity_df.rename(columns={'equity_execution': 'equity'}, inplace=True)
+
+        stats_series = equity_df
+
+        #
+        # Save exposure values
+        #
+        assert len(equity_df) == len(
+            self.exposure_series), "Position equity length doesn't match to exposure_series length"
+        assert np.all(
+            equity_df.index == self.exposure_series.index), "Position equity index doesn't match to exposure_series index"
+
+        if 'exposure' not in self.exposure_series.columns:
+            log.warn(
+                "'exposure' column doesn't exist in strategy.exposure_series, probably custom exposure dataframe or "
+                "strategy.exposure() was not called inside strategy.calculate() method")
+            stats_series.loc[:, 'exposure'] = float('nan')
+        else:
+            stats_series.loc[:, 'exposure'] = self.exposure_series['exposure']
+
+        return {
+            'series': stats_series[['equity', 'costs', 'exposure']]
+        }
+
+
+
     def run(self):
         """
         Run strategy instance and walk-forward optimization
@@ -415,8 +456,18 @@ class StrategyBase:
         if timings_position:
             avg_pos_time = sum(timings_position) / len(timings_position)
 
+        #
+        # Process stats
+        #
+        time_process_stats = time.time()
+        self.stats = self.process_stats()
+
+
         log.info(
-            f'Finished in {time.time() - total_time_begin:0.2f} seconds. Avg. optimize time: {avg_opt_time:0.2f}sec Avg. process time: {avg_pos_time:0.2f}sec')
+            f'Finished in {time.time() - total_time_begin:0.2f} seconds. '
+            f'Avg. optimize time: {avg_opt_time:0.2f}sec '
+            f'Avg. process time: {avg_pos_time:0.2f}sec '
+            f'Avg. Stats time: {time.time() - time_process_stats:0.3f}')
 
     def calculate_position(self, date: datetime, exposure_record: pd.DataFrame) -> None:
         """
@@ -451,6 +502,18 @@ class StrategyBase:
             # Check column names equality
             if not set(exp_df.columns) == set(prev_exp_df.columns):
                 raise ArgumentError("'exposure_df_list' DataFrames' column names doesn't match each other")
+
+    def _exposure_update(self, dt, exposure_df):
+        if self.exposure_series is None:
+            self.exposure_series = pd.DataFrame()
+
+        if exposure_df is None:
+            for col in self.exposure_series.columns:
+                self.exposure_series.at[dt, col] = 0.0
+        else:
+            for k, v in exposure_df.sum().items():
+                self.exposure_series.at[dt, k] = v
+
 
     def process_position(self, exposure_df_list: List[pd.DataFrame], oos_start: datetime, oos_end: datetime):
         """
@@ -493,14 +556,21 @@ class StrategyBase:
 
                 # Close position to maintain flat equity line for a skipped period
                 self.position.close(dt)
+
+                # Set zero exposure
+                self._exposure_update(dt, None)
             else:
                 # Create exposure DataFrame slice at date 'dt' for all alpha members
                 exposure_series = []
                 for exp_df in exposure_df_list:
                     exposure_series.append(exp_df.loc[dt])
 
+                exposure_df = pd.DataFrame(exposure_series)
                 # Run strategy position management
-                self.calculate_position(dt, pd.DataFrame(exposure_series))
+                self.calculate_position(dt, exposure_df)
+
+                # Update exposure stats
+                self._exposure_update(dt, exposure_df)
 
 
 
@@ -539,6 +609,8 @@ class StrategyBase:
             'wfo_optimizer_class_kwargs': self.wfo_optimizer_class_kwargs,
             'wfo_optimizer_class': object_to_full_path(self.wfo_optimizer_class),
             'position': self.position.serialize(),
+            'exposure_series': object_save_compress(self.exposure_series),
+            'stats': object_save_compress(self.stats),
         }
         return result_dict
 
@@ -563,7 +635,9 @@ class StrategyBase:
 
         serialized_strategy_record['position'] = Position.deserialize(serialized_strategy_record['position'],
                                                                       datamanager)
-
+        serialized_strategy_record['exposure_series'] = object_load_decompress(
+            serialized_strategy_record['exposure_series'])
+        serialized_strategy_record['stats'] = object_load_decompress(serialized_strategy_record['stats'])
         serialized_strategy_record['wfo_optimizer_class'] = object_from_path(
             serialized_strategy_record['wfo_optimizer_class'])
 

@@ -712,22 +712,22 @@ class StrategyBaseTestCase(unittest.TestCase):
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
-            with patch('tmqrfeed.position.Position.keep_previous_position') as mock_keep_previous_position:
-                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+            strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
 
-                self.assertEqual(1, mock_calculate_position.call_count)
-                # Undecided
-                # self.assertEqual(1, mock_keep_previous_position.call_count)
-                # self.assertEqual(datetime(2011, 1, 6), mock_keep_previous_position.call_args[0][0])
+            self.assertEqual(1, mock_calculate_position.call_count)
 
-                self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
-                self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][1]))
+            self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
+            self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][1]))
 
-                pos_df = mock_calculate_position.call_args[0][1]
+            pos_df = mock_calculate_position.call_args[0][1]
 
-                self.assertEqual(2, len(pos_df))
-                self.assertEqual(3, pos_df['exposure'].sum())
-                self.assertEqual(2, pos_df['some_value'].sum())
+            self.assertEqual(2, len(pos_df))
+            self.assertEqual(3, pos_df['exposure'].sum())
+            self.assertEqual(2, pos_df['some_value'].sum())
+
+            self.assertEqual(1, len(strategy.exposure_series))
+            self.assertEqual(3, strategy.exposure_series['exposure'][datetime(2011, 1, 6)])
+            self.assertEqual(2, strategy.exposure_series['some_value'][datetime(2011, 1, 6)])
 
     def test_process_position_valid_existing_position(self):
         dm = MagicMock(DataManager)()
@@ -1018,3 +1018,60 @@ class StrategyBaseTestCase(unittest.TestCase):
         best_list_random = np.random.random(10)
 
         self.assertEqual(True, np.all(best_list_random[:5] == strategy.pick(best_list_random)))
+
+    def test__exposure_update(self):
+
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exposure1 = pd.DataFrame({
+            'exposure': [1, 2, 3, 4, 5, 6],
+            'exposure2': [11, 12, 13, 14, 15, 16],
+        }, index=date_idx)
+
+        exposure2 = pd.DataFrame({
+            'exposure': [1, 1, 1, 1, 1, 1],
+            'exposure2': [2, 2, 2, 2, 2, 2],
+        }, index=date_idx)
+
+        def ser_exposure(idx):
+            exp_list_df = []
+            for exp in [exposure1, exposure2]:
+                exp_list_df.append(exp.loc[date_idx[idx]])
+
+            return pd.DataFrame(exp_list_df)
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
+                                wfo_members_count=5)
+
+        strategy._exposure_update(date_idx[0], ser_exposure(0))
+
+        self.assertEqual(list(strategy.exposure_series.columns), ['exposure', 'exposure2'])
+        self.assertEqual(1, len(strategy.exposure_series))
+        self.assertEqual(strategy.exposure_series['exposure'][date_idx[0]], 2)
+        self.assertEqual(strategy.exposure_series['exposure2'][date_idx[0]], 13)
+
+        strategy._exposure_update(date_idx[0], ser_exposure(0))
+        self.assertEqual(list(strategy.exposure_series.columns), ['exposure', 'exposure2'])
+        self.assertEqual(1, len(strategy.exposure_series))
+        self.assertEqual(strategy.exposure_series['exposure'][date_idx[0]], 2)
+        self.assertEqual(strategy.exposure_series['exposure2'][date_idx[0]], 13)
+
+        strategy._exposure_update(date_idx[1], ser_exposure(1))
+        self.assertEqual(list(strategy.exposure_series.columns), ['exposure', 'exposure2'])
+        self.assertEqual(2, len(strategy.exposure_series))
+        self.assertEqual(strategy.exposure_series['exposure'][date_idx[0]], 2)
+        self.assertEqual(strategy.exposure_series['exposure2'][date_idx[0]], 13)
+
+        self.assertEqual(strategy.exposure_series['exposure'][date_idx[1]], 3)
+        self.assertEqual(strategy.exposure_series['exposure2'][date_idx[1]], 14)
+
+        strategy._exposure_update(date_idx[1], None)
+        self.assertEqual(strategy.exposure_series['exposure'][date_idx[1]], 0.0)
+        self.assertEqual(strategy.exposure_series['exposure2'][date_idx[1]], 0.0)

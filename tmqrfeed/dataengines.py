@@ -8,7 +8,7 @@ import pymongo
 from tmqr.errors import *
 from tmqr.settings import *
 from datetime import date, datetime, time
-import lz4
+from tmqr.serialization import object_load_decompress
 #
 # Collection names constants
 #
@@ -130,7 +130,7 @@ class DataEngineMongo(DataEngineBase):
         if data is None:
             raise OptionsEODQuotesNotFoundError(f"No data found for {tckr} in options EOD database")
 
-        data['data'] = pickle.loads(lz4.block.decompress(data['data']))
+        data['data'] = object_load_decompress(data['data'])
 
         if not isinstance(data['data'], pd.DataFrame):
             raise DBDataCorruptionError(
@@ -187,7 +187,7 @@ class DataEngineMongo(DataEngineBase):
         rfr = self.db[COLLECTION_RFR].find_one({'market': market})
         if rfr is None:
             raise DataEngineNotFoundError(f"RiskFreeRate series is not found in the DB for the '{market}' market")
-        return pickle.loads(lz4.block.decompress(rfr['rfr_series']))
+        return object_load_decompress(rfr['rfr_series'])
 
 
     def _source_intraday_get_series(self, tckr, **kwargs):
@@ -212,7 +212,7 @@ class DataEngineMongo(DataEngineBase):
 
         dframes_list = []
         for data in self.db[SRC_INTRADAY].find(request):
-            df = pickle.loads(lz4.block.decompress(data['ohlc']))
+            df = object_load_decompress(data['ohlc'])
             if not isinstance(df, pd.DataFrame):
                 raise DBDataCorruptionError(
                     f"{tckr} data is corrupted in {SRC_INTRADAY} collection at {data['dt']}, "

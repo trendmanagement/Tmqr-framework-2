@@ -7,6 +7,8 @@ from tmqrstrategy import StrategyBase
 from tmqrstrategy.optimizers import OptimizerBase, OptimizerGenetic
 from tmqrstrategy.tests.debug_alpha_prototype import AlphaGeneric
 from unittest.mock import patch
+import numpy as np
+
 
 if __name__ == '__main__':
     dm = DataManager(date_end=datetime(2012, 6, 1))
@@ -68,3 +70,5 @@ if __name__ == '__main__':
     saved_alpha = AlphaGeneric.load(dm2, alpha_name)
 
     assert saved_alpha.position == alpha.position
+    assert np.all(saved_alpha.exposure_series['exposure'] == alpha.exposure_series['exposure'])
+    assert np.all(saved_alpha.exposure_series.index == alpha.exposure_series.index)

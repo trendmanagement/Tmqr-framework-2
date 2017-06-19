@@ -9,6 +9,7 @@ import pickle
 import io
 import lz4
 from typing import Dict, Tuple, List
+from tmqr.serialization import object_save_compress, object_load_decompress
 
 # Position tuple constants
 iDPX = 0  # Decision price
@@ -97,7 +98,7 @@ class Position:
                 asset_dict_converted[k.ticker] = asset_dict[k]
 
         res_dict = {
-            'data': lz4.block.compress(pickle.dumps(result)),
+            'data': object_save_compress(result),
             'kwargs': self.kwargs,
         }
 
@@ -113,7 +114,7 @@ class Position:
         :return: Position class or PositionReadOnlyView class instance
         """
         deserialized_kwargs = pos_data.get('kwargs', {})
-        pos_dict = pickle.loads(lz4.block.decompress(pos_data['data']))
+        pos_dict = object_load_decompress(pos_data['data'])
 
         result = OrderedDict()
         for dt, asset_dict in pos_dict.items():
@@ -538,6 +539,16 @@ class Position:
         for dt, pos_list in self._position.items():
             transactions = self._calc_transactions(dt, pos_list, prev_pos)
             stats = self._transactions_stats(transactions)
+            """
+            Example:
+            stats = {
+            'pnl_change_decision': pnl_change_decision,
+            'pnl_change_execution': pnl_change_execution,
+            'ncontracts_executed': ncontracts_executed,
+            'noptions_executed': noptions_executed,
+            'costs': costs
+            }
+            """
             res = {'dt': dt}
             res.update(stats)
 
