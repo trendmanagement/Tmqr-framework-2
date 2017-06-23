@@ -1,10 +1,10 @@
-from backtester.strategy import StrategyBase
+from tmqrstrategy import StrategyAlpha
 from scipy import signal
 
 
-class Strategy_DSP_BandPass(StrategyBase):
+class Strategy_DSP_BandPass(StrategyAlpha):
     def calc_entryexit_rules(self, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index):
-        px_ser = self.data.exo
+        px_ser = self.dm.quotes()['c']
 
         b, a = signal.butter(filt_order, [filt_start_f, filt_stop_f], btype='bandpass')
 
@@ -41,35 +41,8 @@ class Strategy_DSP_BandPass(StrategyBase):
 
             return entry_rule, exit_rule
 
-    def calculate(self, params=None, save_info=False):
-        #
-        #
-        #  Params is a tripple like (50, 10, 15), where:
-        #   50 - slow MA period
-        #   10 - fast MA period
-        #   15 - median period
-        #
-        #  On every iteration of swarming algorithm, parameter set will be different.
-        #  For more information look inside: /notebooks/tmp/Swarming engine research.ipynb
-        #
-
-        if params is None:
-            # Return default parameters
-            (direction, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index) = self.default_opts()
-        else:
-            # Unpacking optimization params
-            #  in order in self.opts definition
-            (direction, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index) = params
+    def calculate(self, *args):
+        (direction, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index) = args
 
         entry_rule, exit_rule = self.calc_entryexit_rules(filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index)
-
-        # Swarm_member_name must be *unique* for every swarm member
-        # We use params values for uniqueness
-        swarm_member_name = self.get_member_name(params)
-
-        #
-        # Calculation info
-        #
-        calc_info = None
-
-        return swarm_member_name, entry_rule, exit_rule, calc_info
+        return self.exposure(entry_rule, exit_rule, direction)

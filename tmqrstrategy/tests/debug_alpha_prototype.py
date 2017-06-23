@@ -27,10 +27,6 @@ class AlphaGeneric(StrategyAlpha):
 
         self.temp = datetime.now()  # type: pd.DataFrame
 
-    def setup(self):
-        self.dm.series_primary_set(QuoteContFut, 'US.ES',
-                                   timeframe='D')
-        self.dm.costs_set('US', Costs(per_contract=3.0, per_option=3.0))
 
     def calculate(self, *args):
         direction = 1
@@ -67,6 +63,13 @@ if __name__ == '__main__':
     dm = DataManager()
 
     ALPHA_CONTEXT = {
+        'context': {  # Strategy specific settings
+            # These settings only applycable for alphas derived from StrategyAlpha strategy
+            # StrategyAlpha - is a classic EXO/SmartEXO based alpha
+            'index_name': 'US.ES_ContFutEOD',  # Name of EXO index to trade
+            'costs_per_option': 3.0,
+            'costs_per_contract': 3.0,
+        },
         'wfo_params': {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
             'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly

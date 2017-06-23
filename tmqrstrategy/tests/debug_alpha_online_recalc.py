@@ -13,6 +13,13 @@ if __name__ == '__main__':
     dm = DataManager(date_end=datetime(2012, 6, 1))
 
     ALPHA_CONTEXT = {
+        'context': {  # Strategy specific settings
+            # These settings only applycable for alphas derived from StrategyAlpha strategy
+            # StrategyAlpha - is a classic EXO/SmartEXO based alpha
+            'index_name': 'US.ES_ContFutEOD',  # Name of EXO index to trade
+            'costs_per_option': 3.0,
+            'costs_per_contract': 3.0,
+        },
         'wfo_params': {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
             'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
@@ -58,7 +65,6 @@ if __name__ == '__main__':
             # Pretending that current date is date.now()
             mock_date_now.return_value = curr_date.date()
             dm2 = DataManager(date_end=curr_date)
-
             # Load and run
             saved_alpha = AlphaGeneric.load(dm2, alpha_name)
             saved_alpha.run()

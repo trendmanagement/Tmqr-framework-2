@@ -1,13 +1,29 @@
 from tmqrstrategy.strategy_base import StrategyBase
 from tmqr.errors import StrategyError
+from tmqrfeed.quotes import QuoteIndex
+from tmqrfeed.costs import Costs
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 
 class StrategyAlpha(StrategyBase):
     """
     Single instrument strategy with custom stats
     """
+
+    def setup(self):
+        if 'index_name' not in self.context:
+            raise StrategyError("You must set 'index_name' in 'context' kwarg")
+        if 'costs_per_option' not in self.context:
+            raise StrategyError("You must set 'costs_per_option' in 'context' kwarg")
+        if 'costs_per_contract' not in self.context:
+            raise StrategyError("You must set 'costs_per_contract' in 'context' kwarg")
+
+        self.dm.series_primary_set(QuoteIndex, self.context['index_name'])
+        self.dm.costs_set('US', Costs(per_option=self.context['costs_per_option'],
+                                      per_contract=self.context['costs_per_contract']))
+
 
     def process_stats(self):
         """
@@ -26,3 +42,30 @@ class StrategyAlpha(StrategyBase):
         series['delta'] = position_delta
 
         return stats
+
+    def calculate_position(self, date: datetime, exposure_record: pd.DataFrame):
+        """
+        This alpha just replicates EXO/SmartEXO index position
+
+
+        This method used for position construction based on exposure information returned from calculate(),
+        here you can initiate (replicate) EXO index position or setup any custom position you want.
+        """
+        # Get the position of Quote algo (in this case current cont futures)
+        primary_quotes_position = self.dm.position()
+
+        # ALSO you can get secondary positions
+        # secondary_position = self.dm.position('CONTFUT')
+
+        # get net exposure for all members
+        # exposure_record - is a slice of exposures results of picked alphas at 'date'
+
+        # We are calling sum() because we have multiple records of 'exposure'
+        # 1-alpha member of best in the swarm per row
+        exposure = exposure_record['exposure'].sum()
+
+        #
+        # Just replicate primary quotes position
+        #
+        replicated_pos = primary_quotes_position.get_net_position(date)
+        self.position.add_net_position(date, replicated_pos, qty=exposure)

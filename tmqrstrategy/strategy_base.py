@@ -35,8 +35,11 @@ class StrategyBase:
         if not isinstance(self.position, Position):
             raise StrategyError(f"Expected to get Position type for kwarg['position'], got {type(self.position)}")
 
-        self.name = kwargs.get('name', self.__class__.__name__)  # type: str
+        self.name = kwargs.get('name', '')  # type: str
         """Explicit strategy name set in constructor (by default: uses strategy class name)"""
+
+        if not self.name:
+            raise StrategyError("You should set unique strategy 'name' in kwargs")
 
         self.wfo_params = kwargs.get('wfo_params', None)
         """ Walk-forward optimization parameters dictionary
@@ -613,6 +616,7 @@ class StrategyBase:
             'position': self.position.serialize(),
             'exposure_series': object_save_compress(self.exposure_series),
             'stats': object_save_compress(self.stats),
+            'context': self.context,
         }
         return result_dict
 
