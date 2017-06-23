@@ -30,7 +30,7 @@ class AlphaGeneric(StrategyAlpha):
     def setup(self):
         self.dm.series_primary_set(QuoteContFut, 'US.ES',
                                    timeframe='D')
-        self.dm.costs_set('US', Costs())
+        self.dm.costs_set('US', Costs(per_contract=3.0, per_option=3.0))
 
     def calculate(self, *args):
         direction = 1
