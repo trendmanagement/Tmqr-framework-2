@@ -47,7 +47,7 @@ if __name__ == '__main__':
         mock_date_now.return_value = curr_date.date()
         dm2 = DataManager(date_end=curr_date)
         # Do first run
-        alpha_name = 'debug_alpha_online_recalc'
+        alpha_name = 'ES_debug_alpha_online_recalc'
         alpha_online = AlphaGeneric(dm2, **ALPHA_CONTEXT, name=alpha_name)
         alpha_online.run()
         alpha_online.save()

@@ -457,6 +457,8 @@ class Position:
         else:
             intersected_assets = set(current_pos) | set(prev_pos)
 
+        closed_asset_records = {}
+
         for asset in intersected_assets:
             prev_values = prev_pos.get(asset, None) if prev_pos is not None else None
             curr_values = current_pos.get(asset, None)
@@ -484,8 +486,15 @@ class Position:
 
                     result[asset] = (decision_price, exec_price, -prev_values[iQTY],
                                      pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+
+                    # Add closed asset record to the position to keep all prices in the position
+                    #   and decrease DB calls => increases performance
+                    closed_asset_records[asset] = (
+                    decision_price, exec_price, 0.0)  # <- zero qty means position was closed before
+
             else:
                 # Calculating transactions for existing position
+                # Note: Do not exclude trans_qty == 0, because in that case PnL is also calculated
                 trans_qty = curr_values[iQTY] - prev_values[iQTY]
                 costs_value = self.dm.costs_get(asset, trans_qty)
                 pnl_decision = asset.dollar_pnl(prev_values[iDPX], curr_values[iDPX], prev_values[iQTY])
@@ -493,6 +502,15 @@ class Position:
 
                 result[asset] = (curr_values[iDPX], curr_values[iEPX], trans_qty,
                                  pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+
+        #
+        # Add closed contracts records to current_pos
+        #
+        for asset, pos_rec in closed_asset_records.items():
+            assert asset not in current_pos, "Don't expect asset in the current position, because it must be closed"
+            # Add closed position record to store exit prices for it
+            # This will reduce future DB calls in case of Index's or Alpha's positions management
+            current_pos[asset] = pos_rec
 
         return result
 

@@ -657,7 +657,10 @@ class PositionTestCase(unittest.TestCase):
                     opt1: (201, 202, 3.0),
                     opt2: (301, 302, -4.0)
                 }
-                positions[datetime(2011, 1, 3)] = {fut: (102, 103, 1.0), opt1: (202, 203, 0.0)}
+                positions[datetime(2011, 1, 3)] = {
+                    fut: (102, 103, 1.0),
+                    opt1: (202, 203, 0.0)
+                }
 
                 mock_price.return_value = (501, 502)
 
@@ -687,6 +690,55 @@ class PositionTestCase(unittest.TestCase):
                                   opt1: (202, 203, -3.0, 3.0, 3.0, 0.0),
                                   opt2: (501, 502, 4.0, -200 * 4, -200 * 4, 0.0)
                                   }, trans)
+
+    def test__calc_transactions_handle_closed_positions(self):
+        with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            mock_instrument_info.ticksize = 1.0
+            mock_instrument_info.tickvalue = 1.0
+
+            with patch('tmqrfeed.contracts.ContractBase.price') as mock_price:
+                positions = OrderedDict()
+                fut = ContractBase("US.S.AAPL")
+                fut.ctype = 'F'
+
+                opt1 = ContractBase("US.C.AAPL")
+                opt1.ctype = 'C'
+
+                opt2 = ContractBase("US.P.AAPL")
+                opt2.ctype = 'P'
+                positions = OrderedDict()
+
+                positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
+                positions[datetime(2011, 1, 2)] = {
+                    fut: (101, 102, 1.0),
+                    opt1: (201, 202, 3.0),
+                    opt2: (301, 302, -4.0)
+                }
+                positions[datetime(2011, 1, 3)] = {
+                    fut: (102, 103, 1.0),
+                    opt1: (202, 203, 0.0)
+                }
+
+                mock_price.return_value = (501, 502)
+
+                dm = MagicMock(DataManager())
+                # dm.price_get.return_value = (501, 502)
+                dm.costs_get.return_value = 0.0
+
+                p = Position(dm)
+
+                trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 3)],
+                                             positions[datetime(2011, 1, 2)])
+
+                _pos = positions[datetime(2011, 1, 3)]
+                self.assertEqual(3, len(_pos))
+                self.assertEqual({
+                                     fut: (102, 103, 1.0),
+                                     opt1: (202, 203, 0.0),
+                                     opt2: (501, 502, 0.0)
+                                 }, _pos)
+
+
 
     def test__calc_transactions_asset_expired_error(self):
         with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
