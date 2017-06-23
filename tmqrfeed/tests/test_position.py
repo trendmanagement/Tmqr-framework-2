@@ -1024,3 +1024,33 @@ class PositionTestCase(unittest.TestCase):
             self.assertEqual(p, p2)
             self.assertNotEqual(p, p3)
             self.assertNotEqual('test', p)
+
+    def test_delta(self):
+        dm = MagicMock(DataManager())
+        positions = OrderedDict()
+        fut = MagicMock(ContractBase("US.S.AAPL"))
+        fut.ctype = 'F'
+        fut.price.return_value = (501, 502)
+        fut.delta.return_value = 1.0
+
+        opt1 = MagicMock(ContractBase("US.C.AAPL"))
+        opt1.ctype = 'C'
+        opt1.price.return_value = (501, 502)
+        opt1.delta.return_value = 1.0
+
+        opt2 = MagicMock(ContractBase("US.P.AAPL"))
+        opt2.ctype = 'P'
+        opt2.price.return_value = (501, 502)
+        opt2.delta.return_value = -1.0
+
+        positions[datetime(2011, 1, 2)] = {
+            fut: (101, 102, 1.0),
+            opt1: (201, 202, 3.0),
+            opt2: (301, 302, -4.0)
+        }
+
+        p = Position(dm, positions)
+
+        self.assertEqual(p.delta(datetime(2011, 1, 2)),
+                         1 * 1 + 1 * 3 + -1 * -4
+                         )

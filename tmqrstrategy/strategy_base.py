@@ -352,7 +352,9 @@ class StrategyBase:
         equity_df = self.position.get_pnl_series()
 
         if len(equity_df) == 0:
-            return
+            return {
+                'series': pd.DataFrame(columns=['equity', 'costs', 'exposure'])
+            }
         equity_df.rename(columns={'equity_execution': 'equity'}, inplace=True)
 
         stats_series = equity_df

@@ -3,7 +3,6 @@ from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from datetime import datetime, timedelta
 import pandas as pd
-from tmqrstrategy import StrategyBase
 from tmqrstrategy.optimizers import OptimizerBase, OptimizerGenetic
 from tmqrstrategy.tests.debug_alpha_prototype import AlphaGeneric
 from unittest.mock import patch
@@ -47,7 +46,7 @@ if __name__ == '__main__':
         mock_date_now.return_value = curr_date.date()
         dm2 = DataManager(date_end=curr_date)
         # Do first run
-        alpha_name = 'ES_debug_alpha_online_recalc'
+        alpha_name = 'ES_debug_alpha_online_recalc2'
         alpha_online = AlphaGeneric(dm2, **ALPHA_CONTEXT, name=alpha_name)
         alpha_online.run()
         alpha_online.save()

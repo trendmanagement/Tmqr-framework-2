@@ -188,6 +188,19 @@ class Position:
         else:
             return rollover_count / count
 
+    def delta(self, date: datetime) -> float:
+        """
+        Calculate position delta
+        :param date: calculation date
+        :return: delta value, if no position returns 0.0
+        """
+        delta_value = 0.0
+
+        for asset, pos_rec in self.get_net_position(date).items():
+            delta_value += asset.delta(date) * pos_rec[iQTY]
+
+        return delta_value
+
     def close(self,
               date: datetime) -> None:
         """

@@ -3,7 +3,7 @@ from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from datetime import datetime
 import pandas as pd
-from tmqrstrategy import StrategyBase
+from tmqrstrategy import StrategyBase, StrategyAlpha
 from tmqrstrategy.optimizers import OptimizerBase, OptimizerGenetic
 
 
@@ -21,7 +21,7 @@ def CrossDown(a, b):
     return (a.shift(1) > b.shift(1)) & (a < b)
 
 
-class AlphaGeneric(StrategyBase):
+class AlphaGeneric(StrategyAlpha):
     def __init__(self, datamanager: DataManager, **kwargs):
         super().__init__(datamanager, **kwargs)
 
@@ -94,6 +94,6 @@ if __name__ == '__main__':
 
     equity = alpha.position.get_pnl_series()
 
-    alpha.position
+    stats = alpha.stats
 
-
+    pass
