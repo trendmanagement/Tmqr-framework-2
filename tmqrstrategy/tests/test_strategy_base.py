@@ -539,11 +539,11 @@ class StrategyBaseTestCase(unittest.TestCase):
                                                         wfo_optimizer_class=OptimizerBase, name='unittest_strat')
                                 strategy.run()
 
-                                self.assertEqual([[5]], strategy.wfo_selected_alphas)
-                                self.assertEqual(5, len(mock_strategy_process_position.call_args_list))
+                                self.assertEqual([[6]], strategy.wfo_selected_alphas)
+                                self.assertEqual(6, len(mock_strategy_process_position.call_args_list))
 
                                 wfo_matrix = strategy._make_wfo_matrix()
-                                for i in range(5):
+                                for i in range(6):
                                     dm_quotes_range_base_i = i * 3
 
                                     # First call - set IIS quotes data range
@@ -597,10 +597,10 @@ class StrategyBaseTestCase(unittest.TestCase):
 
                                 # First call - set IIS quotes data range
                                 self.assertEqual(dm.quotes_range_set.call_args_list[0][0][0],
-                                                 wfo_matrix[4]['iis_start']
+                                                 wfo_matrix[5]['iis_start']
                                                  )
                                 self.assertEqual(dm.quotes_range_set.call_args_list[0][0][1],
-                                                 wfo_matrix[4]['oos_end']
+                                                 wfo_matrix[5]['oos_end']
                                                  )
 
                                 # Second call - reset quotes range
@@ -614,10 +614,10 @@ class StrategyBaseTestCase(unittest.TestCase):
                                 # Process position called with calculate results and OOS period
                                 self.assertEqual(1, mock_strategy_process_position.call_count)
 
-                                self.assertEqual([(1, 5)], mock_strategy_process_position.call_args_list[0][0][0])
-                                self.assertEqual(wfo_matrix[4]['oos_start'],
+                                self.assertEqual([(1, 6)], mock_strategy_process_position.call_args_list[0][0][0])
+                                self.assertEqual(wfo_matrix[5]['oos_start'],
                                                  mock_strategy_process_position.call_args_list[0][0][1])
-                                self.assertEqual(wfo_matrix[4]['oos_end'],
+                                self.assertEqual(wfo_matrix[5]['oos_end'],
                                                  mock_strategy_process_position.call_args_list[0][0][2])
 
     def test_run_walkforward_error_no_quotes(self):

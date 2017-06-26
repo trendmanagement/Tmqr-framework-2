@@ -101,11 +101,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         alpa_record = alpha.serialize()
 
-        last_period = {
-            'iis_start': datetime(2010, 12, 31, 0, 0),
-            'iis_end': datetime(2011, 12, 31, 0, 0),
-            'oos_start': datetime(2011, 12, 31, 0, 0),
-            'oos_end': datetime(2012, 2, 25, 0, 0)}
+        last_period = alpha._make_wfo_matrix()[-1]
 
         self.assertEqual(alpa_record['wfo_last_period'], last_period)
         self.assertEqual(alpa_record['wfo_selected_alphas'], [(30, 1)])
@@ -118,9 +114,13 @@ class StrategyBaseTestCase(unittest.TestCase):
         self.assertRaises(ArgumentError, AlphaAnother.deserialize, dm, alpa_record.copy())
 
         for k, v in deserialized_alpha_base.__dict__.items():
-            if k not in ['temp']:
+            if k not in ['temp', 'stats', 'exposure_series']:
                 self.assertEqual(alpha.__dict__[k], v, f'attribute={k}')
                 self.assertEqual(alpha.__dict__[k], deserialized_alpha_base.__dict__[k], f'attribute={k}')
+
+        self.assertEqual(True, np.all(alpha.exposure_series == deserialized_alpha_base.exposure_series))
+        self.assertEqual(True, np.all(alpha.stats['series'] == deserialized_alpha_base.stats['series']))
+
 
     def test_save_load_real_db(self):
         dm = DataManager(date_start=datetime(2011, 1, 1), date_end=datetime(2012, 1, 1))
@@ -173,6 +173,9 @@ class StrategyBaseTestCase(unittest.TestCase):
                 self.assertEqual([list(x) for x in alpha.__dict__[k]], v, f'attribute={k}')
                 self.assertEqual([list(x) for x in alpha.__dict__[k]], deserialized_alpha_base.__dict__[k],
                                  f'attribute={k}')
-            elif k not in ['temp']:
+            elif k not in ['temp', 'stats', 'exposure_series']:
                 self.assertEqual(alpha.__dict__[k], v, f'attribute={k}')
                 self.assertEqual(alpha.__dict__[k], deserialized_alpha_base.__dict__[k], f'attribute={k}')
+
+        self.assertEqual(True, np.all(alpha.exposure_series == deserialized_alpha_base.exposure_series))
+        self.assertEqual(True, np.all(alpha.stats['series'] == deserialized_alpha_base.stats['series']))
