@@ -208,14 +208,20 @@ class Position:
         :param date: current date
         :return: date of last position change (i.e. transaction occurrence)
         """
+        date_min_tz = QDATE_MIN
+        if date.tzinfo is not None:
+            # Replacing TZ-info for QDATE_MIN to avoid errors
+            # TypeError: can't compare offset-naive and offset-aware datetimes
+            date_min_tz = date_min_tz.replace(tzinfo=date.tzinfo)
+
         curr_pos = None
-        curr_date = QDATE_MIN
+        curr_date = date_min_tz
 
         for dt, prev_pos in reversed(self._position.items()):
             if dt > date:
                 continue
 
-            if curr_date != QDATE_MIN:
+            if curr_date != date_min_tz:
                 # Get all assets for both dates
                 assets_set = set(prev_pos.keys()) | set(curr_pos.keys())
                 for asset in assets_set:
