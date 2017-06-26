@@ -58,10 +58,10 @@ class IndexEXOBase(IndexBase):
                     log.debug(f"Date: {dt}")
                     self.construct_position(dt, pos, logic_df)
                     log.debug(f'Position\n {repr(pos)}')
-            except ChainNotFoundError:
-                log.error(f"ChainNotFoundError: {dt}")
-            except QuoteNotFoundError:
-                log.error(f"QuoteNotFoundError: {dt}")
+            except ChainNotFoundError as exc:
+                log.error(f"ChainNotFoundError: {dt}: {exc}")
+            except QuoteNotFoundError as exc2:
+                log.error(f"QuoteNotFoundError: {dt}: {exc2}")
 
         self.data = pos.get_pnl_series()
         self.position = pos

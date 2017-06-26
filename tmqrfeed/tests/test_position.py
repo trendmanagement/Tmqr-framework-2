@@ -1054,3 +1054,47 @@ class PositionTestCase(unittest.TestCase):
         self.assertEqual(p.delta(datetime(2011, 1, 2)),
                          1 * 1 + 1 * 3 + -1 * -4
                          )
+
+    def test_last_transaction_date(self):
+        dm = MagicMock(DataManager())
+        positions = OrderedDict()
+        fut = ContractBase("US.S.AAPL")
+        fut.ctype = 'F'
+
+        opt1 = ContractBase("US.C.AAPL")
+        opt1.ctype = 'C'
+
+        opt2 = ContractBase("US.P.AAPL")
+        opt2.ctype = 'P'
+        positions = OrderedDict()
+
+        positions[datetime(2011, 1, 1)] = {fut: (100, 101, 2)}
+        positions[datetime(2011, 1, 2)] = {
+            fut: (101, 102, 1.0),
+            opt1: (201, 202, 3.0),
+            opt2: (301, 302, -4.0)
+        }
+        positions[datetime(2011, 1, 3)] = {
+            fut: (102, 103, 1.0),
+            opt1: (202, 203, 0.0)
+        }
+        positions[datetime(2011, 1, 4)] = {
+            fut: (102, 103, 1.0),
+        }
+        positions[datetime(2011, 1, 5)] = {
+        }
+
+        empty_pos = Position(dm)
+        self.assertEqual(QDATE_MIN, empty_pos.last_transaction_date(datetime(2011, 1, 4)))
+
+        p = Position(dm, positions)
+        self.assertEqual(p.last_transaction_date(datetime(2011, 1, 4)), datetime(2011, 1, 3))
+
+        p = Position(dm, positions)
+        self.assertEqual(p.last_transaction_date(datetime(2011, 1, 3)), datetime(2011, 1, 3))
+
+        p = Position(dm, positions)
+        self.assertEqual(p.last_transaction_date(datetime(2011, 1, 1)), datetime(2011, 1, 1))
+
+        p = Position(dm, positions)
+        self.assertEqual(p.last_transaction_date(datetime(2011, 1, 5)), datetime(2011, 1, 5))

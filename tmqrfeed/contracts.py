@@ -3,6 +3,7 @@ import warnings
 from tmqr.errors import ArgumentError, SettingsError
 from tmqr.settings import *
 import pyximport
+from math import isnan
 
 pyximport.install()
 from tmqrfeed.fast_option_pricing import blackscholes, blackscholes_greeks, GREEK_DELTA
@@ -526,5 +527,13 @@ class OptionContract(ContractBase):
                                              days_to_expiration,
                                              rfr,
                                              option_exec_iv + iv_change)
+
+        assert not isnan(option_price_decision), f"Option decision price is NaN: {self.ticker} at {date} " \
+                                                 f"UnderlyingPrice: {ul_decision_px if ulprice is None else ulprice} " \
+                                                 f"DaysToExp: {days_to_expiration} RFR: {rfr} IV: {option_decision_iv + iv_change}"
+
+        assert not isnan(option_price_decision), f"Option execution price is NaN: {self.ticker} at {date} " \
+                                                 f"UnderlyingPrice: {ul_exec_px if ulprice is None else ulprice} " \
+                                                 f"DaysToExp: {days_to_expiration} RFR: {rfr} IV: {option_exec_iv + iv_change}"
 
         return option_price_decision, option_price_exec

@@ -691,6 +691,20 @@ class DataManagerTestCase(unittest.TestCase):
                         self.assertEqual((stk, dt, (3, 3)), mock__price_set_cached.call_args[0])
 
                         #
+                        # handling bad NaN values from datafeed
+                        #
+                        mock__price_set_cached.reset_mock()
+                        mock__price_get_positions_cached.return_value = None, None
+                        mock__price_get_cached.return_value = None, None
+                        mock__price_get_from_datafeed.return_value = (float('nan'), 3)
+                        self.assertRaises(QuoteNotFoundError, dm.price_get, stk, dt)
+
+                        mock__price_get_from_datafeed.return_value = (3, float('nan'))
+                        self.assertRaises(QuoteNotFoundError, dm.price_get, stk, dt)
+
+                        self.assertFalse(mock__price_set_cached.called)
+
+                        #
                         # Asset expired error
                         #
                         fut = FutureContract('US.F.CL.G12.100120')

@@ -125,9 +125,9 @@ class OptionChainTestCase(unittest.TestCase):
                 return 500.0, 501.0
             if isinstance(asset, OptionContract):
                 if asset.strike == 475:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.strike == 525:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.ctype == 'P':
                     return 0.15, 0.16
 
@@ -150,9 +150,9 @@ class OptionChainTestCase(unittest.TestCase):
                 return 500.0, 501.0
             if isinstance(asset, OptionContract):
                 if asset.strike == 500:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.strike == 525:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.ctype == 'P':
                     return 0.15, 0.16
 
@@ -170,11 +170,11 @@ class OptionChainTestCase(unittest.TestCase):
                 return 500.0, 501.0
             if isinstance(asset, OptionContract):
                 if asset.strike == 500:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.strike == 525:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.strike == 475:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
 
         self.opt_chain.dm = MagicMock(self.opt_chain.dm)
         self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
@@ -188,9 +188,9 @@ class OptionChainTestCase(unittest.TestCase):
                 return 500.0, 501.0
             if isinstance(asset, OptionContract):
                 if asset.strike == 475:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
                 if asset.strike == 525:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
 
         self.opt_chain.dm = MagicMock(self.opt_chain.dm)
         self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect
@@ -229,7 +229,7 @@ class OptionChainTestCase(unittest.TestCase):
                 return 400, 400
             if isinstance(asset, OptionContract):
                 if asset.strike == 375:
-                    raise NotFoundError()
+                    raise QuoteNotFoundError()
 
         self.opt_chain.dm = MagicMock(self.opt_chain.dm)
         self.opt_chain.dm.price_get.side_effect = dm_price_get_sideeffect

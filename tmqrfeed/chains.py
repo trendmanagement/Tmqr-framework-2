@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError
+from tmqr.errors import ArgumentError, NotFoundError, ChainNotFoundError, QuoteNotFoundError
 from tmqr.settings import *
 from tmqrfeed.contracts import FutureContract, ContractBase, OptionContract
 import warnings
@@ -377,7 +377,7 @@ class OptionChain:
                 # Because we expect that selected option will be priced soon in the calling code
                 selected_option.set_pricing_context(dt, ul_decision_px, ul_exec_px, opt_decision_iv, opt_exec_iv, rfr)
                 return selected_option
-            except NotFoundError:
+            except QuoteNotFoundError:
                 is_not_found = True
                 # Searching next strike
                 if initial_item == 0:

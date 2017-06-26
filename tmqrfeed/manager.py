@@ -9,6 +9,7 @@ import pandas as pd
 from typing import Dict, List, Tuple
 from tmqrfeed import Position
 from tmqrfeed.chains import FutureChain, OptionChain, OptionChainList
+from math import isnan
 
 
 class DataManager:
@@ -269,7 +270,15 @@ class DataManager:
             return res
 
         res = self._price_get_from_datafeed(asset, date, **kwargs)
+
+        #
+        # Check for price validity
+        #
+        if isnan(res[0]) or isnan(res[1]):
+            raise QuoteNotFoundError(f"NaN price returned by datafeed for {asset} at {date}")
+
         self._price_set_cached(asset, date, res)
+
         return res
 
     def _price_get_positions_cached(self, asset: ContractBase, date: datetime):

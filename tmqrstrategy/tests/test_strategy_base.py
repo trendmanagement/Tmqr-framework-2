@@ -28,7 +28,8 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         # Wrong position type
 
@@ -37,7 +38,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         self.assertEqual(pos, strategy.position)
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
         self.assertEqual(Position, type(strategy.position))
 
     def test_strategy_name(self):
@@ -52,8 +53,9 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
-        self.assertEqual('StrategyBase', strategy.strategy_name)
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
+        self.assertEqual('unittest_strat', strategy.strategy_name)
 
         strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
                                 name='MyStrategy')
@@ -79,7 +81,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         wfo_matrix = strategy._make_wfo_matrix()
 
@@ -109,7 +112,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         wfo_matrix = strategy._make_wfo_matrix()
         self.assertEqual(3, len(wfo_matrix))
@@ -147,7 +151,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         wfo_matrix = strategy._make_wfo_matrix()
         self.assertEqual(3, len(wfo_matrix))
@@ -185,7 +190,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         wfo_matrix = strategy._make_wfo_matrix()
 
@@ -221,7 +227,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         self.assertRaises(ArgumentError, strategy._make_wfo_matrix)
 
@@ -243,7 +250,8 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         self.assertRaises(ArgumentError, strategy._make_wfo_matrix)
 
@@ -511,7 +519,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = df
 
-        opt_cnt = 0
+        self.opt_cnt = 0
 
         def calculate_side_effect(*args):
             return len(args), args[0]
@@ -528,7 +536,7 @@ class StrategyBaseTestCase(unittest.TestCase):
                                 mock_strategy_calculate.side_effect = calculate_side_effect
 
                                 strategy = StrategyBase(dm, position=pos, wfo_params=wfo_params,
-                                                        wfo_optimizer_class=OptimizerBase)
+                                                        wfo_optimizer_class=OptimizerBase, name='unittest_strat')
                                 strategy.run()
 
                                 self.assertEqual([[5]], strategy.wfo_selected_alphas)
@@ -615,7 +623,7 @@ class StrategyBaseTestCase(unittest.TestCase):
     def test_run_walkforward_error_no_quotes(self):
         dm = DataManager()
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm))
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm), name='unittest_strat')
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -623,9 +631,11 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm), wfo_params=wfo_params)
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm), wfo_params=wfo_params,
+                          name='unittest_strat')
         self.assertRaises(StrategyError, strategy.run)
 
     def test_process_position_exposure_df_integrity_checks(self):
@@ -645,7 +655,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm = MagicMock(DataManager)()
 
-        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm))
+        self.assertRaises(StrategyError, StrategyBase, dm, position=Position(dm), name='unittest_strat')
 
         wfo_params = {
             'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
@@ -653,7 +663,8 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, position=Position(dm), wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                name='unittest_strat')
 
         #
         # Check list members must be pandas.DataFrames
@@ -709,7 +720,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         exp_df_list_valid = [exp_df, exp_df2]
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
             strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
@@ -748,7 +759,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         exp_df_list_valid = [exp_df, exp_df2]
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
             with patch('tmqrfeed.position.Position.keep_previous_position') as mock_keep_previous_position:
@@ -772,7 +783,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         dm.quotes.return_value = pd.Series(np.zeros(len(date_idx)), index=date_idx)
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
             strategy.position._position[datetime(2011, 1, 6)] = {}
@@ -804,7 +815,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         exp_df_list_valid = [exp_df, exp_df2]
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
             with patch('tmqrfeed.position.Position.keep_previous_position') as mock_keep_previous_position:
@@ -830,7 +841,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         dm.quotes.return_value = ohlc
 
         with patch('tmqrstrategy.strategy_base.exposure') as mock_exposure:
-            strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+            strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
             entry_rule = pd.Series(np.random.random(len(date_idx)), index=date_idx)
             exit_rule = pd.Series(np.random.random(len(date_idx)), index=date_idx)
 
@@ -873,7 +884,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         ohlc = pd.DataFrame({'c': np.random.random(len(date_idx))}, index=date_idx)
         dm.quotes.return_value = ohlc
 
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
         entry_rule = pd.Series(np.random.random_integers(0, 1, len(date_idx)), index=date_idx, dtype=np.uint8)
         exit_rule = pd.Series(np.random.random_integers(0, 1, len(date_idx)), index=date_idx, dtype=np.uint8)
         strategy.exposure(entry_rule, exit_rule, 1)
@@ -921,7 +932,7 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
         self.assertRaises(NotImplementedError, strategy.calculate)
 
     def test_calculate_position(self):
@@ -932,7 +943,7 @@ class StrategyBaseTestCase(unittest.TestCase):
             'oos_periods': 2,  # Number of months is OOS period
             'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
         }
-        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock())
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
         self.assertRaises(NotImplementedError, strategy.calculate_position, None, None)
 
     def test_score_netprofit(self):
@@ -949,7 +960,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         dm.quotes.return_value = ohlc
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
-                                wfo_scoring_type='netprofit')
+                                wfo_scoring_type='netprofit', name='unittest_strat')
         exposure_df = pd.DataFrame({'exposure': pd.Series(np.random.random(len(date_idx)), index=date_idx)})
 
         with patch('tmqrstrategy.strategy_base.score_netprofit') as mock_score_netprofit:
@@ -973,7 +984,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         dm.quotes.return_value = ohlc
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
-                                wfo_scoring_type='modsharpe')
+                                wfo_scoring_type='modsharpe', name='unittest_strat')
         exposure_df = pd.DataFrame({'exposure': pd.Series(np.random.random(len(date_idx)), index=date_idx)})
 
         with patch('tmqrstrategy.strategy_base.score_modsharpe') as mock_score_modsharpe:
@@ -997,7 +1008,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         dm.quotes.return_value = ohlc
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), costs_per_contract=3.0,
-                                wfo_scoring_type='unknown_scoring')
+                                wfo_scoring_type='unknown_scoring', name='unittest_strat')
         exposure_df = pd.DataFrame({'exposure': pd.Series(np.random.random(len(date_idx)), index=date_idx)})
 
         self.assertRaises(StrategyError, strategy.score, exposure_df)
@@ -1013,7 +1024,7 @@ class StrategyBaseTestCase(unittest.TestCase):
         }
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
-                                wfo_members_count=5)
+                                wfo_members_count=5, name='unittest_strat')
 
         best_list_random = np.random.random(10)
 
@@ -1048,7 +1059,7 @@ class StrategyBaseTestCase(unittest.TestCase):
             return pd.DataFrame(exp_list_df)
 
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
-                                wfo_members_count=5)
+                                wfo_members_count=5, name='unittest_strat')
 
         strategy._exposure_update(date_idx[0], ser_exposure(0))
 

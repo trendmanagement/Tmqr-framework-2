@@ -15,6 +15,14 @@ class StrategyBaseTestCase(unittest.TestCase):
     def test_serialize(self):
         dm = MagicMock(DataManager)()
         ALPHA_CONTEXT = {
+            'name': 'unittest_strat',
+            'context': {  # Strategy specific settings
+                # These settings only applycable for alphas derived from StrategyAlpha strategy
+                # StrategyAlpha - is a classic EXO/SmartEXO based alpha
+                'index_name': 'US.ES_ContFutEOD',  # Name of EXO index to trade
+                'costs_per_option': 3.0,
+                'costs_per_contract': 3.0,
+            },
             'wfo_params': {
                 'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
                 'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
@@ -51,11 +59,21 @@ class StrategyBaseTestCase(unittest.TestCase):
         self.assertEqual(ser['position'], Position(dm).serialize())
         self.assertEqual(ser['wfo_optimizer_class'], 'tmqrstrategy.optimizers.OptimizerBase')
         self.assertEqual(ser['strategy_class'], 'tmqrstrategy.strategy_base.StrategyBase')
+        self.assertEqual(ser['context'], ALPHA_CONTEXT['context'])
+        self.assertEqual(ser['name'], ALPHA_CONTEXT['name'])
 
     def test_serialize_deserialize(self):
         dm = DataManager(date_start=datetime(2011, 1, 1), date_end=datetime(2012, 1, 1))
 
         ALPHA_CONTEXT = {
+            'name': 'unittest_strat',
+            'context': {  # Strategy specific settings
+                # These settings only applycable for alphas derived from StrategyAlpha strategy
+                # StrategyAlpha - is a classic EXO/SmartEXO based alpha
+                'index_name': 'US.ES_ContFutEOD',  # Name of EXO index to trade
+                'costs_per_option': 3.0,
+                'costs_per_contract': 3.0,
+            },
             'wfo_params': {
                 'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
                 'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
@@ -108,6 +126,13 @@ class StrategyBaseTestCase(unittest.TestCase):
         dm = DataManager(date_start=datetime(2011, 1, 1), date_end=datetime(2012, 1, 1))
         name = 'test_save_load_real_db_alpha'
         ALPHA_CONTEXT = {
+            'context': {  # Strategy specific settings
+                # These settings only applycable for alphas derived from StrategyAlpha strategy
+                # StrategyAlpha - is a classic EXO/SmartEXO based alpha
+                'index_name': 'US.ES_ContFutEOD',  # Name of EXO index to trade
+                'costs_per_option': 3.0,
+                'costs_per_contract': 3.0,
+            },
             'wfo_params': {
                 'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
                 'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly

@@ -3,6 +3,7 @@ from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFo
     AssetExpiredError
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
+from tmqr.settings import QDATE_MIN
 import pandas as pd
 from datetime import timedelta, datetime
 import pickle
@@ -200,6 +201,36 @@ class Position:
             delta_value += asset.delta(date) * pos_rec[iQTY]
 
         return delta_value
+
+    def last_transaction_date(self, date: datetime) -> datetime:
+        """
+        Returns the date when last transaction occurred
+        :param date: current date
+        :return: date of last position change (i.e. transaction occurrence)
+        """
+        curr_pos = None
+        curr_date = QDATE_MIN
+
+        for dt, prev_pos in reversed(self._position.items()):
+            if dt > date:
+                continue
+
+            if curr_date != QDATE_MIN:
+                # Get all assets for both dates
+                assets_set = set(prev_pos.keys()) | set(curr_pos.keys())
+                for asset in assets_set:
+                    # Get position QTY, 0.0 qty by default if asset is not exists for particular date
+                    pos_rec_current_qty = curr_pos.get(asset, (0.0, 0.0, 0.0))[iQTY]
+                    pos_rec_prev_qty = prev_pos.get(asset, (0.0, 0.0, 0.0))[iQTY]
+
+                    if pos_rec_current_qty - pos_rec_prev_qty != 0:
+                        # Transaction occurred
+                        return curr_date
+
+            curr_date = dt
+            curr_pos = prev_pos
+        return curr_date
+
 
     def close(self,
               date: datetime) -> None:
