@@ -47,7 +47,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
 
         self.assertEqual(1, len(holdings._position))
@@ -90,7 +90,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
 
         dt = pd.Timestamp('2011-12-20')
@@ -119,7 +119,7 @@ class FastDataHandlingTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
         # 'holdings' is a tuple of: date, asset, decision_px, exec_px, qty
         self.assertEqual(1, len(holdings._position))
 

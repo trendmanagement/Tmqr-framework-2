@@ -10,6 +10,8 @@ from typing import Dict, List, Tuple
 from tmqrfeed import Position
 from tmqrfeed.chains import FutureChain, OptionChain, OptionChainList
 from math import isnan
+from tmqrfeed.assetsession import AssetSession
+import pytz
 
 
 class DataManager:
@@ -58,6 +60,82 @@ class DataManager:
         self._cache_single_price = {}
 
         self._cache_costs = {}  # type: Dict[str, Costs]
+
+        # Actual session
+        self._session = None  # type: AssetSession
+
+    def session_get(self) -> AssetSession:
+        """
+        Returns trading session for all DataManager quotes, session settings should be set by call of the
+        datamanager.session_set(...) method.
+        :return:
+        """
+        if self._session is None:
+            raise SettingsError("Session is not set, call datamanager.session_set(...) first.")
+
+        return self._session
+
+    def session_set(self,
+                    instrument=None,
+                    session_list=None,
+                    tz=None):
+        """
+        Set the default trading session. This method intended to be used in the setup() method of Index and Alpha algorithms.
+
+        Mode 1: Instrument based
+            Load instrument (or market default) session from the DB by instrument name (example: 'US.ES')
+        Mode 2: Custom session
+            To initiate custom session, you should set the BOTH 'session_list' and 'tz' params (and exclude instrument param)
+
+        'instrument' and (both 'session_list' and 'tz') parameters are mutually exclusive
+
+        :param instrument: Full qualified name of the instrument to load from the DB (like 'US.ES')
+        :param session_list: list of the session params
+            Example:
+                session_list = [
+                    # Default session
+                    {
+                    'decision': '10:40',             # Decision time (uses 'tz' param time zone!)
+                    'dt': datetime(1900, 12, 31),    # Actual date of default session start
+                    'execution': '10:45',            # Execution time (uses 'tz' param time zone!)
+                    'start': '03:32'                 # Start of the session time (uses 'tz' param time zone!)
+                    },
+
+                    # If session rules has been changed by exchange, you can set different rules
+                    {
+                    'decision': '11:40',             # Decision time (uses 'tz' param time zone!)
+                    'dt': datetime(2010, 12, 31),    # Actual date of new session rules start
+                    'execution': '11:45',            # Execution time (uses 'tz' param time zone!)
+                    'start': '01:32'                 # Start of the session time (uses 'tz' param time zone!)
+                    },
+                ]
+        :param tz: see 'pytz' package's list of available timezones
+        :return: nothing
+        """
+        if self._session is not None:
+            raise SettingsError("Session has been already set, it's not allowed to set multiple sessions "
+                                "per Index/Alpha instance, if you need to setup multi-instrumental session try to "
+                                "apply universal trading session for all instruments")
+
+        if instrument is not None:
+            # Load instrument based session settings from the DB
+            if session_list is not None or tz is not None:
+                raise SettingsError("'instrument' and (both 'session_list' and 'tz') parameters are mutually exclusive")
+
+            iinfo = self.datafeed.get_instrument_info(instrument)
+            self._session = iinfo.session
+
+        elif session_list is not None and tz is not None:
+            # Apply custom session settings for
+            try:
+                time_zone = pytz.timezone(tz)
+                self._session = AssetSession(session_list, time_zone)
+            except pytz.UnknownTimeZoneError:
+                raise SettingsError(f"Unknown or unsupported timezone '{tz}'")
+        else:
+            raise SettingsError(
+                "You should set 'instrument' or both 'session_list' and 'tz' to initiate session settings")
+
 
     def costs_set(self, market: str, costs: Costs) -> None:
         """
@@ -221,11 +299,12 @@ class DataManager:
         :param kwargs: DataFeed get_raw_series() **kwargs
         :return: series DataFrame
         """
-        iinfo = asset.instrument_info
         kw_source_type = kwargs.get('source_type', asset.data_source)
-        kw_timezone = kwargs.get('timezone', iinfo.timezone)
         kw_date_start = kwargs.get('date_start', QDATE_MIN)
         kw_date_end = kwargs.get('date_end', QDATE_MAX)
+
+        # use default session timezone
+        kw_timezone = self.session_get().tz
 
         return self.datafeed.get_raw_series(asset.ticker,
                                             source_type=kw_source_type,
@@ -313,8 +392,7 @@ class DataManager:
         Populate internal cache
         :param asset: 
         :param date: 
-        :param decision_px: 
-        :param exec_px: 
+        :param price_data:
         :return: 
         """
         if type(asset) == FutureContract or type(asset) == ContractBase:
@@ -328,17 +406,20 @@ class DataManager:
         """
         iinfo = asset.instrument_info
         kw_source_type = kwargs.get('source_type', asset.data_source)
-        kw_timezone = kwargs.get('timezone', iinfo.timezone)
         kw_data_options_use_prev_date = kwargs.get('data_options_use_prev_date', iinfo.data_options_use_prev_date)
 
-        start, decision, execution, next_sess_date = iinfo.session.get(date)
+        session = self.session_get()
+        # Use default session timezone to maintain data granularity
+        kw_timezone = session.tz
+
+        sess_start_time, sess_decision_time, sess_execution_time, next_sess_date = session.get(date)
 
         decision_px, exec_px = self.datafeed.get_raw_prices(asset.ticker,
                                                             source_type=kw_source_type,
-                                                            dt_list=[decision, execution],
+                                                            dt_list=[sess_decision_time, sess_execution_time],
                                                             timezone=kw_timezone,
-                                                            date_start=decision,
-                                                            date_end=execution,
+                                                            date_start=sess_decision_time,
+                                                            date_end=sess_execution_time,
                                                             data_options_use_prev_date=kw_data_options_use_prev_date
                                                             )
 

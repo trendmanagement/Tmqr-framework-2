@@ -78,6 +78,7 @@ class DataManagerTestCase(unittest.TestCase):
     def test_get_series(self):
         with patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
             dm = DataManager()
+            dm.session_set('US.ES')
             mock_get_raw_series.return_value = True
 
             contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
@@ -91,8 +92,12 @@ class DataManagerTestCase(unittest.TestCase):
             self.assertEqual('US/Pacific', str(kwargs['timezone']))
 
     def test_get_series_with_kwargs(self):
+        import pytz
+
         with patch('tmqrfeed.datafeed.DataFeed.get_raw_series') as mock_get_raw_series:
             dm = DataManager()
+            dm.session_set('US.ES')
+
             mock_get_raw_series.return_value = True
 
             contract = FutureContract('US.F.ES.M83.830520', datamanager=dm)
@@ -108,6 +113,7 @@ class DataManagerTestCase(unittest.TestCase):
             self.assertEqual('US.F.ES.M83.830520', mock_get_raw_series.call_args[0][0])
             kwargs = mock_get_raw_series.call_args[1]
             self.assertEqual(kwargs['source_type'], 'another_source')
+            self.assertEqual(kwargs['timezone'], pytz.timezone('US/Pacific'))
             self.assertEqual(kwargs['date_start'], QDATE_MAX)
             self.assertEqual(kwargs['date_end'], QDATE_MIN)
 
@@ -319,11 +325,6 @@ class DataManagerTestCase(unittest.TestCase):
 
         self.assertEqual(True, dm.series_check('test', primary, extra))
 
-    def test__price_get_from_datafeed(self):
-        dm = DataManager()
-        fut = FutureContract('US.F.CL.G12.120120', datamanager=dm)
-
-        dm._price_get_from_datafeed(fut, datetime.datetime(2012, 1, 9))
 
     def test_chains_get(self):
         def mock_opt_chain_find_sideeffect(date, opt_offset, **kwargs):
@@ -833,3 +834,71 @@ class DataManagerTestCase(unittest.TestCase):
         qdata = dm.quotes()
         self.assertEqual(qdata.index[0], datetime.datetime(2011, 2, 1))
         self.assertEqual(qdata.index[-1], datetime.datetime(2011, 4, 10))
+
+    def test_session_set_instrument(self):
+        with patch('tmqrfeed.datafeed.DataFeed.get_instrument_info') as mock_get_instrument_info:
+            dm = DataManager()
+
+            mock_asset_info = MagicMock()
+            mock_session = MagicMock()
+            mock_asset_info.session = mock_session
+            mock_get_instrument_info.return_value = mock_asset_info
+
+            dm.session_set('US.ES')
+            self.assertEqual('US.ES', mock_get_instrument_info.call_args[0][0])
+            self.assertEqual(mock_session, dm._session)
+
+    def test_session_get(self):
+        with patch('tmqrfeed.datafeed.DataFeed.get_instrument_info') as mock_get_instrument_info:
+            dm = DataManager()
+
+            mock_asset_info = MagicMock()
+            mock_session = MagicMock()
+            mock_asset_info.session = mock_session
+            mock_get_instrument_info.return_value = mock_asset_info
+
+            self.assertRaises(SettingsError, dm.session_get)
+            dm.session_set('US.ES')
+            self.assertEqual('US.ES', mock_get_instrument_info.call_args[0][0])
+            self.assertEqual(mock_session, dm._session)
+
+            self.assertEqual(mock_session, dm.session_get())
+
+    def test_session_set_custom(self):
+        dm = DataManager()
+        session_list = [
+            # Default session
+            {
+                'decision': '10:40',  # Decision time (uses 'tz' param time zone!)
+                'dt': datetime.datetime(1900, 12, 31),  # Actual date of default session start
+                'execution': '10:45',  # Execution time (uses 'tz' param time zone!)
+                'start': '03:32'  # Start of the session time (uses 'tz' param time zone!)
+            },
+        ]
+
+        dm.session_set(session_list=session_list,
+                       tz='US/Pacific'
+                       )
+
+    def test_session_set_errors(self):
+        dm = DataManager()
+        session_list = [
+            # Default session
+            {
+                'decision': '10:40',  # Decision time (uses 'tz' param time zone!)
+                'dt': datetime.datetime(1900, 12, 31),  # Actual date of default session start
+                'execution': '10:45',  # Execution time (uses 'tz' param time zone!)
+                'start': '03:32'  # Start of the session time (uses 'tz' param time zone!)
+            },
+        ]
+
+        self.assertRaises(SettingsError, dm.session_set, session_list=session_list, tz='US/Pacific', instrument='ES')
+        self.assertRaises(SettingsError, dm.session_set, session_list=session_list, instrument='ES')
+        self.assertRaises(SettingsError, dm.session_set, tz='US/Pacific', instrument='ES')
+        self.assertRaises(SettingsError, dm.session_set, session_list=session_list, tz='US/Uansdjkashdikj')
+        self.assertRaises(SettingsError, dm.session_set)
+
+        dm.session_set(session_list=session_list,
+                       tz='US/Pacific'
+                       )
+        self.assertRaises(SettingsError, dm.session_set, instrument='ES')

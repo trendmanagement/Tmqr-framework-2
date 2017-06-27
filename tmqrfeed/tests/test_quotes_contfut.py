@@ -115,8 +115,8 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertAlmostEqual(2769134.1100000003, self.series1.c.sum(), 4)
         self.assertAlmostEqual(3145255.6600000001, self.series2.c.sum(), 4)
 
-        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
-        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
+        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1, self.sess)
+        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2, self.sess)
         # Check compressed output validity
         self.assertAlmostEqual(2105.02, prev_df.c.sum(), 4)
         self.assertAlmostEqual(2392.78, new_df.c.sum(), 4)
@@ -139,8 +139,8 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertTrue(prev_df.index[-1] not in new_series_with_offset)
 
     def test_calculate_fut_offset_series_zero_offset_if_not_found(self):
-        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
-        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
+        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1, self.sess)
+        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2, self.sess)
         # Check compressed output validity
         self.assertAlmostEqual(2105.02, prev_df.c.sum(), 4)
         self.assertAlmostEqual(2392.78, new_df.c.sum(), 4)
@@ -164,8 +164,8 @@ class QuoteContFutTestCase(unittest.TestCase):
         self.assertAlmostEqual(2769134.1100000003, self.series1.c.sum(), 4)
         self.assertAlmostEqual(3145255.6600000001, self.series2.c.sum(), 4)
 
-        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1)
-        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2)
+        prev_df, prev_holdings = compress_daily(DataFrameGetter(self.series1), self.fut1, self.sess)
+        new_df, new_holdings = compress_daily(DataFrameGetter(self.series2), self.fut2, self.sess)
         # Check compressed output validity
         self.assertAlmostEqual(2105.02, prev_df.c.sum(), 4)
         self.assertAlmostEqual(2392.78, new_df.c.sum(), 4)
@@ -234,6 +234,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
     def test_build(self):
         dm = DataManager()
+        dm.session_set('US.CL')
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D', date_start=datetime(2010, 1, 1))
         df, position = qcont_fut.build()
 
@@ -256,6 +257,7 @@ class QuoteContFutTestCase(unittest.TestCase):
 
     def test_build_date_end(self):
         dm = DataManager()
+        dm.session_set('US.CL')
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D', date_start=datetime(2010, 1, 1),
                                  date_end=datetime(2016, 1, 1))
         df, position = qcont_fut.build()

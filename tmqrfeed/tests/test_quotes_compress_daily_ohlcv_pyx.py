@@ -46,7 +46,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)
@@ -74,7 +74,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)
@@ -116,7 +116,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)
@@ -143,7 +143,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)
@@ -160,7 +160,7 @@ class CompressDailyOHLCVCythonizedTestCase(unittest.TestCase):
         asset_mock.instrument_info.session = self.sess
         dfg = DataFrameGetter(df)
 
-        comp_df, holdings = compress_daily(dfg, asset_mock, decision_time_shift=7)
+        comp_df, holdings = compress_daily(dfg, asset_mock, self.sess, decision_time_shift=7)
 
         self.assertTrue(type(comp_df) == pd.DataFrame)
         self.assertTrue(type(holdings) == Position)

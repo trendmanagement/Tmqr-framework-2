@@ -13,7 +13,7 @@ from datetime import timedelta
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-def compress_daily(dfg, asset, int decision_time_shift=0):
+def compress_daily(dfg, asset, asset_session, int decision_time_shift=0):
     """
     Calculate OHLCV based on 1-min data from PreProcessor
     :param dfg: DataFrameGetter instance
@@ -47,7 +47,6 @@ def compress_daily(dfg, asset, int decision_time_shift=0):
     position = Position(asset.dm, decision_time_shift=decision_time_shift)
 
     # Session filter settings
-    asset_session = asset.instrument_info.session
     cdef np.uint64_t sess_start = -1
     cdef np.uint64_t sess_decision = -1
     cdef np.uint64_t sess_execution = -1

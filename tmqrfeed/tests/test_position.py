@@ -1056,6 +1056,8 @@ class PositionTestCase(unittest.TestCase):
                          )
 
     def test_last_transaction_date(self):
+        import pytz
+        tz = pytz.UTC
         dm = MagicMock(DataManager())
         positions = OrderedDict()
         fut = ContractBase("US.S.AAPL")
@@ -1086,6 +1088,8 @@ class PositionTestCase(unittest.TestCase):
 
         empty_pos = Position(dm)
         self.assertEqual(QDATE_MIN, empty_pos.last_transaction_date(datetime(2011, 1, 4)))
+
+        self.assertEqual(QDATE_MIN.replace(tzinfo=tz), empty_pos.last_transaction_date(datetime(2011, 1, 4, tzinfo=tz)))
 
         p = Position(dm, positions)
         self.assertEqual(p.last_transaction_date(datetime(2011, 1, 4)), datetime(2011, 1, 3))

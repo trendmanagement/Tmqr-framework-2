@@ -70,6 +70,9 @@ class QuoteContFut(QuoteBase):
         # Create contracts list
         chain_values = fut_chain.get_list(self.date_start, offset=self.fut_offset)
 
+        # Get deafult asset session
+        asset_session = self.dm.session_get()
+
         # Build price series
         # 1. Iterate chains
         df_data = []
@@ -86,8 +89,10 @@ class QuoteContFut(QuoteBase):
                 # 2. Get futures raw series
                 series = self.dm.series_get(fut_contract, date_start=max(date_start, self.date_start.date()),
                                             date_end=min(date_end, self.date_end.date()))
+
                 # 3. Do resampling (timeframe compression)
-                series, position = compress_daily(DataFrameGetter(series), fut_contract, self.decision_time_shift)
+                series, position = compress_daily(DataFrameGetter(series), fut_contract, asset_session,
+                                                  self.decision_time_shift)
 
 
                 # 4. Append compressed series to continuous futures series
