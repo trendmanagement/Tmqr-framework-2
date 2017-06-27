@@ -16,9 +16,31 @@ class AssetSession:
         :param sessions: list of sessions values
         :param tz: pytz instance of sessions
         """
+        self.sessions_serialized = sessions
         self.tz = tz
+
         self._check_integrity(sessions)
         self.sessions = self.parse(sessions)
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return other.sessions == self.sessions and other.tz == self.tz
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __str__(self):
+        return str(self.sessions_serialized)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def serialize(self):
+        return {
+            'trading_session': self.sessions_serialized,
+            'tz': self.tz.zone
+        }
 
     def parse(self, session_list):
         result = []

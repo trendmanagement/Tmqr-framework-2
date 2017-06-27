@@ -3,6 +3,7 @@ import pandas as pd
 from tmqr.errors import ArgumentError
 from tmqr.errors import QuoteEngineEmptyQuotes
 from collections import OrderedDict
+from tmqrfeed import DataManager
 
 class QuoteBase:
     """
@@ -10,7 +11,7 @@ class QuoteBase:
     """
 
     def __init__(self, *args, **kwargs):
-        self.dm = kwargs.get('datamanager', None)
+        self.dm = kwargs.get('datamanager', None)  # type: DataManager
         if self.dm is None:
             raise ArgumentError("'datamanager' kwarg is not set")
 

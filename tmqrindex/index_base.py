@@ -2,9 +2,10 @@ from tmqr.errors import SettingsError, ArgumentError, IndexReadOnlyError
 import pandas as pd
 from tmqrfeed.manager import DataManager
 from tmqrfeed.position import Position
+from tmqrfeed.assetsession import AssetSession
 from datetime import timedelta
 from tmqr.serialization import object_load_decompress, object_save_compress
-
+import pytz
 import lz4
 import pickle
 
@@ -47,6 +48,11 @@ class IndexBase:
 
         self.as_readonly = kwargs.get('as_readonly', False)
         """Make index read-only, only properties and field access allowed, call of methods will raise exception"""
+
+        self.session = kwargs.get('session', None)
+        """Index trading session settings"""
+        if self.session is not None and not isinstance(self.session, AssetSession):
+            raise SettingsError(f"Saved index session should be AssetSession type, got {type(self.session)}")
 
         self._index_name = kwargs.get('index_name', self._index_name)
         self._description_long = kwargs.get('description_long', self._description_long)
@@ -142,6 +148,7 @@ class IndexBase:
             'data': object_save_compress(self.data),
             'position': self.position.serialize() if self.position is not None else None,
             'context': self.context,
+            'session': self.dm.session_get().serialize() if self.session is None else self.session.serialize(),
         }
         return result_dict
 
@@ -163,6 +170,10 @@ class IndexBase:
             pos = Position.deserialize(serialized_index_record['position'],
                                        datamanager=datamanager,
                                        as_readonly=as_readonly)
+        session = None
+        if serialized_index_record['session'] is not None:
+            sess_dic = serialized_index_record['session']
+            session = AssetSession(sess_dic['trading_session'], tz=pytz.timezone(sess_dic['tz']))
 
         index_instance = cls(datamanager,
                              instrument=serialized_index_record['instrument'],
@@ -172,6 +183,7 @@ class IndexBase:
                              index_name=serialized_index_record['name'],
                              description_long=serialized_index_record['description_long'],
                              description_short=serialized_index_record['description_short'],
+                             session=session,
                              as_readonly=as_readonly)
         return index_instance
 

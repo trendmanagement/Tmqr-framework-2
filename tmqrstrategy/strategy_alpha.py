@@ -20,7 +20,11 @@ class StrategyAlpha(StrategyBase):
         if 'costs_per_contract' not in self.context:
             raise StrategyError("You must set 'costs_per_contract' in 'context' kwarg")
 
-        self.dm.series_primary_set(QuoteIndex, self.context['index_name'])
+        #
+        # Fetching index and setting the session based on index's settings rules
+        # Look for kwargs help in tmqrfeed.quotes.quote_index.py source code
+        self.dm.series_primary_set(QuoteIndex, self.context['index_name'], set_session=True, check_session=True)
+
         self.dm.costs_set('US', Costs(per_option=self.context['costs_per_option'],
                                       per_contract=self.context['costs_per_contract']))
 

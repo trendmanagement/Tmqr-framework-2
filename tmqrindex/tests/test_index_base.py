@@ -133,7 +133,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
         serialized_idx = idx.serialize()
 
-        self.assertEqual(8, len(serialized_idx))
+        self.assertEqual(9, len(serialized_idx))
         self.assertEqual(kwcontext, serialized_idx['context'])
         self.assertEqual('TEST', serialized_idx['instrument'])
         self.assertEqual(IndexBase._description_long, serialized_idx['description_long'])
@@ -143,6 +143,7 @@ class IndexBaseTestCase(unittest.TestCase):
         self.assertEqual(pd.DataFrame, type(pickle.loads(lz4.block.decompress(serialized_idx['data']))))
         self.assertTrue('data' in serialized_idx['position'])
         self.assertTrue('kwargs' in serialized_idx['position'])
+        self.assertTrue('session' in serialized_idx)
 
     def test_deserialize(self):
         dm = MagicMock()
@@ -175,6 +176,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
     def test_deserialize_any_to_index_base(self):
         dm = MagicMock()
+
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([

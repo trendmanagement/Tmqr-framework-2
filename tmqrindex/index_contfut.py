@@ -17,6 +17,12 @@ class IndexContFut(IndexBase):
             raise ArgumentError("You must define 'instrument' in **kwargs")
 
     def setup(self):
+        # Load instrument session from the DB
+        if self.session is None:
+            self.session = self.dm.session_set(self.instrument)
+        else:
+            self.dm.session_set(session_instance=self.session)
+
         self.dm.series_primary_set(QuoteContFut, self.instrument,
                                    timeframe='D', decision_time_shift=self.decision_time_shift)
 

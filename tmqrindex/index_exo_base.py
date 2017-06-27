@@ -23,6 +23,13 @@ class IndexEXOBase(IndexBase):
         self.costs_options = self.context.get('costs_options', 0.0)
 
     def setup(self):
+        # Load instrument session from the DB
+        # And store session settings
+        if self.session is None:
+            self.session = self.dm.session_set(self.instrument)
+        else:
+            self.dm.session_set(session_instance=self.session)
+
         self.dm.series_primary_set(QuoteContFut, self.instrument,
                                    timeframe='D', decision_time_shift=self.decision_time_shift)
         self.dm.costs_set(self.instrument.split('.')[0], Costs(per_contract=self.costs_futures,

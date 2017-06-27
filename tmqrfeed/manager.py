@@ -77,8 +77,9 @@ class DataManager:
 
     def session_set(self,
                     instrument=None,
+                    session_instance=None,
                     session_list=None,
-                    tz=None):
+                    tz=None) -> AssetSession:
         """
         Set the default trading session. This method intended to be used in the setup() method of Index and Alpha algorithms.
 
@@ -90,6 +91,7 @@ class DataManager:
         'instrument' and (both 'session_list' and 'tz') parameters are mutually exclusive
 
         :param instrument: Full qualified name of the instrument to load from the DB (like 'US.ES')
+        :param session_instance: AssetSession class instance
         :param session_list: list of the session params
             Example:
                 session_list = [
@@ -110,7 +112,7 @@ class DataManager:
                     },
                 ]
         :param tz: see 'pytz' package's list of available timezones
-        :return: nothing
+        :return: AssetSession instance
         """
         if self._session is not None:
             raise SettingsError("Session has been already set, it's not allowed to set multiple sessions "
@@ -119,17 +121,28 @@ class DataManager:
 
         if instrument is not None:
             # Load instrument based session settings from the DB
-            if session_list is not None or tz is not None:
-                raise SettingsError("'instrument' and (both 'session_list' and 'tz') parameters are mutually exclusive")
+            if session_list is not None or tz is not None or session_instance is not None:
+                raise SettingsError(
+                    "'instrument' and ('session_list' and 'tz') and 'session_instance' parameters are mutually exclusive")
 
             iinfo = self.datafeed.get_instrument_info(instrument)
             self._session = iinfo.session
+            return self._session
+        if session_instance is not None:
+            if session_list is not None or tz is not None:
+                raise SettingsError(
+                    "'instrument' and ('session_list' and 'tz') and 'session_instance' parameters are mutually exclusive")
+
+            assert isinstance(session_instance, AssetSession), 'session_instance expected to be AssetSession'
+            self._session = session_instance
+            return self._session
 
         elif session_list is not None and tz is not None:
             # Apply custom session settings for
             try:
                 time_zone = pytz.timezone(tz)
                 self._session = AssetSession(session_list, time_zone)
+                return self._session
             except pytz.UnknownTimeZoneError:
                 raise SettingsError(f"Unknown or unsupported timezone '{tz}'")
         else:
