@@ -66,6 +66,11 @@ class StrategyAlpha(StrategyBase):
 
         # We are calling sum() because we have multiple records of 'exposure'
         # 1-alpha member of best in the swarm per row
+        if 'exposure' not in exposure_record:
+            raise StrategyError(
+                "'exposure_record' expected to have 'exposure' column, check alpha's calculate(...) method "
+                "to make sure that it returns valid pandas.DataFrame with exposure column or just check "
+                "for 'return self.exposure(...)' in the last line")
         exposure = exposure_record['exposure'].sum()
 
         #

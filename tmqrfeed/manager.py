@@ -39,7 +39,7 @@ class DataManager:
             datafeed_cls = kwargs.pop('datafeed_cls', DataFeed)
             feed = datafeed_cls(**kwargs, datamanager=self)
 
-        self.datafeed: DataFeed = feed  # type: DataFeed
+        self.datafeed = feed  # type: DataFeed
         """DataFeed instance for low-level data fetching"""
 
         # Quotes dataframe for primary series

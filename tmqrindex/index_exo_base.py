@@ -1,5 +1,5 @@
 from tmqrindex.index_base import IndexBase, INSTRUMENT_NA
-from tmqr.errors import ArgumentError, ChainNotFoundError, QuoteNotFoundError
+from tmqr.errors import ArgumentError, ChainNotFoundError, QuoteNotFoundError, SettingsError
 from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from tmqr.logs import log
@@ -52,9 +52,9 @@ class IndexEXOBase(IndexBase):
 
                 # Getting SmartEXO logic data point for current date
                 logic_df = None
-                if exo_df:
+                if exo_df is not None and len(exo_df) > 0:
                     try:
-                        logic_df = exo_df[dt]
+                        logic_df = exo_df.loc[dt]
                     except KeyError:
                         pass
 
@@ -104,4 +104,7 @@ class IndexEXOBase(IndexBase):
 
     @property
     def index_name(self):
+        if self._index_name == 'EXOBase':
+            raise SettingsError("You must replace default '_index_name' in child class source code")
+
         return f"{self.instrument}_{self._index_name}"

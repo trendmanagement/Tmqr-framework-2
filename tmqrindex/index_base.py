@@ -52,7 +52,7 @@ class IndexBase:
         self.session = kwargs.get('session', None)
         """Index trading session settings"""
         if self.session is not None and not isinstance(self.session, AssetSession):
-            raise SettingsError(f"Saved index session should be AssetSession type, got {type(self.session)}")
+            raise ArgumentError(f"Saved index session should be AssetSession type, got {type(self.session)}")
 
         self._index_name = kwargs.get('index_name', self._index_name)
         self._description_long = kwargs.get('description_long', self._description_long)

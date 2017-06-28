@@ -8,6 +8,8 @@ from tmqrfeed.manager import DataManager
 from tmqrfeed.chains import *
 from tmqrfeed.position import Position
 from tmqrfeed.costs import Costs
+import pytz
+from tmqrfeed.assetsession import AssetSession
 
 
 class DataManagerTestCase(unittest.TestCase):
@@ -880,7 +882,12 @@ class DataManagerTestCase(unittest.TestCase):
                        tz='US/Pacific'
                        )
 
-    def test_session_set_errors(self):
+        tz = pytz.timezone("US/Pacific")
+        sess = AssetSession(session_list, tz)
+
+        self.assertEqual(dm.session_get(), sess)
+
+    def test_session_set_instance(self):
         dm = DataManager()
         session_list = [
             # Default session
@@ -892,10 +899,33 @@ class DataManagerTestCase(unittest.TestCase):
             },
         ]
 
+        tz = pytz.timezone("UTC")
+        sess = AssetSession(session_list, tz)
+        dm.session_set(session_instance=sess)
+        self.assertEqual(dm.session_get(), sess)
+
+    def test_session_set_errors(self):
+        dm = DataManager()
+        session_list = [
+            # Default session
+            {
+                'decision': '10:40',  # Decision time (uses 'tz' param time zone!)
+                'dt': datetime.datetime(1900, 12, 31),  # Actual date of default session start
+                'execution': '10:45',  # Execution time (uses 'tz' param time zone!)
+                'start': '03:32'  # Start of the session time (uses 'tz' param time zone!)
+            },
+        ]
+        tz = pytz.timezone("UTC")
+        sess = AssetSession(session_list, tz)
+
+
+
         self.assertRaises(SettingsError, dm.session_set, session_list=session_list, tz='US/Pacific', instrument='ES')
         self.assertRaises(SettingsError, dm.session_set, session_list=session_list, instrument='ES')
         self.assertRaises(SettingsError, dm.session_set, tz='US/Pacific', instrument='ES')
         self.assertRaises(SettingsError, dm.session_set, session_list=session_list, tz='US/Uansdjkashdikj')
+        self.assertRaises(SettingsError, dm.session_set, session_instance=sess, session_list=session_list)
+        self.assertRaises(SettingsError, dm.session_set, session_instance=sess, tz='UTC')
         self.assertRaises(SettingsError, dm.session_set)
 
         dm.session_set(session_list=session_list,

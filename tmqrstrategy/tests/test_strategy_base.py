@@ -513,7 +513,9 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         pos = MagicMock(Position(dm))
 
-        idx = pd.bdate_range('2017-01-01', '2017-06-23')
+        # 2017-06-28 Changed end date to cover wfo_action == WFO_ACTION_BREAK
+        # idx = pd.bdate_range('2017-01-01', '2017-06-23')
+        idx = pd.bdate_range('2017-01-01', '2017-06-27')
 
         df = pd.DataFrame({'close': np.zeros(len(idx))}, index=idx)
 
@@ -1086,3 +1088,106 @@ class StrategyBaseTestCase(unittest.TestCase):
         strategy._exposure_update(date_idx[1], None)
         self.assertEqual(strategy.exposure_series['exposure'][date_idx[1]], 0.0)
         self.assertEqual(strategy.exposure_series['exposure2'][date_idx[1]], 0.0)
+
+    def test_process_stats(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exposure1 = pd.DataFrame({
+            'exposure': [1, 2, 3, 4, 5, 6],
+            'exposure2': [11, 12, 13, 14, 15, 16],
+        }, index=date_idx)
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
+                                wfo_members_count=5, name='unittest_strat')
+
+        mock_position = MagicMock(Position)()
+        mock_position.get_pnl_series.return_value = pd.DataFrame(
+            {
+                'equity_execution': [21, 22, 23, 24, 25, 26],
+                'costs': [1, 1, 1, 1, 1, 1]},
+            index=date_idx
+        )
+
+        strategy.position = mock_position
+        strategy.exposure_series = exposure1
+
+        stats = strategy.process_stats()
+        self.assertEqual(dict, type(stats))
+        self.assertEqual(pd.DataFrame, type(stats['series']))
+        self.assertEqual(['equity', 'costs', 'exposure'], list(stats['series'].columns))
+        self.assertEqual(len(exposure1), len(stats['series']))
+        self.assertEqual(True, np.all(exposure1.index == stats['series'].index))
+
+        self.assertEqual(exposure1['exposure'].sum(), stats['series']['exposure'].sum())
+        self.assertEqual(sum([1, 1, 1, 1, 1, 1]), stats['series']['costs'].sum())
+        self.assertEqual(sum([21, 22, 23, 24, 25, 26]), stats['series']['equity'].sum())
+
+    def test_process_stats_no_exposure_column(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exposure1 = pd.DataFrame({
+            'exposure3': [1, 2, 3, 4, 5, 6],
+            'exposure2': [11, 12, 13, 14, 15, 16],
+        }, index=date_idx)
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
+                                wfo_members_count=5, name='unittest_strat')
+
+        mock_position = MagicMock(Position)()
+        mock_position.get_pnl_series.return_value = pd.DataFrame(
+            {
+                'equity_execution': [21, 22, 23, 24, 25, 26],
+                'costs': [1, 1, 1, 1, 1, 1]},
+            index=date_idx
+        )
+
+        strategy.position = mock_position
+        strategy.exposure_series = exposure1
+
+        stats = strategy.process_stats()
+        self.assertEqual(['equity', 'costs', 'exposure'], list(stats['series'].columns))
+        self.assertEqual(True, np.all(pd.isnull(stats['series']['exposure'])))
+
+    def test_process_stats_no_pnl_series(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exposure1 = pd.DataFrame({
+            'exposure3': [1, 2, 3, 4, 5, 6],
+            'exposure2': [11, 12, 13, 14, 15, 16],
+        }, index=date_idx)
+
+        strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), wfo_costs_per_contract=3.0,
+                                wfo_members_count=5, name='unittest_strat')
+
+        mock_position = MagicMock(Position)()
+        mock_position.get_pnl_series.return_value = pd.DataFrame()
+
+        strategy.position = mock_position
+        strategy.exposure_series = exposure1
+
+        stats = strategy.process_stats()
+        self.assertEqual(dict, type(stats))
+        self.assertEqual(pd.DataFrame, type(stats['series']))
+        self.assertEqual(['equity', 'costs', 'exposure'], list(stats['series'].columns))
+        self.assertEqual(0, len(stats['series']))

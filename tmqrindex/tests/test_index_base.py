@@ -12,9 +12,25 @@ from collections import OrderedDict
 import pickle
 import lz4
 import numpy as np
+from tmqrfeed.assetsession import AssetSession
+import pytz
 
 
 class IndexBaseTestCase(unittest.TestCase):
+    def setUp(self):
+        session_list = [
+            # Default session
+            {
+                'decision': '10:40',  # Decision time (uses 'tz' param time zone!)
+                'dt': datetime(1900, 12, 31),  # Actual date of default session start
+                'execution': '10:45',  # Execution time (uses 'tz' param time zone!)
+                'start': '03:32'  # Start of the session time (uses 'tz' param time zone!)
+            },
+        ]
+
+        tz = pytz.timezone("UTC")
+        self.sess = AssetSession(session_list, tz)
+
     def test_instrument_na(self):
         self.assertEqual(INSTRUMENT_NA, "N/A")
 
@@ -34,12 +50,18 @@ class IndexBaseTestCase(unittest.TestCase):
         kwdata = MagicMock()
         kwposition = MagicMock()
 
-        idx = IndexBase(dm, instrument=kwinstrument, context=kwcontext, data=kwdata, position=kwposition)
+        idx = IndexBase(dm, instrument=kwinstrument, context=kwcontext, data=kwdata, position=kwposition,
+                        session=self.sess)
 
         self.assertEqual(kwinstrument, idx.instrument)
         self.assertEqual(kwcontext, idx.context)
         self.assertEqual(kwdata, idx.data)
         self.assertEqual(kwposition, idx.position)
+        self.assertEqual(self.sess, idx.session)
+
+        self.assertRaises(ArgumentError, IndexBase, dm, instrument=kwinstrument, context=kwcontext, data=kwdata,
+                          position=kwposition,
+                          session='wrong')
 
     def test_init_defaults(self):
         dm = MagicMock()
@@ -146,7 +168,8 @@ class IndexBaseTestCase(unittest.TestCase):
         self.assertTrue('session' in serialized_idx)
 
     def test_deserialize(self):
-        dm = MagicMock()
+        dm = MagicMock(DataManager)()
+        dm.session_get.return_value = self.sess
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([
@@ -175,7 +198,8 @@ class IndexBaseTestCase(unittest.TestCase):
                          idx2.position.get_net_position(datetime(2011, 1, 1)))
 
     def test_deserialize_any_to_index_base(self):
-        dm = MagicMock()
+        dm = MagicMock(DataManager)()
+        dm.session_get.return_value = self.sess
 
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
@@ -201,7 +225,8 @@ class IndexBaseTestCase(unittest.TestCase):
         self.assertEqual(IndexContFut._description_long, idx2._description_long)
 
     def test_deserialize_readonly_index(self):
-        dm = MagicMock()
+        dm = MagicMock(DataManager)()
+        dm.session_get.return_value = self.sess
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([
@@ -237,7 +262,8 @@ class IndexBaseTestCase(unittest.TestCase):
             self.assertEqual(dm, asset.dm)
 
     def test_deserialize_readonly_index_fail_to_call_methods(self):
-        dm = MagicMock()
+        dm = MagicMock(DataManager)()
+        dm.session_get.return_value = self.sess
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([
@@ -267,6 +293,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
     def test_save_load_realdb(self):
         dm = DataManager()
+        dm.session_set(session_instance=self.sess)
 
         kwinstrument = 'TEST'
         kwcontext = {'TEST': True}
@@ -296,6 +323,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
     def test_save_load_realdb_no_instrument_index(self):
         dm = DataManager()
+        dm.session_set(session_instance=self.sess)
 
         kwcontext = {'TEST': True}
         kwdata = pd.DataFrame([

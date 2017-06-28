@@ -237,4 +237,47 @@ class AssetSessionTestCase(unittest.TestCase):
         start, decision, execution, next = sess._get_sess_params(datetime(2012, 12, 31, 12, 45))
         self.assertEqual(next, None)
 
+    def test_session_equality(self):
+        tz = pytz.timezone(self.info_dic['timezone'])
+        tz2 = pytz.UTC
+        s_correct = [{
+            'decision': '10:40',
+            'dt': datetime(1900, 1, 1),
+            'execution': '10:45',
+            'start': '00:32'},
+        ]
 
+        sess = AssetSession(s_correct, tz)
+        sess2 = AssetSession(s_correct, tz)
+        sess3 = AssetSession(s_correct, tz2)
+
+        self.assertEqual(sess, sess2)
+        self.assertNotEqual(sess, sess3)
+        self.assertNotEqual(sess, None)
+        self.assertNotEqual(sess, 'something')
+
+    def test_session_serialize(self):
+        tz2 = pytz.UTC
+        s_correct = [{
+            'decision': '10:40',
+            'dt': datetime(1900, 1, 1),
+            'execution': '10:45',
+            'start': '00:32'},
+        ]
+        sess = AssetSession(s_correct, tz2).serialize()
+
+        self.assertEqual(dict, type(sess))
+        self.assertEqual(s_correct, sess['trading_session'])
+        self.assertEqual('UTC', sess['tz'])
+
+    def test_session_str_repr(self):
+        tz2 = pytz.UTC
+        s_correct = [{
+            'decision': '10:40',
+            'dt': datetime(1900, 1, 1),
+            'execution': '10:45',
+            'start': '00:32'},
+        ]
+        sess = AssetSession(s_correct, tz2)
+        self.assertEqual(str(s_correct), str(sess))
+        self.assertEqual(str(s_correct), repr(sess))
