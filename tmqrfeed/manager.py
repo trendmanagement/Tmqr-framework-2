@@ -216,7 +216,7 @@ class DataManager:
             # To set pre-saved index series as primary quotes and series
             self.dm.series_primary_set(QuoteIndex, "US.ES_ContFut", set_session=True, check_session=True)
 
-            # NOTE: refer to tmqrfeed.quotes package documentation for QuoteContFut/QuoteIndex params description
+            # NOTE: refer to tmqrfeed.quotes package documentation2 for QuoteContFut/QuoteIndex params description
         """
         if self._primary_quotes is not None:
             raise DataManagerError("series_primary_set() already called, only one instance of primary quotes allowed")
