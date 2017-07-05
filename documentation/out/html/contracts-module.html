@@ -1,0 +1,912 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Contracts module &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="contracts-module">
+                    <span id="id1"></span>
+                    <h1>Contracts module<a class="headerlink" href="#contracts-module"
+                                           title="Permalink to this headline">¶</a></h1>
+                    <p>This page automatically generated from source code.</p>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="id2">
+                        <h2><code class="docutils literal"><span class="pre">Contracts</span></code> module<a
+                                class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+                        <span class="target" id="module-tmqrfeed.contracts"></span>
+                        <dl class="class">
+                            <dt id="tmqrfeed.contracts.ContractBase">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.contracts.</code><code
+                                    class="descname">ContractBase</code><span class="sig-paren">(</span><em>tckr</em>,
+                                <em>datamanager=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a
+                                    class="reference internal"
+                                    href="_modules/tmqrfeed/contracts.html#ContractBase"><span class="viewcode-link">[source]</span></a><a
+                                    class="headerlink" href="#tmqrfeed.contracts.ContractBase"
+                                    title="Permalink to this definition">¶</a></dt>
+                            <dd><p>Base class for generic asset</p>
+                                <p>Init generic contract from special <cite>tckr</cite> code</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body">
+                                            <ul class="first last simple">
+                                                <li><strong>tckr</strong> &#8211; Ticker code</li>
+                                                <li><strong>datamanager</strong> &#8211; DataManager instance</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="staticmethod">
+                                    <dt id="tmqrfeed.contracts.ContractBase.calc_to_expiration_days">
+                                        <em class="property">static </em><code
+                                            class="descname">calc_to_expiration_days</code><span
+                                            class="sig-paren">(</span><em>expiration_date</em>,
+                                        <em>current_date</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#ContractBase.calc_to_expiration_days"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.ContractBase.calc_to_expiration_days"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculates calendar days to expiration</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>expiration_date</strong> &#8211;</li>
+                                                        <li><strong>current_date</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last"></p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.contract_info">
+                                        <code class="descname">contract_info</code><a class="headerlink"
+                                                                                      href="#tmqrfeed.contracts.ContractBase.contract_info"
+                                                                                      title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Return ContractInfo class values</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">ContractInfo class instance</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.ContractBase.delta">
+                                        <code class="descname">delta</code><span class="sig-paren">(</span><em>date</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/contracts.html#ContractBase.delta"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.ContractBase.delta"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get contract delta</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">decision time greeks</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.ContractBase.dollar_pnl">
+                                        <code class="descname">dollar_pnl</code><span class="sig-paren">(</span><em>prev_price</em>,
+                                        <em>current_price</em>, <em>qty</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#ContractBase.dollar_pnl"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.ContractBase.dollar_pnl"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate dollar PnL for asset</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>prev_price</strong> &#8211; previous price</li>
+                                                        <li><strong>current_price</strong> &#8211; current price</li>
+                                                        <li><strong>qty</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">PnL in dollars</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.instrument">
+                                        <code class="descname">instrument</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.contracts.ContractBase.instrument"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Contract&#8217;s instrument in &lt;Market&gt;.&lt;Name&gt;</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.instrument_info">
+                                        <code class="descname">instrument_info</code><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.ContractBase.instrument_info"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Return underlying instrument info</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.market">
+                                        <code class="descname">market</code><a class="headerlink"
+                                                                               href="#tmqrfeed.contracts.ContractBase.market"
+                                                                               title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Contract&#8217;s market</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.name">
+                                        <code class="descname">name</code><a class="headerlink"
+                                                                             href="#tmqrfeed.contracts.ContractBase.name"
+                                                                             title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Contract&#8217;s name without market info</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.ContractBase.point_value">
+                                        <code class="descname">point_value</code><a class="headerlink"
+                                                                                    href="#tmqrfeed.contracts.ContractBase.point_value"
+                                                                                    title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>1-point USD value</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.ContractBase.price">
+                                        <code class="descname">price</code><span class="sig-paren">(</span><em>date</em>,
+                                        <em>ulprice=None</em>, <em>iv_change=0.0</em>, <em>days_to_expiration=None</em>,
+                                        <em>riskfreerate=None</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#ContractBase.price"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.ContractBase.price"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate generic assets&#8217;s price (also could be used for WhatIF
+                                        analysis)</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211;</li>
+                                                        <li><strong>ulprice</strong> &#8211;</li>
+                                                        <li><strong>iv_change</strong> &#8211;</li>
+                                                        <li><strong>days_to_expiration</strong> &#8211;</li>
+                                                        <li><strong>riskfreerate</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">tuple (decision_price,
+                                                    execution_price)</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                        <dl class="class">
+                            <dt id="tmqrfeed.contracts.FutureContract">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.contracts.</code><code class="descname">FutureContract</code><span
+                                    class="sig-paren">(</span><em>tckr</em>, <em>datamanager=None</em>,
+                                <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal"
+                                                                                    href="_modules/tmqrfeed/contracts.html#FutureContract"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.contracts.FutureContract"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Future contract asset class</p>
+                                <p>Init future contract from special <cite>tckr</cite> code</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body">
+                                            <ul class="first last simple">
+                                                <li><strong>tckr</strong> &#8211; Ticker code</li>
+                                                <li><strong>datamanager</strong> &#8211; DataManager instance</li>
+                                                <li><strong>kwargs</strong> &#8211;</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.FutureContract.instrument">
+                                        <code class="descname">instrument</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.contracts.FutureContract.instrument"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Future contract instrument information: US.F.CL.M83.830520 -&gt; US.CL</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.FutureContract.name">
+                                        <code class="descname">name</code><a class="headerlink"
+                                                                             href="#tmqrfeed.contracts.FutureContract.name"
+                                                                             title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Future contract name without market information, US.F.CL.M83.830520 -&gt;
+                                        CLM83</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.FutureContract.underlying">
+                                        <code class="descname">underlying</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.contracts.FutureContract.underlying"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Future contract underlying (equals to contract.instrument):
+                                        US.F.CL.M83.830520 -&gt; US.CL</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                        <dl class="class">
+                            <dt id="tmqrfeed.contracts.OptionContract">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.contracts.</code><code class="descname">OptionContract</code><span
+                                    class="sig-paren">(</span><em>tckr</em>, <em>datamanager=None</em>,
+                                <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal"
+                                                                                    href="_modules/tmqrfeed/contracts.html#OptionContract"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.contracts.OptionContract"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Option contract asset class</p>
+                                <p>Init option contract from special <cite>tckr</cite> code</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body">
+                                            <ul class="first last simple">
+                                                <li><strong>tckr</strong> &#8211; Ticker code</li>
+                                                <li><strong>datamanager</strong> &#8211; DataManager instance</li>
+                                                <li><strong>kwargs</strong> &#8211; contract init kwargs
+                                                    * &#8216;underlying&#8217; - underlying contract instance (by
+                                                    default: get from tckr name)
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.OptionContract.data_source">
+                                        <code class="descname">data_source</code><a class="headerlink"
+                                                                                    href="#tmqrfeed.contracts.OptionContract.data_source"
+                                                                                    title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>DataSource name of OptionContract</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.delta">
+                                        <code class="descname">delta</code><span class="sig-paren">(</span><em>date</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/contracts.html#OptionContract.delta"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.delta"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get option delta greek at the decision time</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">decision time greeks</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.get_pricing_context">
+                                        <code class="descname">get_pricing_context</code><span
+                                            class="sig-paren">(</span><em>date</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#OptionContract.get_pricing_context"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.get_pricing_context"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Fetch pricing context for option contract from cache, otherwise from
+                                        DataManager</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.greeks">
+                                        <code class="descname">greeks</code><span
+                                            class="sig-paren">(</span><em>date</em>, <em>ulprice=None</em>, <em>iv_change=0.0</em>,
+                                        <em>days_to_expiration=None</em>, <em>riskfreerate=None</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/contracts.html#OptionContract.greeks"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.greeks"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate option&#8217;s greeks at the decision time (only delta supported so
+                                        far)</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211;</li>
+                                                        <li><strong>ulprice</strong> &#8211;</li>
+                                                        <li><strong>iv_change</strong> &#8211;</li>
+                                                        <li><strong>days_to_expiration</strong> &#8211;</li>
+                                                        <li><strong>riskfreerate</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">tuple (decision_price,
+                                                    execution_price)</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.OptionContract.instrument">
+                                        <code class="descname">instrument</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.contracts.OptionContract.instrument"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Option contract instrument information: <a class="reference external"
+                                                                                      href="mailto:US&#46;C&#46;F-ZB-H11-110322&#46;110121&#37;&#52;&#48;89&#46;0">US<span>&#46;</span>C<span>&#46;</span>F-ZB-H11-110322<span>&#46;</span>110121<span>&#64;</span>89<span>&#46;</span>0</a>
+                                        -&gt; US.ZB</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.iv">
+                                        <code class="descname">iv</code><span
+                                            class="sig-paren">(</span><em>date</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#OptionContract.iv"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.iv"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get option IV for date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211; required date</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">decision time IV</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.OptionContract.name">
+                                        <code class="descname">name</code><a class="headerlink"
+                                                                             href="#tmqrfeed.contracts.OptionContract.name"
+                                                                             title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Option contract name without market information, <a
+                                            class="reference external"
+                                            href="mailto:US&#46;C&#46;F-ZB-H11-110322&#46;110121&#37;&#52;&#48;89&#46;0">US<span>&#46;</span>C<span>&#46;</span>F-ZB-H11-110322<span>&#46;</span>110121<span>&#64;</span>89<span>&#46;</span>0</a>
+                                        -&gt; <a class="reference external"
+                                                 href="mailto:ZBH11&#46;110121&#37;&#52;&#48;89&#46;0">ZBH11<span>&#46;</span>110121<span>&#64;</span>89<span>&#46;</span>0</a>
+                                    </p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.OptionContract.point_value">
+                                        <code class="descname">point_value</code><a class="headerlink"
+                                                                                    href="#tmqrfeed.contracts.OptionContract.point_value"
+                                                                                    title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Point value of option contract
+                                        :return:</p>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.price">
+                                        <code class="descname">price</code><span class="sig-paren">(</span><em>date</em>,
+                                        <em>ulprice=None</em>, <em>iv_change=0.0</em>, <em>days_to_expiration=None</em>,
+                                        <em>riskfreerate=None</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#OptionContract.price"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.price"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate option&#8217;s price (also could be used for WhatIF analysis)</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211;</li>
+                                                        <li><strong>ulprice</strong> &#8211;</li>
+                                                        <li><strong>iv_change</strong> &#8211;</li>
+                                                        <li><strong>days_to_expiration</strong> &#8211;</li>
+                                                        <li><strong>riskfreerate</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">tuple (decision_price,
+                                                    execution_price)</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.set_pricing_context">
+                                        <code class="descname">set_pricing_context</code><span
+                                            class="sig-paren">(</span><em>date</em>, <em>ul_decision_px</em>, <em>ul_exec_px</em>,
+                                        <em>option_decision_iv</em>, <em>option_exec_iv</em>,
+                                        <em>risk_free_rate=0.0</em><span class="sig-paren">)</span><a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/contracts.html#OptionContract.set_pricing_context"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.set_pricing_context"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Set recent date pricing context for option contract</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211;</li>
+                                                        <li><strong>ul_decision_px</strong> &#8211;</li>
+                                                        <li><strong>ul_exec_px</strong> &#8211;</li>
+                                                        <li><strong>option_decision_iv</strong> &#8211;</li>
+                                                        <li><strong>option_exec_iv</strong> &#8211;</li>
+                                                        <li><strong>risk_free_rate</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last"></p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.to_expiration_days">
+                                        <code class="descname">to_expiration_days</code><span class="sig-paren">(</span><em>date</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/contracts.html#OptionContract.to_expiration_days"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.to_expiration_days"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calendar days to option expiration</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.contracts.OptionContract.to_expiration_years_from_days">
+                                        <code class="descname">to_expiration_years_from_days</code><span
+                                            class="sig-paren">(</span><em>days_to_expiration</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/contracts.html#OptionContract.to_expiration_years_from_days"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.contracts.OptionContract.to_expiration_years_from_days"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate years to expriration from days</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>days_to_expiration</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.contracts.OptionContract.underlying">
+                                        <code class="descname">underlying</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.contracts.OptionContract.underlying"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Option contract&#8217;s underlying FutureContract class instance or
+                                        ContractBase class instance.</p>
+                                        <p>Example: <a class="reference external"
+                                                       href="mailto:US&#46;C&#46;F-ZB-H11-110322&#46;110121&#37;&#52;&#48;89&#46;0">US<span>&#46;</span>C<span>&#46;</span>F-ZB-H11-110322<span>&#46;</span>110121<span>&#64;</span>89<span>&#46;</span>0</a>
+                                            -&gt; US.F.ZB.H11.110322 future instance
+                                            <a class="reference external"
+                                               href="mailto:US&#46;C&#46;S-AAPL&#46;110121&#37;&#52;&#48;89&#46;0">US<span>&#46;</span>C<span>&#46;</span>S-AAPL<span>&#46;</span>110121<span>&#64;</span>89<span>&#46;</span>0</a>
+                                            -&gt; US.S.AAPL for stock options</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">FutureContract class instance or ContractBase
+                                                    class instance
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Contracts module</a>
+                    <ul>
+                        <li><a class="reference internal" href="#id2"><code class="docutils literal"><span class="pre">Contracts</span></code>
+                            module</a></li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/contracts-module.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/contracts-module.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

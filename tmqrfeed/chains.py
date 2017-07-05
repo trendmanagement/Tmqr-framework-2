@@ -19,6 +19,7 @@ class FutureChain:
     def __init__(self, fut_tckr_list, datamanager, rollover_days_before, futures_months, **kwargs):
         """
         Initiate Futures chain
+
         :param fut_tckr_list: list of futures contracts full-qualified tickers        
         :param datamanager: DataManager instance
         :param rollover_days_before: rollover in days before future contract expiration
@@ -50,6 +51,7 @@ class FutureChain:
         Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Creates historical chains
+
         :param raw_futures:
         :return:
         """
@@ -77,9 +79,9 @@ class FutureChain:
 
         return chain
 
-    def bisect_right(self,
-                     fut_chain: List[Tuple[FutureContract, datetime.datetime, datetime.datetime]],
-                     end_date: datetime.datetime) -> int:
+    def _bisect_right(self,
+                      fut_chain: List[Tuple[FutureContract, datetime.datetime, datetime.datetime]],
+                      end_date: datetime.datetime) -> int:
         """Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.
 
         The return value i is such that all e in fut_chain[:i] have e <= end_date, and all e in
@@ -106,12 +108,13 @@ class FutureChain:
                  limit: int = 0) -> List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Returns list of actual futures contracts for particular date
+
         :param date: actual date
         :param offset: chain offset, 0 - front chain, +1 - front+1, etc.
         :param limit: Number contracts to return (0 - all)
         :return: List[Tuple[FutureContract, start_datetime, end_datetime]]
         """
-        idx_start = self.bisect_right(self._futchain, date.date())
+        idx_start = self._bisect_right(self._futchain, date.date())
 
 
         if offset < 0:
@@ -133,6 +136,7 @@ class FutureChain:
     def get_contract(self, date: datetime.datetime, offset: int = 0) -> FutureContract:
         """
         Returns future contract for particular date
+
         :param date: actual date
         :param offset: chain offset, 0 - front chain, +1 - front+1, etc.
         :return: FutureContract class instance
@@ -143,6 +147,7 @@ class FutureChain:
     def get_all(self) -> List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]:
         """
         Get futures contracts list sorted by expiration date
+
         :return: List[Tuple[FutureContract, datetime, datetime]]
         """
         return self._futchain
@@ -195,17 +200,18 @@ class OptionChain:
              **kwargs) -> OptionContract:
         """
         Find option contract in chain using 'how' criteria
+
         :param dt: analysis date
-        :param item: search value
+        :param item: search value ( depending on 'how' parameter value required ATM offset, absolute strike price or delta )
         :param opttype: option type 'C' or 'P'
         :param how: search method
-                    - 'offset' - by strike offset from ATM
-                    - 'strike' - by strike absolute value
-                    - 'delta'  - by delta
-                        Search option contract by delta value:
-                        If delta ==  0.5 - returns ATM call/put
-                        If delta > 0.5 - returns ITM call/put near target delta
-                        If delta < 0.5 - returns OTM call/put near target delta
+
+            * 'offset' - by strike offset from ATM
+            * 'delta'  - by delta
+                Search option contract by delta value:
+                    - If delta ==  0.5 - returns ATM call/put
+                    - If delta > 0.5 - returns ITM call/put near target delta
+                    - If delta < 0.5 - returns OTM call/put near target delta
         :param kwargs:
             * how == 'offset' kwargs:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
@@ -213,6 +219,45 @@ class OptionChain:
                 - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)
                 - strike_limit - how many strikes to analyse from ATM (default: 30)
         :return: OptionContract
+
+        Examples::
+
+            # Getting actual options chain (to get more info refer to DataManager.chains_options_get() help)
+            fut, opt_chain = self.dm.chains_options_get('US.ES', dt)
+
+
+            dt = datetime(2017, 3, 2)
+            #
+            # Getting option contracts from chain by ATM offset
+
+            # ATM Put (all of these lines are equivalent)
+            atm_put = opt_chain.find(dt, item=0, opttype='P', how='offset' )
+            atm_put = opt_chain.find(dt, item=0, opttype='P')
+            atm_put = opt_chain.find(dt, 0, 'P')
+
+            # ATM + 1 Strike above call
+            atm_call_up1 = opt_chain.find(dt, 1, 'C')
+            # ATM - 1 Strike above call
+            atm_call_dn1 = opt_chain.find(dt, -1, 'C')
+
+            #
+            # Getting options by delta
+            #
+            # - If delta ==  0.5 - returns ATM call/put
+            # - If delta > 0.5 - returns ITM call/put near target delta
+            # - If delta < 0.5 - returns OTM call/put near target delta
+            #
+
+            # ATM Put option
+            atm_put = opt_chain.find(dt, item=0.5, opttype='P', how='delta')
+
+            # 0.25 Delta OTM option
+            otm_put = opt_chain.find(dt, item=0.25, opttype='P', how='delta')
+
+            # 0.75 Delta ITM option
+            itm_put = opt_chain.find(dt, item=0.75, opttype='P', how='delta')
+
+
         """
         if not isinstance(dt, datetime.datetime):
             raise ArgumentError("'dt' argument must be datetime")
@@ -234,7 +279,7 @@ class OptionChain:
             strike_limit = kwargs.get('strike_limit', 30)
             return self._find_by_delta(dt, item, opttype.upper(), err_limit, strike_limit)
         else:
-            raise ArgumentError("Wrong 'how' argument, only 'offset'|'strike'|'delta' values supported.")
+            raise ArgumentError("Wrong 'how' argument, only 'offset'|'delta' values supported.")
 
     def _get_atm_index(self, ulprice: float) -> int:
         """
@@ -416,6 +461,12 @@ class OptionChainList:
     """
 
     def __init__(self, chain_list, underlying: ContractBase, datamanager):
+        """
+        Init OptionChainList class
+        :param chain_list: chain list dictionary
+        :param underlying: underlying contract
+        :param datamanager: DataManager instance
+        """
         if chain_list is None or len(chain_list) == 0:
             raise ArgumentError("Empty 'chain_list' argument")
 
@@ -441,7 +492,8 @@ class OptionChainList:
     def expirations(self) -> List[datetime.datetime]:
         """
         List of available expirations for options chains
-        :return: 
+
+        :return: List[datetime.datetime]
         """
         return self._expirations
 
@@ -450,14 +502,22 @@ class OptionChainList:
             yield v
 
     def items(self):
+        """
+        Key-value iterator where Key is expiration date of chain and Value is OptionChain class instance
+
+        :return: yields expiration, OptionsChain
+        """
         for k, v in self.chain_list.items():
             yield k, v
 
     def find(self, date: datetime.datetime, by, **kwargs) -> OptionChain:
         """
         Find option chain by datetime, date, or offset
+
         If no **kwargs are set, performs exact match by datetime, date, or offset
+
         Otherwise if **kwargs are set, performs SMART search where 'by' must be current datetime
+
         :param date: current date
         :param by: lookup criteria
         :param kwargs:

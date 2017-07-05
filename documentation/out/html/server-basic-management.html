@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Basic server management &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="basic-server-management">
+                    <span id="id1"></span>
+                    <h1>Basic server management<a class="headerlink" href="#basic-server-management"
+                                                  title="Permalink to this headline">¶</a></h1>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <p>This section describes common task for remote server management and diagnostics.</p>
+                    <div class="section" id="logging-in">
+                        <h2>Logging in<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a>
+                        </h2>
+                        <p>The server is managed over SSH session, to establish SSH session do next steps:</p>
+                        <ol class="arabic simple">
+                            <li>Connect to the server via OpenVPN</li>
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>Open or install SSH client</dt>
+                                    <dd>
+                                        <ul class="first last">
+                                            <li><strong>Linux / MacOS</strong> - just open terminal window</li>
+                                            <li><strong>Windows</strong> - <a class="reference external"
+                                                                              href="https://tartarus.org/~simon/putty-snapshots/x86/putty-installer.msi">Install
+                                                PuTTY</a></li>
+                                        </ul>
+                                    </dd>
+                                </dl>
+                            </li>
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>Login to server <code class="docutils literal"><span class="pre">10.0.1.2</span></code>
+                                        using username: <strong>tmqrquant</strong> and password
+                                    </dt>
+                                    <dd>
+                                        <ul class="first last">
+                                            <li><strong>Linux / MacOS</strong> - type <code
+                                                    class="docutils literal"><span class="pre">ssh</span> <span
+                                                    class="pre">tmqrquant&#64;10.0.1.2</span></code></li>
+                                            <li><strong>Windows</strong> - enter username and password when prompted
+                                            </li>
+                                        </ul>
+                                    </dd>
+                                </dl>
+                            </li>
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>Elevate permissions to <strong>root</strong> user (i.e. super admin)</dt>
+                                    <dd>Type <code class="docutils literal"><span class="pre">sudo</span> <span
+                                            class="pre">su</span></code> and re-enter password for user <strong>tmqrquant</strong>,
+                                        after that you should see commant prompt like that: <code
+                                                class="docutils literal"><span class="pre">root&#64;tmqr-quant:/home/tmqrquant#</span></code>
+                                    </dd>
+                                </dl>
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="section" id="common-server-paths-and-commands">
+                        <h2>Common server paths and commands<a class="headerlink"
+                                                               href="#common-server-paths-and-commands"
+                                                               title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="common-commands">
+                            <h3>Common commands<a class="headerlink" href="#common-commands"
+                                                  title="Permalink to this headline">¶</a></h3>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">ls</span></code> - show directory
+                                    files
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">cd</span></code> - change directory
+                                    (i.e. <code class="docutils literal"><span class="pre">cd</span> <span class="pre">/var/data/</span></code>,
+                                    changes current working directory to <code class="docutils literal"><span
+                                            class="pre">/var/data/</span></code></li>
+                                <li><code class="docutils literal"><span class="pre">mc</span></code> - user friendly
+                                    file manager like old Norton Commander
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="section" id="server-diagnostics-commands">
+                            <h3>Server diagnostics commands<a class="headerlink" href="#server-diagnostics-commands"
+                                                              title="Permalink to this headline">¶</a></h3>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">htop</span></code> - text GUI
+                                    server resource monitoring and process management (for memory and CPU load analysis)
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">supervisorctl</span> <span
+                                        class="pre">status</span></code> - shows the status of execution for trading
+                                    scripts, Jupyter server and web server
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="section" id="useful-server-paths">
+                            <h3>Useful server paths<a class="headerlink" href="#useful-server-paths"
+                                                      title="Permalink to this headline">¶</a></h3>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">/var/data/notebooks</span></code> -
+                                    Jupyter notebooks GIT directory
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/var/data/tmqrengine</span></code>
+                                    - framework GIT directory (including main code, trading scripts, settings, etc.)
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/var/data/mongodb</span></code> -
+                                    MongoDB storage files
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/etc/</span></code> - settings
+                                    directory for entire system
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="section" id="logs-path">
+                            <h3>Logs path<a class="headerlink" href="#logs-path"
+                                            title="Permalink to this headline">¶</a></h3>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">/var/log/syslog</span></code> -
+                                    generic system log file
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/var/log/supervisor</span></code> -
+                                    generic Supervisor service logs
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/var/log/rabbitmq</span></code> -
+                                    RabbitMQ logs
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">/var/log/mongodb</span></code> -
+                                    MongoDB logs
+                                </li>
+                                <li><code class="docutils literal"><span
+                                        class="pre">/var/data/tmqrengine/scripts/logs</span></code> - TMQR Framework
+                                    logs, also available via <code class="docutils literal"><span class="pre">http://10.0.1.2:8080/</span></code>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="section" id="basic-service-management-commands">
+                            <h3>Basic service management commands<a class="headerlink"
+                                                                    href="#basic-service-management-commands"
+                                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>Following commands should be executed by <code class="docutils literal"><span
+                                    class="pre">root</span></code> or via <code class="docutils literal"><span
+                                    class="pre">sudo</span> <span class="pre">&lt;command&gt;</span></code></p>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">service</span> <span class="pre">rabbitmq-server</span>
+                                    <span class="pre">start|stop|restart</span></code> - Start/stop of RabbitMQ service
+                                    (used for inter-script communication)
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">service</span> <span class="pre">mongod</span>
+                                    <span class="pre">start|stop|restart</span></code> - Start/stop of MongoDB service
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">service</span> <span class="pre">supervisor</span>
+                                    <span class="pre">start|stop|restart</span></code> - Start/stop of Supervisor
+                                    service which is managing all trading scripts
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">reboot</span></code> - restarts the
+                                    server
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Basic server management</a>
+                    <ul>
+                        <li><a class="reference internal" href="#logging-in">Logging in</a></li>
+                        <li><a class="reference internal" href="#common-server-paths-and-commands">Common server paths
+                            and commands</a>
+                            <ul>
+                                <li><a class="reference internal" href="#common-commands">Common commands</a></li>
+                                <li><a class="reference internal" href="#server-diagnostics-commands">Server diagnostics
+                                    commands</a></li>
+                                <li><a class="reference internal" href="#useful-server-paths">Useful server paths</a>
+                                </li>
+                                <li><a class="reference internal" href="#logs-path">Logs path</a></li>
+                                <li><a class="reference internal" href="#basic-service-management-commands">Basic
+                                    service management commands</a></li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/server-basic-management.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/server-basic-management.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

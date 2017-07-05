@@ -1,0 +1,25 @@
+.. _contracts-module:
+
+Contracts module
+****************
+
+This page automatically generated from source code.
+
+:ref:`index-page`
+
+.. toctree::
+    :maxdepth: 3
+
+
+``Contracts`` module
+====================
+
+.. automodule:: tmqrfeed.contracts
+
+
+
+
+Indices and tables
+==================
+
+* :ref:`index-page`

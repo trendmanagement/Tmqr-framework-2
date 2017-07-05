@@ -1,0 +1,1140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tmqrfeed.chains &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: '../../',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tmqrfeed.chains</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span
+                        class="n">OrderedDict</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">pandas.tseries.offsets</span> <span class="k">import</span> <span
+                        class="n">BDay</span>
+
+<span class="kn">from</span> <span class="nn">tmqr.errors</span> <span class="k">import</span> <span class="n">ArgumentError</span><span
+                        class="p">,</span> <span class="n">NotFoundError</span><span class="p">,</span> <span class="n">ChainNotFoundError</span><span
+                        class="p">,</span> <span class="n">QuoteNotFoundError</span>
+<span class="kn">from</span> <span class="nn">tmqr.settings</span> <span class="k">import</span> <span
+                        class="o">*</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.contracts</span> <span class="k">import</span> <span class="n">FutureContract</span><span
+                        class="p">,</span> <span class="n">ContractBase</span><span class="p">,</span> <span class="n">OptionContract</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<div class="viewcode-block" id="FutureChain"><a class="viewcode-back"
+                                                href="../../chains-module.html#tmqrfeed.chains.FutureChain">[docs]</a><span
+        class="k">class</span> <span class="nc">FutureChain</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Futures chain class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">fut_tckr_list</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="p">,</span> <span class="n">rollover_days_before</span><span
+            class="p">,</span> <span class="n">futures_months</span><span class="p">,</span> <span
+            class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initiate Futures chain</span>
+
+<span class="sd">        :param fut_tckr_list: list of futures contracts full-qualified tickers        </span>
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        :param rollover_days_before: rollover in days before future contract expiration</span>
+<span class="sd">        :param futures_months: list of tradable futures months</span>
+<span class="sd">        :param kwargs: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">fut_tckr_list</span> <span class="ow">is</span> <span
+            class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">fut_tckr_list</span><span class="p">)</span> <span class="o">==</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Failed to initiate futures chain empty tickers list&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rollover_days_before</span> <span class="o">=</span> <span
+            class="n">rollover_days_before</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rollover_days_before</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;rollover_days_before&#39; kwarg is not set&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">futures_months</span> <span
+            class="o">=</span> <span class="n">futures_months</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">futures_months</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;futures_months&#39; kwarg is not set&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">datamanager</span> <span class="o">=</span> <span
+            class="n">datamanager</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datamanager</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;datamanager&#39; is None&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_futchain</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_generatechain_list</span><span class="p">(</span>
+            <span class="n">fut_tckr_list</span><span class="p">)</span>  <span class="c1"># type: List[Tuple[FutureContract, datetime.datetime, datetime.datetime]]</span>
+
+    <span class="k">def</span> <span class="nf">_generatechain_list</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span>
+                            <span class="n">raw_futures</span><span class="p">:</span> <span class="n">List</span><span
+            class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span
+            class="n">List</span><span class="p">[</span>
+        <span class="n">Tuple</span><span class="p">[</span><span class="n">FutureContract</span><span
+            class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span
+            class="n">datetime</span><span class="p">,</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates historical chains</span>
+
+<span class="sd">        :param raw_futures:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prev_fut</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">chain</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">tckr</span> <span
+            class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span
+            class="n">raw_futures</span><span class="p">):</span>
+            <span class="n">fut</span> <span class="o">=</span> <span class="n">FutureContract</span><span
+            class="p">(</span><span class="n">tckr</span><span class="p">,</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">datamanager</span><span class="p">)</span>
+
+            <span class="c1">#</span>
+            <span class="c1"># Check expiration months filter</span>
+            <span class="c1">#</span>
+            <span class="k">if</span> <span class="n">fut</span><span class="o">.</span><span
+            class="n">expiration_month</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">futures_months</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">prev_fut</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+                <span class="n">prev_fut</span> <span class="o">=</span> <span class="n">fut</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">series_date_start</span> <span class="o">=</span> <span class="n">prev_fut</span><span
+            class="o">.</span><span class="n">expiration</span> <span class="o">-</span> <span
+            class="n">BDay</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">rollover_days_before</span><span class="p">)</span>
+                <span class="n">series_date_end</span> <span class="o">=</span> <span class="n">fut</span><span
+            class="o">.</span><span class="n">expiration</span> <span class="o">-</span> <span
+            class="n">BDay</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">rollover_days_before</span><span class="p">)</span>
+                <span class="n">chain</span><span class="o">.</span><span class="n">append</span><span
+            class="p">((</span><span class="n">fut</span><span class="p">,</span> <span
+            class="n">series_date_start</span><span class="o">.</span><span class="n">date</span><span
+            class="p">(),</span> <span class="n">series_date_end</span><span class="o">.</span><span
+            class="n">date</span><span class="p">()))</span>
+                <span class="n">prev_fut</span> <span class="o">=</span> <span class="n">fut</span>
+
+        <span class="k">return</span> <span class="n">chain</span>
+
+    <span class="k">def</span> <span class="nf">_bisect_right</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span>
+                      <span class="n">fut_chain</span><span class="p">:</span> <span class="n">List</span><span
+            class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span
+            class="n">FutureContract</span><span class="p">,</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span
+            class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">]],</span>
+                      <span class="n">end_date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the index where to insert item end_date in list fut_chain, assuming fut_chain is sorted.</span>
+
+<span class="sd">        The return value i is such that all e in fut_chain[:i] have e &lt;= end_date, and all e in</span>
+<span class="sd">        fut_chain[i:] have e &gt; end_date.  So if end_date already appears in the list, fut_chain.insert(end_date) will</span>
+<span class="sd">        insert just after the rightmost end_date already there.</span>
+
+<span class="sd">        Optional args lo (default 0) and hi (default len(fut_chain)) bound the</span>
+<span class="sd">        slice of fut_chain to be searched.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lo</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">hi</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">fut_chain</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="n">lo</span> <span class="o">&lt;</span> <span
+            class="n">hi</span><span class="p">:</span>
+            <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">lo</span> <span
+            class="o">+</span> <span class="n">hi</span><span class="p">)</span> <span class="o">//</span> <span
+            class="mi">2</span>
+            <span class="k">if</span> <span class="n">end_date</span> <span class="o">&lt;</span> <span class="n">fut_chain</span><span
+            class="p">[</span><span class="n">mid</span><span class="p">][</span><span class="mi">2</span><span
+            class="p">]:</span>  <span class="c1"># Slightly changed algo to fetch end date</span>
+                <span class="n">hi</span> <span class="o">=</span> <span class="n">mid</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">lo</span> <span class="o">=</span> <span class="n">mid</span> <span
+            class="o">+</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">lo</span>
+
+<div class="viewcode-block" id="FutureChain.get_list"><a class="viewcode-back"
+                                                         href="../../chains-module.html#tmqrfeed.chains.FutureChain.get_list">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_list</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span>
+                 <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">,</span>
+                 <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span
+            class="n">FutureContract</span><span class="p">,</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span
+            class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns list of actual futures contracts for particular date</span>
+
+<span class="sd">        :param date: actual date</span>
+<span class="sd">        :param offset: chain offset, 0 - front chain, +1 - front+1, etc.</span>
+<span class="sd">        :param limit: Number contracts to return (0 - all)</span>
+<span class="sd">        :return: List[Tuple[FutureContract, start_datetime, end_datetime]]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">idx_start</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_bisect_right</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_futchain</span><span class="p">,</span> <span
+            class="n">date</span><span class="o">.</span><span class="n">date</span><span class="p">())</span>
+
+
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">&lt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;offset&#39; argument must be &gt;= 0&quot;</span><span
+            class="p">)</span>
+        <span class="k">if</span> <span class="n">limit</span> <span class="o">&lt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;limit&#39; argument must be &gt; 0&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_futchain</span><span class="p">[</span><span
+            class="n">idx_start</span> <span class="o">+</span> <span class="n">offset</span><span
+            class="p">:</span> <span class="n">idx_start</span> <span class="o">+</span> <span
+            class="n">offset</span> <span class="o">+</span> <span class="n">limit</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_futchain</span><span class="p">[</span><span
+            class="n">idx_start</span> <span class="o">+</span> <span class="n">offset</span><span class="p">:]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span
+            class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;Can&#39;t get futures chain at </span><span class="si">{date}</span><span
+            class="s2"> limit: </span><span class="si">{limit}</span><span class="s2"> offset: </span><span class="si">{offset}</span><span
+            class="s2">. Too strict request or not enough data&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="FutureChain.get_contract"><a class="viewcode-back"
+                                                             href="../../chains-module.html#tmqrfeed.chains.FutureChain.get_contract">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_contract</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span
+        class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span
+        class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span
+        class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">FutureContract</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns future contract for particular date</span>
+
+<span class="sd">        :param date: actual date</span>
+<span class="sd">        :param offset: chain offset, 0 - front chain, +1 - front+1, etc.</span>
+<span class="sd">        :return: FutureContract class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">get_list</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="n">offset</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span
+            class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="mi">0</span><span
+            class="p">][</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="FutureChain.get_all"><a class="viewcode-back"
+                                                        href="../../chains-module.html#tmqrfeed.chains.FutureChain.get_all">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_all</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span
+        class="n">Tuple</span><span class="p">[</span><span class="n">FutureContract</span><span
+        class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span
+        class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span
+        class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get futures contracts list sorted by expiration date</span>
+
+<span class="sd">        :return: List[Tuple[FutureContract, datetime, datetime]]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_futchain</span></div></div>
+
+
+<div class="viewcode-block" id="OptionChain"><a class="viewcode-back"
+                                                href="../../chains-module.html#tmqrfeed.chains.OptionChain">[docs]</a><span
+        class="k">class</span> <span class="nc">OptionChain</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main class for option chains data management.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">option_chain_record</span><span class="p">,</span> <span class="n">expiration</span><span
+            class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span
+            class="n">datetime</span><span class="p">,</span> <span class="n">underlying</span><span class="p">:</span> <span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">datamanager</span><span
+            class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_expiration</span> <span class="o">=</span> <span
+            class="n">expiration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span class="o">=</span> <span
+            class="n">datamanager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">underlying</span> <span
+            class="o">=</span> <span class="n">underlying</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span
+            class="o">=</span> <span class="n">option_chain_record</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_strike_array</span> <span
+            class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span
+            class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">keys</span><span
+            class="p">()))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;DataManager instance must be set&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_strike_array</span><span class="p">)</span> <span
+            class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;Empty option chain for </span><span
+            class="si">{underlying}</span><span class="s1"> at expiration: </span><span
+            class="si">{expiration}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Setting chain opt code</span>
+        <span class="n">opt_code_set</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">()</span>
+        <span class="k">for</span> <span class="n">call</span><span class="p">,</span> <span class="n">put</span> <span
+            class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_options</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">opt_code_set</span><span class="o">.</span><span class="n">add</span><span
+            class="p">(</span><span class="n">call</span><span class="o">.</span><span class="n">opt_code</span><span
+            class="p">)</span>
+            <span class="n">opt_code_set</span><span class="o">.</span><span class="n">add</span><span
+            class="p">(</span><span class="n">put</span><span class="o">.</span><span class="n">opt_code</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">opt_code_set</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span>
+                <span class="n">f</span><span class="s2">&quot;Mixed options codes for </span><span class="si">{underlying}</span><span
+            class="s2"> option chain at expiration </span><span class="si">{expiration}</span><span class="s2">: </span><span
+            class="si">{opt_code_set}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt_code</span> <span
+            class="o">=</span> <span class="n">opt_code_set</span><span class="o">.</span><span
+            class="n">pop</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">expiration</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expiration date for option chain</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_expiration</span>
+
+<div class="viewcode-block" id="OptionChain.find"><a class="viewcode-back"
+                                                     href="../../chains-module.html#tmqrfeed.chains.OptionChain.find">[docs]</a>    <span
+        class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span>
+             <span class="n">dt</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="p">,</span>
+             <span class="n">item</span><span class="p">,</span>
+             <span class="n">opttype</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+             <span class="n">how</span><span class="o">=</span><span class="s1">&#39;offset&#39;</span><span
+            class="p">,</span>
+             <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">OptionContract</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find option contract in chain using &#39;how&#39; criteria</span>
+
+<span class="sd">        :param dt: analysis date</span>
+<span class="sd">        :param item: search value ( depending on &#39;how&#39; parameter value required ATM offset, absolute strike price or delta )</span>
+<span class="sd">        :param opttype: option type &#39;C&#39; or &#39;P&#39;</span>
+<span class="sd">        :param how: search method</span>
+
+<span class="sd">            * &#39;offset&#39; - by strike offset from ATM</span>
+<span class="sd">            * &#39;delta&#39;  - by delta</span>
+<span class="sd">                Search option contract by delta value:</span>
+<span class="sd">                    - If delta ==  0.5 - returns ATM call/put</span>
+<span class="sd">                    - If delta &gt; 0.5 - returns ITM call/put near target delta</span>
+<span class="sd">                    - If delta &lt; 0.5 - returns OTM call/put near target delta</span>
+<span class="sd">        :param kwargs:</span>
+<span class="sd">            * how == &#39;offset&#39; kwargs:</span>
+<span class="sd">                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)</span>
+<span class="sd">            * how == &#39;delta&#39; kwargs:</span>
+<span class="sd">                - error_limit - how many QuoteNotFound errors occurred before raising exception (default: 5)</span>
+<span class="sd">                - strike_limit - how many strikes to analyse from ATM (default: 30)</span>
+<span class="sd">        :return: OptionContract</span>
+
+<span class="sd">        Examples::</span>
+
+<span class="sd">            # Getting actual options chain (to get more info refer to DataManager.chains_options_get() help)</span>
+<span class="sd">            fut, opt_chain = self.dm.chains_options_get(&#39;US.ES&#39;, dt)</span>
+
+
+<span class="sd">            dt = datetime(2017, 3, 2)</span>
+<span class="sd">            #</span>
+<span class="sd">            # Getting option contracts from chain by ATM offset</span>
+
+<span class="sd">            # ATM Put (all of these lines are equivalent)</span>
+<span class="sd">            atm_put = opt_chain.find(dt, item=0, opttype=&#39;P&#39;, how=&#39;offset&#39; )</span>
+<span class="sd">            atm_put = opt_chain.find(dt, item=0, opttype=&#39;P&#39;)</span>
+<span class="sd">            atm_put = opt_chain.find(dt, 0, &#39;P&#39;)</span>
+
+<span class="sd">            # ATM + 1 Strike above call</span>
+<span class="sd">            atm_call_up1 = opt_chain.find(dt, 1, &#39;C&#39;)</span>
+<span class="sd">            # ATM - 1 Strike above call</span>
+<span class="sd">            atm_call_dn1 = opt_chain.find(dt, -1, &#39;C&#39;)</span>
+
+<span class="sd">            #</span>
+<span class="sd">            # Getting options by delta</span>
+<span class="sd">            #</span>
+<span class="sd">            # - If delta ==  0.5 - returns ATM call/put</span>
+<span class="sd">            # - If delta &gt; 0.5 - returns ITM call/put near target delta</span>
+<span class="sd">            # - If delta &lt; 0.5 - returns OTM call/put near target delta</span>
+<span class="sd">            #</span>
+
+<span class="sd">            # ATM Put option</span>
+<span class="sd">            atm_put = opt_chain.find(dt, item=0.5, opttype=&#39;P&#39;, how=&#39;delta&#39;)</span>
+
+<span class="sd">            # 0.25 Delta OTM option</span>
+<span class="sd">            otm_put = opt_chain.find(dt, item=0.25, opttype=&#39;P&#39;, how=&#39;delta&#39;)</span>
+
+<span class="sd">            # 0.75 Delta ITM option</span>
+<span class="sd">            itm_put = opt_chain.find(dt, item=0.75, opttype=&#39;P&#39;, how=&#39;delta&#39;)</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">dt</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span
+            class="n">datetime</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;dt&#39; argument must be datetime&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">opttype</span><span class="o">.</span><span
+            class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span
+            class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span
+            class="s1">&#39;P&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;opttype&#39; argument must be &#39;C&#39; or &#39;P&#39;&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span
+            class="s1">&#39;offset&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="p">(</span><span
+            class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span
+            class="n">int32</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span
+            class="n">int64</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;&#39;item&#39; argument must be integer in the case of how==&#39;offset&#39;&quot;</span><span
+            class="p">)</span>
+
+            <span class="n">err_limit</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;error_limit&#39;</span><span class="p">,</span> <span class="mi">5</span><span
+            class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_by_offset</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">item</span><span
+            class="p">,</span> <span class="n">opttype</span><span class="o">.</span><span class="n">upper</span><span
+            class="p">(),</span> <span class="n">err_limit</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">how</span> <span class="o">==</span> <span
+            class="s1">&#39;delta&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="p">(</span><span
+            class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span
+            class="n">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span
+            class="n">double</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;&#39;item&#39; argument must be float in the case of how==&#39;delta&#39;&quot;</span><span
+            class="p">)</span>
+
+            <span class="n">err_limit</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;error_limit&#39;</span><span class="p">,</span> <span class="mi">5</span><span
+            class="p">)</span>
+            <span class="n">strike_limit</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;strike_limit&#39;</span><span class="p">,</span> <span class="mi">30</span><span
+            class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_by_delta</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">item</span><span
+            class="p">,</span> <span class="n">opttype</span><span class="o">.</span><span class="n">upper</span><span
+            class="p">(),</span> <span class="n">err_limit</span><span class="p">,</span> <span
+            class="n">strike_limit</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Wrong &#39;how&#39; argument, only &#39;offset&#39;|&#39;delta&#39; values supported.&quot;</span><span
+            class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_atm_index</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">ulprice</span><span class="p">:</span> <span
+            class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find ATM index of strike array based on underlying price</span>
+<span class="sd">        :param ulprice: underlying price</span>
+<span class="sd">        :return: strike array index pointing to ATM strike</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span
+            class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span
+            class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_strike_array</span> <span class="o">-</span> <span
+            class="n">ulprice</span><span class="p">)))</span>
+
+    <span class="k">def</span> <span class="nf">_find_by_delta</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span>
+                       <span class="n">dt</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+                       <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span
+            class="p">,</span>
+                       <span class="n">opttype</span><span class="p">:</span> <span class="nb">str</span><span
+            class="p">,</span>
+                       <span class="n">error_limit</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                       <span class="n">strike_limit</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">30</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="n">OptionContract</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Search option contract by delta value:</span>
+<span class="sd">        If delta ==  0.5 - returns ATM call/put</span>
+<span class="sd">        If delta &gt; 0.5 - returns ITM call/put near target delta</span>
+<span class="sd">        If delta &lt; 0.5 - returns OTM call/put near target delta</span>
+<span class="sd">        :param dt: calculation date</span>
+<span class="sd">        :param delta: delta to find (must be &gt; 0 and &lt; 1)</span>
+<span class="sd">        :param opttype: option type &#39;C&#39; or &#39;P&#39;</span>
+<span class="sd">        :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised</span>
+<span class="sd">        :param strike_limit: how many strikes to analyse from ATM</span>
+<span class="sd">        :return: Option contract instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">delta</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span
+            class="n">delta</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">delta</span> <span class="o">&lt;=</span> <span
+            class="mi">0</span> <span class="ow">or</span> <span class="n">delta</span> <span
+            class="o">&gt;=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">np</span><span
+            class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">delta</span><span
+            class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Delta values must be &gt; 0 and &lt; 1&quot;</span><span
+            class="p">)</span>
+        <span class="k">if</span> <span class="n">strike_limit</span> <span class="o">&lt;=</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Only positive &#39;strike_limit&#39; argument allowed&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">delta</span> <span class="o">==</span> <span
+            class="mf">0.5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_by_offset</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="mi">0</span><span
+            class="p">,</span> <span class="n">opttype</span><span class="p">,</span> <span class="n">error_limit</span><span
+            class="o">=</span><span class="n">error_limit</span><span class="p">)</span>
+
+        <span class="c1"># Fetching underlying price</span>
+        <span class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">price_get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">underlying</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+        <span class="n">atm_index</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_get_atm_index</span><span class="p">(</span><span class="n">ul_decision_px</span><span
+            class="p">)</span>
+        <span class="n">strikes_max_offset</span> <span class="o">=</span> <span class="nb">len</span><span
+            class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">_strike_array</span><span class="p">)</span> <span class="o">-</span> <span
+            class="n">atm_index</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">strikes_min_offset</span> <span class="o">=</span> <span class="o">-</span><span class="n">atm_index</span>
+
+        <span class="k">if</span> <span class="n">opttype</span> <span class="o">==</span> <span
+            class="s1">&#39;P&#39;</span><span class="p">:</span>
+            <span class="c1"># Algo direction for put</span>
+            <span class="n">offset_direction</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span
+            class="n">delta</span> <span class="o">&gt;</span> <span class="mf">0.5</span> <span
+            class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">max_offset</span> <span class="o">=</span> <span class="nb">abs</span><span
+            class="p">(</span><span class="n">strikes_max_offset</span><span class="p">)</span> <span
+            class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span
+            class="mf">0.5</span> <span class="k">else</span> <span class="nb">abs</span><span class="p">(</span><span
+            class="n">strikes_min_offset</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Algo direction for call</span>
+            <span class="n">offset_direction</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span
+            class="n">delta</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span
+            class="k">else</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">max_offset</span> <span class="o">=</span> <span class="nb">abs</span><span
+            class="p">(</span><span class="n">strikes_max_offset</span><span class="p">)</span> <span
+            class="k">if</span> <span class="n">delta</span> <span class="o">&lt;</span> <span
+            class="mf">0.5</span> <span class="k">else</span> <span class="nb">abs</span><span class="p">(</span><span
+            class="n">strikes_min_offset</span><span class="p">)</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="n">offset_direction</span>
+        <span class="n">nerrors</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">last_contract</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">while</span> <span class="nb">abs</span><span class="p">(</span><span class="n">i</span><span
+            class="p">)</span> <span class="o">&lt;=</span> <span class="nb">min</span><span class="p">(</span><span
+            class="n">strike_limit</span><span class="p">,</span> <span class="n">max_offset</span><span
+            class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">contract</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_find_by_offset</span><span class="p">(</span><span
+            class="n">dt</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span
+            class="n">opttype</span><span class="p">,</span>
+                                                <span class="n">error_limit</span><span class="o">=</span><span
+            class="mi">1</span><span class="p">,</span>
+                                                <span class="n">ul_decision_px</span><span class="o">=</span><span
+            class="n">ul_decision_px</span><span class="p">,</span>
+                                                <span class="n">ul_exec_px</span><span class="o">=</span><span
+            class="n">ul_exec_px</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">delta</span> <span
+            class="o">&gt;</span> <span class="mf">0.5</span> <span class="ow">and</span> <span
+            class="nb">abs</span><span class="p">(</span><span class="n">contract</span><span class="o">.</span><span
+            class="n">delta</span><span class="p">(</span><span class="n">dt</span><span class="p">))</span> <span
+            class="o">&gt;=</span> <span class="n">delta</span><span class="p">)</span> <span class="ow">or</span> <span
+            class="p">(</span>
+                                <span class="n">delta</span> <span class="o">&lt;</span> <span
+            class="mf">0.5</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span
+            class="n">contract</span><span class="o">.</span><span class="n">delta</span><span class="p">(</span><span
+            class="n">dt</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="n">delta</span><span
+            class="p">):</span>
+                    <span class="k">return</span> <span class="n">contract</span>
+                <span class="n">last_contract</span> <span class="o">=</span> <span class="n">contract</span>
+                <span class="n">nerrors</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">except</span> <span class="n">NotFoundError</span><span class="p">:</span>
+                <span class="c1"># Catching data errors</span>
+                <span class="n">nerrors</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">nerrors</span> <span class="o">&gt;=</span> <span class="n">error_limit</span><span
+            class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                        <span class="n">f</span><span
+            class="s2">&quot;Couldn&#39;t get requested strike by delta </span><span class="si">{delta}</span><span
+            class="s2"> at </span><span class="si">{dt}</span><span class="s2"> for </span><span class="si">{self.underlying}</span><span
+            class="s2">.&quot;</span>
+                        <span class="n">f</span><span class="s2">&quot; QuoteNotFound errors limit reached: </span><span
+            class="si">{nerrors}</span><span class="s2"> errors occurred.&quot;</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="n">offset_direction</span>
+
+        <span class="k">if</span> <span class="n">last_contract</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Couldn&#39;t get requested strike by delta </span><span class="si">{delta}</span><span
+            class="s2"> at </span><span class="si">{dt}</span><span class="s2">. Strike limit is reached.&quot;</span>
+                                     <span class="n">f</span><span class="s2">&quot; Try to check delta value validity and data presence for </span><span
+            class="si">{self.underlying}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">last_contract</span>
+
+    <span class="k">def</span> <span class="nf">_find_by_offset</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span>
+                        <span class="n">dt</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                        <span class="n">item</span><span class="p">:</span> <span class="nb">int</span><span
+            class="p">,</span>
+                        <span class="n">opttype</span><span class="p">:</span> <span class="nb">str</span><span
+            class="p">,</span>
+                        <span class="n">error_limit</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+                        <span class="n">ul_decision_px</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span>
+                        <span class="n">ul_exec_px</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="n">OptionContract</span><span
+            class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find option contract by offset from ATM</span>
+<span class="sd">        :param dt: current datetime</span>
+<span class="sd">        :param item: strike offset where 0 - ATM strike, +1 - ATM+1 strike above, -1 - ATM-1 strike below, etc...</span>
+<span class="sd">        :param opttype: option type &#39;P&#39; or &#39;C&#39;</span>
+<span class="sd">        :param error_limit: how many consecutive QuoteNotFound errors occurred until ChainNotFoundError() raised</span>
+<span class="sd">        :return: OptionContract instance</span>
+<span class="sd">        :rtype: OptionContract</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Fetching underlying price</span>
+        <span class="k">if</span> <span class="n">ul_decision_px</span> <span class="ow">is</span> <span
+            class="kc">None</span> <span class="ow">or</span> <span class="n">ul_exec_px</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">price_get</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">underlying</span><span class="p">,</span> <span class="n">dt</span><span
+            class="p">)</span>
+
+        <span class="n">atm_index</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_get_atm_index</span><span class="p">(</span><span class="n">ul_decision_px</span><span
+            class="p">)</span>
+
+        <span class="n">initial_item</span> <span class="o">=</span> <span class="n">item</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Perform strike search by index</span>
+        <span class="c1">#</span>
+        <span class="n">is_not_found</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">initial_item</span> <span class="o">!=</span> <span
+            class="mi">0</span><span class="p">:</span>
+                <span class="n">nerrors</span> <span class="o">=</span> <span class="nb">abs</span><span
+            class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">-</span> <span
+            class="nb">abs</span><span class="p">(</span><span class="n">initial_item</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">nerrors</span> <span class="o">&gt;=</span> <span class="n">error_limit</span><span
+            class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Couldn&#39;t get requested strike offset at </span><span
+            class="si">{dt}</span><span class="s2"> for </span><span class="si">{self.underlying}</span><span
+            class="s2">.&quot;</span>
+                                             <span class="n">f</span><span class="s2">&quot; QuoteNotFound errors limit reached: </span><span
+            class="si">{nerrors}</span><span class="s2"> errors occurred.&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">atm_index</span> <span class="o">+</span> <span
+            class="n">item</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span
+            class="n">atm_index</span> <span class="o">+</span> <span class="n">item</span> <span class="o">&gt;</span> <span
+            class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">_strike_array</span><span class="p">)</span> <span class="o">-</span> <span
+            class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_not_found</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;Failed to find options quotes while processing chain at </span><span class="si">{dt}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Strike offset is too low, &quot;</span>
+                                             <span class="n">f</span><span class="s2">&quot;[{-atm_index}, {len(self._strike_array)-atm_index-1}] values allowed&quot;</span><span
+            class="p">)</span>
+
+            <span class="n">strike</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_strike_array</span><span class="p">[</span><span
+            class="n">atm_index</span> <span class="o">+</span> <span class="n">item</span><span class="p">]</span>
+            <span class="n">call_contract</span><span class="p">,</span> <span class="n">put_contract</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span
+            class="p">[</span><span class="n">strike</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Getting Put/Call prices</span>
+                <span class="c1"># To make sure that we have quotes available in the DB</span>
+                <span class="n">selected_option</span> <span class="o">=</span> <span
+            class="n">call_contract</span> <span class="k">if</span> <span class="n">opttype</span> <span
+            class="o">==</span> <span class="s1">&#39;C&#39;</span> <span class="k">else</span> <span class="n">put_contract</span>
+
+                <span class="c1"># Getting option price to check data availability (rises &#39;NotFoundError&#39; if not)</span>
+                <span class="c1"># and populating pricing context for selected option</span>
+                <span class="n">opt_decision_iv</span><span class="p">,</span> <span class="n">opt_exec_iv</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">price_get</span><span class="p">(</span><span
+            class="n">selected_option</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+                <span class="n">rfr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">dm</span><span class="o">.</span><span class="n">riskfreerate_get</span><span
+            class="p">(</span><span class="n">selected_option</span><span class="p">,</span> <span
+            class="n">dt</span><span class="p">)</span>
+
+                <span class="c1"># Set pricing context for option, this prevents extra DB calls</span>
+                <span class="c1"># Because we expect that selected option will be priced soon in the calling code</span>
+                <span class="n">selected_option</span><span class="o">.</span><span class="n">set_pricing_context</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span
+            class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span><span
+            class="p">,</span> <span class="n">opt_decision_iv</span><span class="p">,</span> <span class="n">opt_exec_iv</span><span
+            class="p">,</span> <span class="n">rfr</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">selected_option</span>
+            <span class="k">except</span> <span class="n">QuoteNotFoundError</span><span class="p">:</span>
+                <span class="n">is_not_found</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="c1"># Searching next strike</span>
+                <span class="k">if</span> <span class="n">initial_item</span> <span class="o">==</span> <span
+            class="mi">0</span><span class="p">:</span>
+                    <span class="c1"># If we need ATM strike we will perform bidirectional strike search</span>
+                    <span class="c1"># If ATM options data is missing we will search ATM+1</span>
+                    <span class="c1"># If ATM+1 still has no data we will search ATM-1</span>
+                    <span class="c1"># If ATM-1 still has no data we will raise ChainNotFoundError()</span>
+                    <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span
+            class="mi">0</span><span class="p">:</span>
+                        <span class="c1"># Search for strike ATM+1</span>
+                        <span class="n">item</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">item</span> <span class="o">==</span> <span
+            class="mi">1</span><span class="p">:</span>
+                        <span class="c1"># Search for strike ATM-1</span>
+                        <span class="n">item</span> <span class="o">=</span> <span class="o">-</span><span
+            class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">missing_strikes</span> <span class="o">=</span> <span class="p">[</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_strike_array</span><span
+            class="p">[</span><span class="n">atm_index</span> <span class="o">+</span> <span class="n">x</span><span
+            class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span
+            class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span
+            class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]]</span>
+                        <span class="n">missing_options</span> <span class="o">=</span> <span class="p">[</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span
+            class="n">strike</span><span class="p">][</span><span class="mi">0</span> <span class="k">if</span> <span
+            class="n">opttype</span> <span class="o">==</span> <span class="s1">&#39;C&#39;</span> <span
+            class="k">else</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span
+            class="n">strike</span> <span class="ow">in</span>
+                                           <span class="n">missing_strikes</span><span class="p">]</span>
+                        <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;Couldn&#39;t find ATM strike data, data for &quot;</span>
+                            <span class="n">f</span><span class="s2">&quot;strikes </span><span class="si">{missing_options}</span><span
+            class="s2"> is missing at </span><span class="si">{dt}</span><span class="s2"> for </span><span class="si">{self.underlying}</span><span
+            class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">item</span> <span class="o">&gt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+                        <span class="n">item</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">item</span> <span class="o">-=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="n">f</span><span class="s1">&#39;Chain: </span><span class="si">{self.underlying}</span><span
+            class="s1"> {self.expiration.date()}&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="fm">__str__</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="OptionChainList"><a class="viewcode-back"
+                                                    href="../../chains-module.html#tmqrfeed.chains.OptionChainList">[docs]</a><span
+        class="k">class</span> <span class="nc">OptionChainList</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class stores list of options chains with many expiration dates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">chain_list</span><span class="p">,</span> <span
+            class="n">underlying</span><span class="p">:</span> <span class="n">ContractBase</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init OptionChainList class</span>
+<span class="sd">        :param chain_list: chain list dictionary</span>
+<span class="sd">        :param underlying: underlying contract</span>
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">chain_list</span> <span class="ow">is</span> <span
+            class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">chain_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span
+            class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Empty &#39;chain_list&#39; argument&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span class="o">=</span> <span
+            class="n">datamanager</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;DataManager instance must be set&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">underlying</span> <span
+            class="o">=</span> <span class="n">underlying</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">underlying</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Underlying asset in None&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">chain_list</span> <span
+            class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">expiration</span><span class="p">,</span> <span
+            class="n">chain</span> <span class="ow">in</span> <span class="n">chain_list</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">chain_list</span><span
+            class="p">[</span><span class="n">expiration</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">OptionChain</span><span class="p">(</span><span class="n">chain</span><span
+            class="p">,</span> <span class="n">expiration</span><span class="p">,</span> <span
+            class="n">underlying</span><span class="p">,</span> <span class="n">datamanager</span><span
+            class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_expirations</span> <span class="o">=</span> <span
+            class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">chain_list</span><span class="o">.</span><span
+            class="n">keys</span><span class="p">()))</span>  <span class="c1"># type: List[datetime.datetime]</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">chain_list</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">expirations</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span
+            class="p">[</span><span class="n">datetime</span><span class="o">.</span><span
+            class="n">datetime</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        List of available expirations for options chains</span>
+
+<span class="sd">        :return: List[datetime.datetime]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_expirations</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span
+            class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">chain_list</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="n">v</span>
+
+<div class="viewcode-block" id="OptionChainList.items"><a class="viewcode-back"
+                                                          href="../../chains-module.html#tmqrfeed.chains.OptionChainList.items">[docs]</a>    <span
+        class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Key-value iterator where Key is expiration date of chain and Value is OptionChain class instance</span>
+
+<span class="sd">        :return: yields expiration, OptionsChain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span
+            class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">chain_list</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span></div>
+
+<div class="viewcode-block" id="OptionChainList.find"><a class="viewcode-back"
+                                                         href="../../chains-module.html#tmqrfeed.chains.OptionChainList.find">[docs]</a>    <span
+        class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+        class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">by</span><span
+        class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">OptionChain</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find option chain by datetime, date, or offset</span>
+
+<span class="sd">        If no **kwargs are set, performs exact match by datetime, date, or offset</span>
+
+<span class="sd">        Otherwise if **kwargs are set, performs SMART search where &#39;by&#39; must be current datetime</span>
+
+<span class="sd">        :param date: current date</span>
+<span class="sd">        :param by: lookup criteria</span>
+<span class="sd">        :param kwargs:</span>
+<span class="sd">            Keywords for SMART chains search:</span>
+<span class="sd">            - min_days - ignore chains with days to expiration &lt;= min_days</span>
+<span class="sd">            - opt_codes - include only option chains in opt_codes list</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">by</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span
+            class="n">datetime</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">chain_list</span><span class="p">[</span><span class="n">by</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">by</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span
+            class="n">date</span><span class="p">):</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">combine</span><span
+            class="p">(</span><span class="n">by</span><span class="p">,</span> <span class="n">datetime</span><span
+            class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span
+            class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span
+            class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">chain_list</span><span class="p">[</span><span class="n">dt</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">by</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span
+            class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span
+            class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span
+            class="p">)):</span>
+            <span class="n">option_offset</span> <span class="o">=</span> <span class="n">by</span>
+
+            <span class="k">if</span> <span class="n">option_offset</span> <span class="o">&lt;</span> <span class="mi">0</span><span
+            class="p">:</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;&#39;by&#39; must be &gt;= 0&quot;</span><span class="p">)</span>
+
+            <span class="n">min_days</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;min_days&#39;</span><span class="p">,</span> <span class="mi">0</span><span
+            class="p">)</span>
+            <span class="n">start_exp_idx</span> <span class="o">=</span> <span class="o">-</span><span
+            class="mi">1</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">exp</span> <span
+            class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_expirations</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">ContractBase</span><span class="o">.</span><span class="n">calc_to_expiration_days</span><span
+            class="p">(</span><span class="n">exp</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">)</span> <span class="o">&gt;</span> <span class="n">min_days</span><span class="p">:</span>
+                    <span class="n">start_exp_idx</span> <span class="o">=</span> <span class="n">i</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">start_exp_idx</span> <span class="o">==</span> <span
+            class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;Couldn&#39;t find not expired options chains, with days to expiration &gt; </span><span
+            class="si">{min_days}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">start_exp_idx</span> <span class="o">+</span> <span class="n">option_offset</span> <span
+            class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_expirations</span><span class="p">)</span> <span class="o">-</span> <span
+            class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;Couldn&#39;t find front+</span><span class="si">{option_offset}</span><span
+            class="s2"> options chains, try to look next futures series&quot;</span><span class="p">,</span>
+                    <span class="c1"># IMPORTANT: add valid series count here, this will help to handle next future chains by offset</span>
+                    <span class="n">option_offset_skipped</span><span class="o">=</span><span class="nb">len</span><span
+            class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">_expirations</span><span class="p">)</span> <span class="o">-</span> <span
+            class="n">start_exp_idx</span><span class="p">)</span>
+
+            <span class="n">opt_codes</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;opt_codes&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">opt_codes</span><span class="p">:</span>
+                <span class="n">oc_i</span> <span class="o">=</span> <span class="n">start_exp_idx</span>
+                <span class="n">oc_cnt</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">oc_i</span> <span class="o">&gt;</span> <span class="nb">len</span><span
+            class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">expirations</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span
+            class="p">:</span>
+                        <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;Couldn&#39;t find front+</span><span
+            class="si">{option_offset}</span><span class="s2"> options chains, filtered by opt_codes </span><span
+            class="si">{opt_codes}</span><span class="s2">&quot;</span><span class="p">,</span>
+                            <span class="c1"># IMPORTANT: add valid series count here, this will help to handle next future chains by offset</span>
+                            <span class="n">option_offset_skipped</span><span class="o">=</span><span
+            class="n">oc_cnt</span><span class="p">)</span>
+                    <span class="n">expiration</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_expirations</span><span class="p">[</span><span
+            class="n">oc_i</span><span class="p">]</span>
+                    <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">chain_list</span><span class="p">[</span><span class="n">expiration</span><span
+            class="p">]</span>
+                    <span class="k">if</span> <span class="n">chain</span><span class="o">.</span><span class="n">opt_code</span> <span
+            class="ow">in</span> <span class="n">opt_codes</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">oc_cnt</span> <span class="o">==</span> <span
+            class="n">option_offset</span><span class="p">:</span>
+                            <span class="k">break</span>
+                        <span class="n">oc_cnt</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">oc_i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">expiration</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_expirations</span><span class="p">[</span><span
+            class="n">start_exp_idx</span> <span class="o">+</span> <span class="n">option_offset</span><span class="p">]</span>
+                <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">chain_list</span><span class="p">[</span><span class="n">expiration</span><span
+            class="p">]</span>
+
+            <span class="k">return</span> <span class="n">chain</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Unexpected &#39;by&#39; type, must be float or int&quot;</span><span
+            class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="n">exp_str</span> <span class="o">=</span> <span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{self.underlying}</span><span class="s2"> expirations list: </span><span
+            class="se">\n</span><span class="s2">&quot;</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">exp</span> <span
+            class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">expirations</span><span class="p">):</span>
+            <span class="n">_opt_code</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">chain_list</span><span class="p">[</span><span class="n">exp</span><span
+            class="p">]</span><span class="o">.</span><span class="n">opt_code</span>
+            <span class="k">if</span> <span class="n">_opt_code</span><span class="p">:</span>
+                <span class="n">exp_str</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span
+            class="s1">: </span><span class="si">{1}</span><span class="s1"> (OptCode: </span><span
+            class="si">{2}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span><span
+            class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span
+            class="p">,</span> <span class="n">exp</span><span class="o">.</span><span class="n">date</span><span
+            class="p">(),</span> <span class="n">_opt_code</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">exp_str</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span
+            class="s1">: </span><span class="si">{1}</span><span class="se">\n</span><span class="s1">&#39;</span><span
+            class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span
+            class="p">,</span> <span class="n">exp</span><span class="o">.</span><span class="n">date</span><span
+            class="p">())</span>
+        <span class="k">return</span> <span class="n">exp_str</span></div>
+
+
+
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+</div>
+
+
+</body>
+</html>

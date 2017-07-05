@@ -51,7 +51,7 @@ if __name__ == '__main__':
     with patch('tmqrstrategy.strategy_base.StrategyBase.date_now') as mock_date_now:
         curr_date = datetime(2012, 2, 20)
         mock_date_now.return_value = curr_date.date()
-        dm2 = DataManager(date_end=curr_date)
+        dm2 = DataManager(date_end=datetime(2012, 2, 20))
         # Do first run
         alpha_name = 'ES_debug_alpha_online_recalc2'
         alpha_online = AlphaGeneric(dm2, **ALPHA_CONTEXT, name=alpha_name)

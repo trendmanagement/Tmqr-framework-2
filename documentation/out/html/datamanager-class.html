@@ -1,0 +1,834 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>DataManager class &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="datamanager-class">
+                    <span id="id1"></span>
+                    <h1>DataManager class<a class="headerlink" href="#datamanager-class"
+                                            title="Permalink to this headline">¶</a></h1>
+                    <p>This page automatically generated from source code.</p>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="id2">
+                        <h2><code class="docutils literal"><span class="pre">DataManager</span></code> class<a
+                                class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+                        <span class="target" id="module-tmqrfeed.manager"></span>
+                        <dl class="class">
+                            <dt id="tmqrfeed.manager.DataManager">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.manager.</code><code
+                                    class="descname">DataManager</code><span class="sig-paren">(</span><em>**kwargs</em><span
+                                    class="sig-paren">)</span><a class="reference internal"
+                                                                 href="_modules/tmqrfeed/manager.html#DataManager"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.manager.DataManager"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Utility class used for data management of the strategy.</p>
+                                <p>Also this class will be used for following purposes:</p>
+                                <blockquote>
+                                    <div>
+                                        <ul class="simple">
+                                            <li>Quotes building - acts as a container for a different quotes types
+                                                produced by Quote* classes.
+                                            </li>
+                                            <li>Quotes aligning - if several quotes sources utilized with different
+                                                timestamps layout
+                                            </li>
+                                            <li>Return positions structure - contracts names and information for each
+                                                date of the dataseries
+                                            </li>
+                                            <li>Quotes sanity checks - warns if one of the series are delayed or has
+                                                data holes
+                                            </li>
+                                            <li>Data access interface and container - stores all data requested by
+                                                strategies/contracts and provides interface for data management
+                                            </li>
+                                            <li>Smart chains fetching - selects actual options and futures chains by
+                                                several criterias
+                                            </li>
+                                            <li>Quotes caching - reduces DB calls and speedup data access if this data
+                                                is already fetched
+                                            </li>
+                                            <li>Extradata fetching - fetch extradata (like indexes or non-price data)
+                                                from the DB and properly align this data
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </blockquote>
+                                <p>Init DataManager class</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body"><strong>kwargs</strong> &#8211;
+                                            <ul class="simple">
+                                                <li>&#8216;datafeed&#8217; - low-level datafeed class instance (by
+                                                    default: DataFeed)
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.chains_futures_get">
+                                        <code class="descname">chains_futures_get</code><span class="sig-paren">(</span><em>instrument:
+                                        str</em>, <em>date: datetime.datetime</em>, <em>offset: int = 0</em><span
+                                            class="sig-paren">)</span> &rarr; tmqrfeed.contracts.FutureContract<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.chains_futures_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.chains_futures_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get future contract from futures chains</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>instrument</strong> &#8211; Full-qualified
+                                                            instrument name
+                                                        </li>
+                                                        <li><strong>date</strong> &#8211; current date</li>
+                                                        <li><strong>offset</strong> &#8211; future expiration offset, 0
+                                                            - front month, +1 - front+1, etc. (default: 0)
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">Future contract</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.chains_options_get">
+                                        <code class="descname">chains_options_get</code><span class="sig-paren">(</span><em>instrument:
+                                        str</em>, <em>date: datetime.datetime</em>, <em>**kwargs</em><span
+                                            class="sig-paren">)</span> &rarr;
+                                        typing.Tuple[tmqrfeed.contracts.FutureContract, tmqrfeed.chains.OptionChain]<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.chains_options_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.chains_options_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Find future+option chain by given criteria</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>instrument</strong> &#8211; Full-qualified
+                                                            instrument name
+                                                        </li>
+                                                        <li><strong>date</strong> &#8211; current date</li>
+                                                        <li><strong>kwargs</strong> &#8211;
+                                                            <ul>
+                                                                <li>&#8216;opt_offset&#8217; - option expiration offset,
+                                                                    0 - front month, +1 - front+1, etc. (default: 0)
+                                                                </li>
+                                                                <li>&#8216;opt_min_days&#8217; - minimal days count
+                                                                    until option expiration (default: 2)
+                                                                </li>
+                                                                <li>&#8216;opt_codes&#8217; - include options codes only
+                                                                    (default: [] i.e. include all)
+                                                                </li>
+                                                                <li>&#8216;error_limit&#8217; - ChainNotFoundError error
+                                                                    limit, useful to increase when you are trying to get
+                                                                    far &#8216;opt_offset&#8217; (default: 4)
+                                                                </li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">(tuple) FutureContract,
+                                                    OptionChain</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.costs_get">
+                                        <code class="descname">costs_get</code><span class="sig-paren">(</span><em>asset:
+                                        tmqrfeed.contracts.ContractBase</em>, <em>qty: float</em><span
+                                            class="sig-paren">)</span> &rarr; float<a class="reference internal"
+                                                                                      href="_modules/tmqrfeed/manager.html#DataManager.costs_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.costs_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate costs based on &#8216;asset&#8217;.market and qty</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>asset</strong> &#8211; ContractBase instance</li>
+                                                        <li><strong>qty</strong> &#8211; transaction qty</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">costs value in dollars</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.costs_set">
+                                        <code class="descname">costs_set</code><span class="sig-paren">(</span><em>market:
+                                        str</em>, <em>costs: tmqrfeed.costs.Costs</em><span class="sig-paren">)</span>
+                                        &rarr; None<a class="reference internal"
+                                                      href="_modules/tmqrfeed/manager.html#DataManager.costs_set"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.costs_set"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Initiate costs settings for position PnL calculations</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>market</strong> &#8211; market name</li>
+                                                        <li><strong>costs</strong> &#8211; Costs class instance</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">None</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.instrument_info_get">
+                                        <code class="descname">instrument_info_get</code><span
+                                            class="sig-paren">(</span><em>instrument: str</em><span
+                                            class="sig-paren">)</span> &rarr; tmqrfeed.instrumentinfo.InstrumentInfo<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.instrument_info_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.instrument_info_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns information about instrument</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>instrument</strong> &#8211; full
+                                                    qualified instrument name, for example &#8216;US.ES&#8217;
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">InstrumentInfo class instance</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.position">
+                                        <code class="descname">position</code><span class="sig-paren">(</span><em>position_key:
+                                        str = None</em><span class="sig-paren">)</span> &rarr;
+                                        tmqrfeed.position.Position<a class="reference internal"
+                                                                     href="_modules/tmqrfeed/manager.html#DataManager.position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get aligned primary or extra position instance</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>position_key</strong> &#8211;
+                                                    extra_series key, or if None - return primary series
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">pd.DataFrame of series</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.price_get">
+                                        <code class="descname">price_get</code><span class="sig-paren">(</span><em>asset:
+                                        tmqrfeed.contracts.ContractBase</em>, <em>date: datetime.datetime</em>, <em>**kwargs</em><span
+                                            class="sig-paren">)</span> &rarr; typing.Tuple[float, float]<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.price_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.price_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get price at decision and execution time for given asset</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>asset</strong> &#8211; Contract class instance</li>
+                                                        <li><strong>date</strong> &#8211; timestamp for price</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">Tuple of [decision_px,
+                                                    exec_px]</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.quotes">
+                                        <code class="descname">quotes</code><span class="sig-paren">(</span><em>series_key:
+                                        str = None</em><span class="sig-paren">)</span> &rarr;
+                                        pandas.core.frame.DataFrame<a class="reference internal"
+                                                                      href="_modules/tmqrfeed/manager.html#DataManager.quotes"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.quotes"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get aligned primary or extra quotes data</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>series_key</strong> &#8211; extra_series
+                                                    key, or if None - return primary series
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">pd.DataFrame of series</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.quotes_range_set">
+                                        <code class="descname">quotes_range_set</code><span
+                                            class="sig-paren">(</span><em>range_start: datetime.datetime = None</em>,
+                                        <em>range_end: datetime.datetime = None</em><span class="sig-paren">)</span>
+                                        &rarr; None<a class="reference internal"
+                                                      href="_modules/tmqrfeed/manager.html#DataManager.quotes_range_set"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.quotes_range_set"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Set quotes date range returned by DataManager.quotes() method</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>range_start</strong> &#8211; starting date</li>
+                                                        <li><strong>range_end</strong> &#8211; end date</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">nothing</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.riskfreerate_get">
+                                        <code class="descname">riskfreerate_get</code><span
+                                            class="sig-paren">(</span><em>asset: tmqrfeed.contracts.ContractBase</em>,
+                                        <em>date: datetime.datetime</em><span class="sig-paren">)</span> &rarr; float<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.riskfreerate_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.riskfreerate_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns RFR for asset&#8217;s market at &#8216;date&#8217;</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>asset</strong> &#8211;</li>
+                                                        <li><strong>date</strong> &#8211;</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">risk free rate value</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.series_extra_set">
+                                        <code class="descname">series_extra_set</code><span
+                                            class="sig-paren">(</span><em>name</em>, <em>quote_engine_cls</em>, <em>*args</em>,
+                                        <em>**kwargs</em><span class="sig-paren">)</span> &rarr; None<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.series_extra_set"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.series_extra_set"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Fetch additional series, align them to primary series and save by &#8216;name&#8217;</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>name</strong> &#8211; Extra series name for further
+                                                            access
+                                                        </li>
+                                                        <li><strong>quote_engine_cls</strong> &#8211; Quote* class</li>
+                                                        <li><strong>args</strong> &#8211; positional arguments for given
+                                                            Quote* class
+                                                        </li>
+                                                        <li><strong>kwargs</strong> &#8211; kwargs for given Quote*
+                                                            class
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">None</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.series_get">
+                                        <code class="descname">series_get</code><span class="sig-paren">(</span><em>asset:
+                                        tmqrfeed.contracts.ContractBase</em>, <em>**kwargs</em><span
+                                            class="sig-paren">)</span> &rarr; pandas.core.frame.DataFrame<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.series_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.series_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get asset&#8217;s raw series from the DB</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>asset</strong> &#8211; asset instance</li>
+                                                        <li><strong>kwargs</strong> &#8211; DataFeed get_raw_series() <a
+                                                                href="#id3"><span class="problematic" id="id4">**</span></a>kwargs
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">series DataFrame</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.series_primary_set">
+                                        <code class="descname">series_primary_set</code><span class="sig-paren">(</span><em>quote_engine_cls</em>,
+                                        <em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span> &rarr; None<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.series_primary_set"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.series_primary_set"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Fetch main series used for algorithm and strategy calculations</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>quote_engine_cls</strong> &#8211; Quote* class</li>
+                                                        <li><strong>args</strong> &#8211; positional arguments for given
+                                                            Quote* class
+                                                        </li>
+                                                        <li><strong>kwargs</strong> &#8211; kwargs for given Quote*
+                                                            class
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">None</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                        <p>Usually this method is used in Index or Strategy setup() methods by following
+                                            way:</p>
+                                        <div class="highlight-default">
+                                            <div class="highlight"><pre><span></span><span class="c1"># To set continuous futures index for &#39;US.ES&#39; instrument with decision_time_shift (for index usage)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_primary_set</span><span
+                                                        class="p">(</span><span class="n">QuoteContFut</span><span
+                                                        class="p">,</span> <span class="s1">&#39;US.ES&#39;</span><span
+                                                        class="p">,</span>
+                           <span class="n">timeframe</span><span class="o">=</span><span
+                                                        class="s1">&#39;D&#39;</span><span class="p">,</span> <span
+                                                        class="n">decision_time_shift</span><span
+                                                        class="o">=</span><span class="bp">self</span><span
+                                                        class="o">.</span><span
+                                                        class="n">decision_time_shift</span><span class="p">)</span>
+
+
+<span class="c1"># To set pre-saved index series as primary quotes and series</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_primary_set</span><span
+                                                        class="p">(</span><span class="n">QuoteIndex</span><span
+                                                        class="p">,</span> <span
+                                                        class="s2">&quot;US.ES_ContFut&quot;</span><span
+                                                        class="p">,</span> <span class="n">set_session</span><span
+                                                        class="o">=</span><span class="kc">True</span><span
+                                                        class="p">,</span> <span class="n">check_session</span><span
+                                                        class="o">=</span><span class="kc">True</span><span
+                                                        class="p">)</span>
+
+<span class="c1"># NOTE: refer to tmqrfeed.quotes package documentation for QuoteContFut/QuoteIndex params description</span>
+</pre>
+                                            </div>
+                                        </div>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.session_get">
+                                        <code class="descname">session_get</code><span class="sig-paren">(</span><span
+                                            class="sig-paren">)</span> &rarr; tmqrfeed.assetsession.AssetSession<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/manager.html#DataManager.session_get"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.session_get"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns trading session for all DataManager quotes, session settings should
+                                        be set by call of the
+                                        datamanager.session_set(...) method.</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">AssetSession</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.manager.DataManager.session_set">
+                                        <code class="descname">session_set</code><span class="sig-paren">(</span><em>instrument=None</em>,
+                                        <em>session_instance=None</em>, <em>session_list=None</em>,
+                                        <em>tz=None</em><span class="sig-paren">)</span> &rarr;
+                                        tmqrfeed.assetsession.AssetSession<a class="reference internal"
+                                                                             href="_modules/tmqrfeed/manager.html#DataManager.session_set"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.manager.DataManager.session_set"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Set the default trading session. This method intended to be used in the
+                                        setup() method of Index and Alpha algorithms.</p>
+                                        <dl class="docutils">
+                                            <dt>Mode 1: Instrument based</dt>
+                                            <dd>Load instrument (or market default) session from the DB by instrument
+                                                name (example: &#8216;US.ES&#8217;)
+                                            </dd>
+                                            <dt>Mode 2: Custom session</dt>
+                                            <dd>To initiate custom session, you should set the BOTH &#8216;session_list&#8217;
+                                                and &#8216;tz&#8217; params (and exclude instrument param)
+                                            </dd>
+                                            <dt>Mode 3: Custom AssetSession instance</dt>
+                                            <dd>You can initiate custom AssetSession class instance</dd>
+                                        </dl>
+                                        <p>&#8216;instrument&#8217; and (both &#8216;session_list&#8217; and &#8216;tz&#8217;)
+                                            parameters are mutually exclusive</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>instrument</strong> &#8211; Full qualified name of
+                                                            the instrument to load from the DB (like &#8216;US.ES&#8217;)
+                                                        </li>
+                                                        <li><strong>session_instance</strong> &#8211; AssetSession class
+                                                            instance
+                                                        </li>
+                                                        <li><strong>session_list</strong> &#8211; <p>list of the session
+                                                            params</p>
+                                                            <p>For example:</p>
+                                                            <div class="highlight-default">
+                                                                <div class="highlight"><pre><span></span><span
+                                                                        class="n">session_list</span> <span
+                                                                        class="o">=</span> <span class="p">[</span>
+    <span class="c1"># Default session</span>
+    <span class="p">{</span>
+    <span class="s1">&#39;decision&#39;</span><span class="p">:</span> <span class="s1">&#39;10:40&#39;</span><span
+                                                                            class="p">,</span>             <span
+                                                                            class="c1"># Decision time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="s1">&#39;dt&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="p">(</span><span
+                                                                            class="mi">1900</span><span
+                                                                            class="p">,</span> <span
+                                                                            class="mi">12</span><span class="p">,</span> <span
+                                                                            class="mi">31</span><span
+                                                                            class="p">),</span>    <span class="c1"># Actual date of default session start</span>
+    <span class="s1">&#39;execution&#39;</span><span class="p">:</span> <span class="s1">&#39;10:45&#39;</span><span
+                                                                            class="p">,</span>            <span
+                                                                            class="c1"># Execution time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="s1">&#39;start&#39;</span><span class="p">:</span> <span class="s1">&#39;03:32&#39;</span>                 <span
+                                                                            class="c1"># Start of the session time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="p">},</span>
+
+    <span class="c1"># If session rules has been changed by exchange, you can set different rules</span>
+    <span class="p">{</span>
+    <span class="s1">&#39;decision&#39;</span><span class="p">:</span> <span class="s1">&#39;11:40&#39;</span><span
+                                                                            class="p">,</span>             <span
+                                                                            class="c1"># Decision time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="s1">&#39;dt&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="p">(</span><span
+                                                                            class="mi">2010</span><span
+                                                                            class="p">,</span> <span
+                                                                            class="mi">12</span><span class="p">,</span> <span
+                                                                            class="mi">31</span><span
+                                                                            class="p">),</span>    <span class="c1"># Actual date of new session rules start</span>
+    <span class="s1">&#39;execution&#39;</span><span class="p">:</span> <span class="s1">&#39;11:45&#39;</span><span
+                                                                            class="p">,</span>            <span
+                                                                            class="c1"># Execution time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="s1">&#39;start&#39;</span><span class="p">:</span> <span class="s1">&#39;01:32&#39;</span>                 <span
+                                                                            class="c1"># Start of the session time (uses &#39;tz&#39; param time zone!)</span>
+    <span class="p">},</span>
+<span class="p">]</span>
+</pre>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                        <li><strong>tz</strong> &#8211; see &#8216;pytz&#8217; package&#8217;s
+                                                            list of available timezones
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">AssetSession instance</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">DataManager class</a>
+                    <ul>
+                        <li><a class="reference internal" href="#id2"><code class="docutils literal"><span class="pre">DataManager</span></code>
+                            class</a></li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/datamanager-class.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/datamanager-class.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

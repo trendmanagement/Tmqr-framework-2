@@ -1,0 +1,1099 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tmqrfeed.manager &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: '../../',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tmqrfeed.manager</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">tmqr.errors</span> <span class="k">import</span> <span
+                        class="o">*</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.contracts</span> <span class="k">import</span> <span class="n">ContractBase</span><span
+                        class="p">,</span> <span class="n">FutureContract</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.datafeed</span> <span class="k">import</span> <span class="n">DataFeed</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span
+                        class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">tmqr.settings</span> <span class="k">import</span> <span class="n">QDATE_MIN</span><span
+                        class="p">,</span> <span class="n">QDATE_MAX</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.costs</span> <span class="k">import</span> <span
+                        class="n">Costs</span>
+<span class="kn">from</span> <span class="nn">tmqr.logs</span> <span class="k">import</span> <span class="n">log</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span
+                        class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed</span> <span class="k">import</span> <span
+                        class="n">Position</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.chains</span> <span class="k">import</span> <span class="n">FutureChain</span><span
+                        class="p">,</span> <span class="n">OptionChain</span><span class="p">,</span> <span class="n">OptionChainList</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">isnan</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.assetsession</span> <span class="k">import</span> <span
+                        class="n">AssetSession</span>
+<span class="kn">import</span> <span class="nn">pytz</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.instrumentinfo</span> <span class="k">import</span> <span
+                        class="n">InstrumentInfo</span>
+
+
+<div class="viewcode-block" id="DataManager"><a class="viewcode-back"
+                                                href="../../datamanager-class.html#tmqrfeed.manager.DataManager">[docs]</a><span
+        class="k">class</span> <span class="nc">DataManager</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Utility class used for data management of the strategy.</span>
+
+<span class="sd">    Also this class will be used for following purposes:</span>
+
+<span class="sd">        * Quotes building - acts as a container for a different quotes types produced by Quote* classes.</span>
+<span class="sd">        * Quotes aligning - if several quotes sources utilized with different timestamps layout</span>
+<span class="sd">        * Return positions structure - contracts names and information for each date of the dataseries</span>
+<span class="sd">        * Quotes sanity checks - warns if one of the series are delayed or has data holes</span>
+<span class="sd">        * Data access interface and container - stores all data requested by strategies/contracts and provides interface for data management</span>
+<span class="sd">        * Smart chains fetching - selects actual options and futures chains by several criterias</span>
+<span class="sd">        * Quotes caching - reduces DB calls and speedup data access if this data is already fetched</span>
+<span class="sd">        * Extradata fetching - fetch extradata (like indexes or non-price data) from the DB and properly align this data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init DataManager class</span>
+
+<span class="sd">        :param kwargs:</span>
+<span class="sd">            * &#39;datafeed&#39; - low-level datafeed class instance (by default: DataFeed)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initiate low-level datafeed</span>
+        <span class="n">feed</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span
+            class="n">get</span><span class="p">(</span><span class="s1">&#39;datafeed&#39;</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">feed</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="n">datafeed_cls</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">pop</span><span class="p">(</span><span
+            class="s1">&#39;datafeed_cls&#39;</span><span class="p">,</span> <span class="n">DataFeed</span><span
+            class="p">)</span>
+            <span class="n">feed</span> <span class="o">=</span> <span class="n">datafeed_cls</span><span
+            class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">datafeed</span> <span
+            class="o">=</span> <span class="n">feed</span>  <span class="c1"># type: DataFeed</span>
+        <span class="sd">&quot;&quot;&quot;DataFeed instance for low-level data fetching&quot;&quot;&quot;</span>
+
+        <span class="c1"># Quotes dataframe for primary series</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_primary_quotes</span> <span
+            class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: pd.DataFrame</span>
+        <span class="c1"># Secondary dataframes dictionary for secondary series quotes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_secondary_quotes</span> <span
+            class="o">=</span> <span class="p">{}</span>  <span class="c1"># type: Dict[str, pd.DataFrame]</span>
+
+        <span class="c1"># Quotes range settings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_start</span> <span
+            class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_end</span> <span
+            class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Primary series positions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_primary_positions</span> <span
+            class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># Secondary series positions dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_secondary_positions</span> <span class="o">=</span> <span
+            class="p">{}</span>
+
+        <span class="c1"># Internal price cache for getting single quotes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_single_price</span> <span
+            class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_costs</span> <span class="o">=</span> <span
+            class="p">{}</span>  <span class="c1"># type: Dict[str, Costs]</span>
+
+        <span class="c1"># Actual session</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span
+            class="o">=</span> <span class="kc">None</span>  <span class="c1"># type: AssetSession</span>
+
+<div class="viewcode-block" id="DataManager.instrument_info_get"><a class="viewcode-back"
+                                                                    href="../../datamanager-class.html#tmqrfeed.manager.DataManager.instrument_info_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">instrument_info_get</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">instrument</span><span class="p">:</span> <span
+        class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">InstrumentInfo</span><span
+        class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns information about instrument</span>
+
+<span class="sd">        :param instrument: full qualified instrument name, for example &#39;US.ES&#39;</span>
+<span class="sd">        :return: InstrumentInfo class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">datafeed</span><span class="o">.</span><span class="n">get_instrument_info</span><span
+            class="p">(</span><span class="n">instrument</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataManager.session_get"><a class="viewcode-back"
+                                                            href="../../datamanager-class.html#tmqrfeed.manager.DataManager.session_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">session_get</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">AssetSession</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns trading session for all DataManager quotes, session settings should be set by call of the</span>
+<span class="sd">        datamanager.session_set(...) method.</span>
+
+<span class="sd">        :return: AssetSession</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_session</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span><span class="s2">&quot;Session is not set, call datamanager.session_set(...) first.&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_session</span></div>
+
+<div class="viewcode-block" id="DataManager.session_set"><a class="viewcode-back"
+                                                            href="../../datamanager-class.html#tmqrfeed.manager.DataManager.session_set">[docs]</a>    <span
+        class="k">def</span> <span class="nf">session_set</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                    <span class="n">instrument</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span>
+                    <span class="n">session_instance</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span>
+                    <span class="n">session_list</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span>
+                    <span class="n">tz</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="n">AssetSession</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the default trading session. This method intended to be used in the setup() method of Index and Alpha algorithms.</span>
+
+<span class="sd">        Mode 1: Instrument based</span>
+<span class="sd">            Load instrument (or market default) session from the DB by instrument name (example: &#39;US.ES&#39;)</span>
+<span class="sd">        Mode 2: Custom session</span>
+<span class="sd">            To initiate custom session, you should set the BOTH &#39;session_list&#39; and &#39;tz&#39; params (and exclude instrument param)</span>
+<span class="sd">        Mode 3: Custom AssetSession instance</span>
+<span class="sd">            You can initiate custom AssetSession class instance</span>
+
+<span class="sd">        &#39;instrument&#39; and (both &#39;session_list&#39; and &#39;tz&#39;) parameters are mutually exclusive</span>
+
+<span class="sd">        :param instrument: Full qualified name of the instrument to load from the DB (like &#39;US.ES&#39;)</span>
+<span class="sd">        :param session_instance: AssetSession class instance</span>
+<span class="sd">        :param session_list: list of the session params</span>
+
+<span class="sd">            For example::</span>
+
+<span class="sd">                session_list = [</span>
+<span class="sd">                    # Default session</span>
+<span class="sd">                    {</span>
+<span class="sd">                    &#39;decision&#39;: &#39;10:40&#39;,             # Decision time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    &#39;dt&#39;: datetime(1900, 12, 31),    # Actual date of default session start</span>
+<span class="sd">                    &#39;execution&#39;: &#39;10:45&#39;,            # Execution time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    &#39;start&#39;: &#39;03:32&#39;                 # Start of the session time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    },</span>
+
+<span class="sd">                    # If session rules has been changed by exchange, you can set different rules</span>
+<span class="sd">                    {</span>
+<span class="sd">                    &#39;decision&#39;: &#39;11:40&#39;,             # Decision time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    &#39;dt&#39;: datetime(2010, 12, 31),    # Actual date of new session rules start</span>
+<span class="sd">                    &#39;execution&#39;: &#39;11:45&#39;,            # Execution time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    &#39;start&#39;: &#39;01:32&#39;                 # Start of the session time (uses &#39;tz&#39; param time zone!)</span>
+<span class="sd">                    },</span>
+<span class="sd">                ]</span>
+
+<span class="sd">        :param tz: see &#39;pytz&#39; package&#39;s list of available timezones</span>
+<span class="sd">        :return: AssetSession instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_session</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span><span class="s2">&quot;Session has been already set, it&#39;s not allowed to set multiple sessions &quot;</span>
+                                <span class="s2">&quot;per Index/Alpha instance, if you need to setup multi-instrumental session try to &quot;</span>
+                                <span class="s2">&quot;apply universal trading session for all instruments&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">instrument</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Load instrument based session settings from the DB</span>
+            <span class="k">if</span> <span class="n">session_list</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">or</span> <span class="n">tz</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">session_instance</span> <span
+            class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span>
+                    <span class="s2">&quot;&#39;instrument&#39; and (&#39;session_list&#39; and &#39;tz&#39;) and &#39;session_instance&#39; parameters are mutually exclusive&quot;</span><span
+            class="p">)</span>
+
+            <span class="n">iinfo</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span
+            class="n">get_instrument_info</span><span class="p">(</span><span class="n">instrument</span><span
+            class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span
+            class="n">iinfo</span><span class="o">.</span><span class="n">session</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_session</span>
+        <span class="k">if</span> <span class="n">session_instance</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">session_list</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">or</span> <span class="n">tz</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span>
+                    <span class="s2">&quot;&#39;instrument&#39; and (&#39;session_list&#39; and &#39;tz&#39;) and &#39;session_instance&#39; parameters are mutually exclusive&quot;</span><span
+            class="p">)</span>
+
+            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">session_instance</span><span
+            class="p">,</span> <span class="n">AssetSession</span><span class="p">),</span> <span class="s1">&#39;session_instance expected to be AssetSession&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span class="o">=</span> <span
+            class="n">session_instance</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_session</span>
+
+        <span class="k">elif</span> <span class="n">session_list</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="n">tz</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="c1"># Apply custom session settings for</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">time_zone</span> <span class="o">=</span> <span class="n">pytz</span><span
+            class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="n">tz</span><span
+            class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_session</span> <span
+            class="o">=</span> <span class="n">AssetSession</span><span class="p">(</span><span
+            class="n">session_list</span><span class="p">,</span> <span class="n">time_zone</span><span
+            class="p">)</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span>
+            <span class="k">except</span> <span class="n">pytz</span><span class="o">.</span><span class="n">UnknownTimeZoneError</span><span
+            class="p">:</span>
+                <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Unknown or unsupported timezone &#39;</span><span
+            class="si">{tz}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span>
+                <span class="s2">&quot;You should set &#39;instrument&#39; or both &#39;session_list&#39; and &#39;tz&#39; to initiate session settings&quot;</span><span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DataManager.costs_set"><a class="viewcode-back"
+                                                          href="../../datamanager-class.html#tmqrfeed.manager.DataManager.costs_set">[docs]</a>    <span
+        class="k">def</span> <span class="nf">costs_set</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">market</span><span class="p">:</span> <span class="nb">str</span><span
+        class="p">,</span> <span class="n">costs</span><span class="p">:</span> <span class="n">Costs</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initiate costs settings for position PnL calculations</span>
+
+<span class="sd">        :param market: market name</span>
+<span class="sd">        :param costs: Costs class instance</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">costs</span><span class="p">,</span> <span class="n">Costs</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;costs&#39; argument must be instance/or derived from tmqrfeed.costs.Costs class&quot;</span><span
+            class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache_costs</span><span
+            class="p">[</span><span class="n">market</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">costs</span></div>
+
+<div class="viewcode-block" id="DataManager.costs_get"><a class="viewcode-back"
+                                                          href="../../datamanager-class.html#tmqrfeed.manager.DataManager.costs_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">costs_get</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="n">ContractBase</span><span
+        class="p">,</span> <span class="n">qty</span><span class="p">:</span> <span class="nb">float</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate costs based on &#39;asset&#39;.market and qty</span>
+
+<span class="sd">        :param asset: ContractBase instance</span>
+<span class="sd">        :param qty: transaction qty</span>
+<span class="sd">        :return: costs value in dollars</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">costs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_cache_costs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="n">asset</span><span class="o">.</span><span class="n">market</span><span class="p">,</span> <span
+            class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">costs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CostsNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Couldn&#39;t find costs settings for market &#39;</span><span
+            class="si">{asset.market}</span><span class="s2">&#39;.&quot;</span>
+                                     <span class="n">f</span><span class="s2">&quot;Try call datamanager.costs_set(&#39;market_name&#39;, costs_class_instance first.&quot;</span><span
+            class="p">)</span>
+        <span class="k">return</span> <span class="n">costs</span><span class="o">.</span><span
+            class="n">calc_costs</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="n">qty</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataManager.series_primary_set"><a class="viewcode-back"
+                                                                   href="../../datamanager-class.html#tmqrfeed.manager.DataManager.series_primary_set">[docs]</a>    <span
+        class="k">def</span> <span class="nf">series_primary_set</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">quote_engine_cls</span><span
+        class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span
+        class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span
+        class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetch main series used for algorithm and strategy calculations</span>
+
+<span class="sd">        :param quote_engine_cls: Quote* class</span>
+<span class="sd">        :param args: positional arguments for given Quote* class</span>
+<span class="sd">        :param kwargs: kwargs for given Quote* class</span>
+<span class="sd">        :return: None</span>
+
+<span class="sd">        Usually this method is used in Index or Strategy setup() methods by following way::</span>
+
+<span class="sd">            # To set continuous futures index for &#39;US.ES&#39; instrument with decision_time_shift (for index usage)</span>
+<span class="sd">            self.dm.series_primary_set(QuoteContFut, &#39;US.ES&#39;,</span>
+<span class="sd">                                       timeframe=&#39;D&#39;, decision_time_shift=self.decision_time_shift)</span>
+
+
+<span class="sd">            # To set pre-saved index series as primary quotes and series</span>
+<span class="sd">            self.dm.series_primary_set(QuoteIndex, &quot;US.ES_ContFut&quot;, set_session=True, check_session=True)</span>
+
+<span class="sd">            # NOTE: refer to tmqrfeed.quotes package documentation for QuoteContFut/QuoteIndex params description</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_primary_quotes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="k">raise</span> <span class="n">DataManagerError</span><span class="p">(</span><span
+            class="s2">&quot;series_primary_set() already called, only one instance of primary quotes allowed&quot;</span><span
+            class="p">)</span>
+
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;datamanager&#39;</span><span
+            class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="n">quote_engine</span> <span class="o">=</span> <span class="n">quote_engine_cls</span><span
+            class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span
+            class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_primary_quotes</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_primary_positions</span> <span class="o">=</span> <span class="n">quote_engine</span><span
+            class="o">.</span><span class="n">build</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DataManager.series_extra_set"><a class="viewcode-back"
+                                                                 href="../../datamanager-class.html#tmqrfeed.manager.DataManager.series_extra_set">[docs]</a>    <span
+        class="k">def</span> <span class="nf">series_extra_set</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span
+        class="n">quote_engine_cls</span><span class="p">,</span> <span class="o">*</span><span
+        class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetch additional series, align them to primary series and save by &#39;name&#39;</span>
+
+<span class="sd">        :param name: Extra series name for further access</span>
+<span class="sd">        :param quote_engine_cls: Quote* class</span>
+<span class="sd">        :param args: positional arguments for given Quote* class</span>
+<span class="sd">        :param kwargs: kwargs for given Quote* class</span>
+<span class="sd">        :return: None </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_primary_quotes</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="c1"># Make sure that primary quotes are filled before</span>
+            <span class="k">raise</span> <span class="n">DataManagerError</span><span class="p">(</span><span
+            class="s2">&quot;Call series_primary_set() before series_extra_set()&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_secondary_quotes</span> <span
+            class="ow">or</span> <span class="n">name</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_secondary_positions</span><span
+            class="p">:</span>
+            <span class="c1"># Check for &#39;name&#39; duplicate for extra series</span>
+            <span class="k">raise</span> <span class="n">DataManagerError</span><span class="p">(</span><span class="n">f</span><span
+            class="s2">&quot;You have already added extra series with name &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;datamanager&#39;</span><span
+            class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="n">quote_engine</span> <span class="o">=</span> <span class="n">quote_engine_cls</span><span
+            class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span
+            class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">quotes</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span
+            class="n">quote_engine</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
+        <span class="c1"># Checking quotes validity</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">series_check</span><span class="p">(</span><span class="n">f</span><span
+            class="s2">&quot;</span><span class="si">{quote_engine}</span><span class="s2">_</span><span class="si">{name}</span><span
+            class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_primary_quotes</span><span class="p">,</span> <span class="n">quotes</span><span
+            class="p">):</span>
+            <span class="c1"># Align and store extra series</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_secondary_quotes</span><span class="p">[</span><span
+            class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">series_align</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_primary_quotes</span><span class="p">,</span> <span
+            class="n">quotes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_secondary_positions</span><span
+            class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">pos</span></div>
+
+<div class="viewcode-block" id="DataManager.quotes"><a class="viewcode-back"
+                                                       href="../../datamanager-class.html#tmqrfeed.manager.DataManager.quotes">[docs]</a>    <span
+        class="k">def</span> <span class="nf">quotes</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">series_key</span><span class="p">:</span> <span class="nb">str</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get aligned primary or extra quotes data</span>
+
+<span class="sd">        :param series_key: extra_series key, or if None - return primary series</span>
+<span class="sd">        :return: pd.DataFrame of series</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">series_key</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_primary_quotes</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">QuoteNotFoundError</span><span class="p">(</span><span
+            class="s2">&quot;Primary quotes are not initiated, run series_primary_set() first&quot;</span><span
+            class="p">)</span>
+            <span class="n">result_series</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_primary_quotes</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">extra_series</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_secondary_quotes</span><span class="o">.</span><span class="n">get</span><span
+            class="p">(</span><span class="n">series_key</span><span class="p">,</span> <span
+            class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">extra_series</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+                <span class="k">raise</span> <span class="n">QuoteNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Couldn&#39;t find extra quotes by &#39;series_key&#39;=&#39;</span><span
+            class="si">{series_key}</span><span class="s2">&#39;,&quot;</span>
+                                         <span class="n">f</span><span class="s2">&quot; run series_extra_set() first or check the &#39;series_key&#39; validity&quot;</span><span
+            class="p">)</span>
+            <span class="n">result_series</span> <span class="o">=</span> <span class="n">extra_series</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_start</span> <span
+            class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span
+            class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_quotes_range_end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="c1"># Apply quote range filters</span>
+            <span class="n">result_series</span> <span class="o">=</span> <span class="n">result_series</span><span
+            class="o">.</span><span class="n">ix</span><span class="p">[</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_quotes_range_start</span><span class="p">:</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_end</span><span
+            class="p">]</span>
+
+        <span class="k">return</span> <span class="n">result_series</span></div>
+
+<div class="viewcode-block" id="DataManager.quotes_range_set"><a class="viewcode-back"
+                                                                 href="../../datamanager-class.html#tmqrfeed.manager.DataManager.quotes_range_set">[docs]</a>    <span
+        class="k">def</span> <span class="nf">quotes_range_set</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">range_start</span><span class="p">:</span> <span
+        class="n">datetime</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span
+        class="n">range_end</span><span class="p">:</span> <span class="n">datetime</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set quotes date range returned by DataManager.quotes() method</span>
+
+<span class="sd">        :param range_start: starting date</span>
+<span class="sd">        :param range_end: end date</span>
+<span class="sd">        :return: nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">range_start</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">range_start</span><span class="p">,</span> <span class="n">datetime</span><span
+            class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;range_start&#39; parameter expected to be datetime, got {type(range_start)}&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">range_end</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">range_end</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;range_start&#39; parameter expected to be datetime, got {type(range_end)}&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="n">range_end</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="n">range_start</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="ow">and</span> <span class="n">range_end</span> <span
+            class="o">&lt;=</span> <span class="n">range_start</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;&#39;range_start&#39; must be less than &#39;range_end&#39;&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_start</span> <span
+            class="o">=</span> <span class="n">range_start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_quotes_range_end</span> <span
+            class="o">=</span> <span class="n">range_end</span></div>
+
+<div class="viewcode-block" id="DataManager.position"><a class="viewcode-back"
+                                                         href="../../datamanager-class.html#tmqrfeed.manager.DataManager.position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">position</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">position_key</span><span class="p">:</span> <span class="nb">str</span> <span
+        class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">Position</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get aligned primary or extra position instance</span>
+
+<span class="sd">        :param position_key: extra_series key, or if None - return primary series</span>
+<span class="sd">        :return: pd.DataFrame of series</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">position_key</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_primary_positions</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">PositionNotFoundError</span><span class="p">(</span><span
+            class="s2">&quot;Primary position is not initiated, try to run series_primary_set() first&quot;</span>
+                                            <span class="s2">&quot; or make sure that Quote algorithm supports position initiation&quot;</span><span
+            class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_primary_positions</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_secondary_positions</span><span
+            class="p">[</span><span class="n">position_key</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">PositionNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;Couldn&#39;t find extra position by &#39;position_key&#39;=&#39;</span><span class="si">{position_key}</span><span
+            class="s2">&#39;,&quot;</span>
+                                            <span class="n">f</span><span class="s2">&quot; run series_extra_set() first or check the &#39;position_key&#39; validity&quot;</span><span
+            class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">series_align</span><span class="p">(</span><span class="n">primary_quotes</span><span
+            class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span
+            class="p">,</span> <span class="n">extra_quotes</span><span class="p">:</span> <span
+            class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">extra_quotes</span><span class="o">.</span><span
+            class="n">reindex</span><span class="p">(</span><span class="n">primary_quotes</span><span
+            class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">method</span><span
+            class="o">=</span><span class="s1">&#39;ffill&#39;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">series_check</span><span class="p">(</span><span
+            class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span
+            class="n">primary_quotes</span><span class="p">:</span> <span class="n">pd</span><span
+            class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span
+            class="n">extra_quotes</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span
+            class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span
+            class="p">:</span>
+        <span class="k">if</span> <span class="n">extra_quotes</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;ExtraSeriesSanityCheck: &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39; - extra quotes are None&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">extra_quotes</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span
+            class="n">DataFrame</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;ExtraSeriesSanityCheck: &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39; - extra quotes are not Pandas.DataFrame&quot;</span><span
+            class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">extra_quotes</span><span
+            class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;ExtraSeriesSanityCheck: &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39; - extra quotes are empty&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">primary_quotes</span><span class="o">.</span><span
+            class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span
+            class="o">&gt;</span> <span class="n">extra_quotes</span><span class="o">.</span><span
+            class="n">index</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span
+            class="p">]</span> <span class="ow">or</span> <span class="n">primary_quotes</span><span
+            class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span
+            class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span
+            class="n">extra_quotes</span><span class="o">.</span><span class="n">index</span><span
+            class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;ExtraSeriesSanityCheck: &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39; - extra quotes period doesn&#39;t overlap with primary quotes&quot;</span><span
+            class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">primary_quotes</span><span
+            class="o">.</span><span class="n">index</span><span class="p">[</span><span class="o">-</span><span
+            class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span
+            class="n">extra_quotes</span><span class="o">.</span><span class="n">index</span><span
+            class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span
+            class="n">days</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;ExtraSeriesSanityCheck: &#39;</span><span
+            class="si">{name}</span><span class="s2">&#39; - extra quotes could be delayed. &quot;</span>
+                     <span class="n">f</span><span class="s2">&quot;Primary last date: </span><span class="si">{primary_quotes.index[-1]}</span><span
+            class="s2"> Extra last date: </span><span class="si">{extra_quotes.index[-1]}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
+
+<div class="viewcode-block" id="DataManager.series_get"><a class="viewcode-back"
+                                                           href="../../datamanager-class.html#tmqrfeed.manager.DataManager.series_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">series_get</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="n">ContractBase</span><span
+        class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span
+        class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get asset&#39;s raw series from the DB</span>
+
+<span class="sd">        :param asset: asset instance</span>
+<span class="sd">        :param kwargs: DataFeed get_raw_series() **kwargs</span>
+<span class="sd">        :return: series DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kw_source_type</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;source_type&#39;</span><span class="p">,</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">data_source</span><span class="p">)</span>
+        <span class="n">kw_date_start</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;date_start&#39;</span><span class="p">,</span> <span class="n">QDATE_MIN</span><span
+            class="p">)</span>
+        <span class="n">kw_date_end</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;date_end&#39;</span><span class="p">,</span> <span class="n">QDATE_MAX</span><span
+            class="p">)</span>
+
+        <span class="c1"># use default session timezone</span>
+        <span class="n">kw_timezone</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">session_get</span><span class="p">()</span><span class="o">.</span><span class="n">tz</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">datafeed</span><span class="o">.</span><span class="n">get_raw_series</span><span
+            class="p">(</span><span class="n">asset</span><span class="o">.</span><span class="n">ticker</span><span
+            class="p">,</span>
+                                            <span class="n">source_type</span><span class="o">=</span><span class="n">kw_source_type</span><span
+            class="p">,</span>
+                                            <span class="n">timezone</span><span class="o">=</span><span class="n">kw_timezone</span><span
+            class="p">,</span>
+                                            <span class="n">date_start</span><span class="o">=</span><span class="n">kw_date_start</span><span
+            class="p">,</span>
+                                            <span class="n">date_end</span><span class="o">=</span><span class="n">kw_date_end</span>
+                                            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="DataManager.riskfreerate_get"><a class="viewcode-back"
+                                                                 href="../../datamanager-class.html#tmqrfeed.manager.DataManager.riskfreerate_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">riskfreerate_get</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span
+        class="n">ContractBase</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span
+        class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns RFR for asset&#39;s market at &#39;date&#39;</span>
+
+<span class="sd">        :param asset:</span>
+<span class="sd">        :param date:</span>
+<span class="sd">        :return: risk free rate value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rfr_series</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span class="n">get_riskfreerate_series</span><span
+            class="p">(</span><span class="n">asset</span><span class="o">.</span><span class="n">market</span><span
+            class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Trying to go fastest way</span>
+            <span class="k">return</span> <span class="n">rfr_series</span><span class="p">[</span><span
+            class="n">date</span><span class="o">.</span><span class="n">date</span><span class="p">()]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># Getting closest risk-free rate</span>
+            <span class="n">closest_rfr</span> <span class="o">=</span> <span class="n">rfr_series</span><span
+            class="o">.</span><span class="n">ix</span><span class="p">[:</span><span class="n">date</span><span
+            class="o">.</span><span class="n">date</span><span class="p">()]</span><span class="o">.</span><span
+            class="n">tail</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">closest_rfr</span><span class="p">)</span> <span class="o">==</span> <span
+            class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">QuoteNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Risk-free rate data point not found for &#39;</span><span
+            class="si">{asset.market}</span><span class="s2">&#39; market at </span><span class="si">{date}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">closest_rfr</span><span class="p">[</span><span
+            class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="DataManager.price_get"><a class="viewcode-back"
+                                                          href="../../datamanager-class.html#tmqrfeed.manager.DataManager.price_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">price_get</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span class="n">ContractBase</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+        class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span
+        class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get price at decision and execution time for given asset</span>
+
+<span class="sd">        :param asset: Contract class instance</span>
+<span class="sd">        :param date: timestamp for price</span>
+<span class="sd">        :return: Tuple of [decision_px, exec_px]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Check if asset is expired</span>
+        <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">to_expiration_days</span><span class="p">(</span><span class="n">date</span><span
+            class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AssetExpiredError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Trying to get price for already expired asset: </span><span
+            class="si">{asset}</span><span class="s2"> at </span><span class="si">{date}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Trying to search positions cache</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_price_get_positions_cached</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span
+            class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="k">return</span> <span class="n">res</span>
+
+        <span class="c1"># Trying to search internal price cache</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_price_get_cached</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span
+            class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="k">return</span> <span class="n">res</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_price_get_from_datafeed</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="o">**</span><span
+            class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Check for price validity</span>
+        <span class="c1">#</span>
+        <span class="k">if</span> <span class="n">isnan</span><span class="p">(</span><span class="n">res</span><span
+            class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">or</span> <span
+            class="n">isnan</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span
+            class="mi">1</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="n">QuoteNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;NaN price returned by datafeed for </span><span
+            class="si">{asset}</span><span class="s2"> at </span><span class="si">{date}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_price_set_cached</span><span
+            class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">,</span> <span class="n">res</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">res</span></div>
+
+    <span class="k">def</span> <span class="nf">_price_get_positions_cached</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">:</span> <span class="n">datetime</span><span class="p">):</span>
+
+        <span class="c1"># Looking for primary positions</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_primary_positions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_primary_positions</span><span
+            class="o">.</span><span class="n">get_asset_price</span><span class="p">(</span><span
+            class="n">date</span><span class="p">,</span> <span class="n">asset</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">PositionQuoteNotFoundError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+        <span class="c1"># TODO: add look up for secondary data positions</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_price_get_cached</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check internal price cache for asset&#39;s price</span>
+<span class="sd">        :param asset: </span>
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">)</span> <span class="o">==</span> <span class="n">FutureContract</span> <span
+            class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">)</span> <span class="o">==</span> <span class="n">ContractBase</span><span class="p">:</span>
+            <span class="n">price_data_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_cache_single_price</span><span class="o">.</span><span class="n">get</span><span
+            class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="kc">None</span><span
+            class="p">)</span>
+            <span class="k">if</span> <span class="n">price_data_dict</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">price_data</span> <span class="o">=</span> <span class="n">price_data_dict</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">date</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">price_data</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">price_data</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_price_set_cached</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">,</span> <span class="n">price_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Populate internal cache</span>
+<span class="sd">        :param asset: </span>
+<span class="sd">        :param date: </span>
+<span class="sd">        :param price_data:</span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">)</span> <span class="o">==</span> <span class="n">FutureContract</span> <span
+            class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">)</span> <span class="o">==</span> <span class="n">ContractBase</span><span class="p">:</span>
+            <span class="n">price_data_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_cache_single_price</span><span class="o">.</span><span class="n">setdefault</span><span
+            class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">price_data_dict</span><span class="p">[</span><span class="n">date</span><span
+            class="p">]</span> <span class="o">=</span> <span class="n">price_data</span>
+
+    <span class="k">def</span> <span class="nf">_price_get_from_datafeed</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">asset</span><span class="p">:</span> <span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetch asset price directly from datafeed</span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">iinfo</span> <span class="o">=</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">instrument_info</span>
+        <span class="n">kw_source_type</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;source_type&#39;</span><span class="p">,</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">data_source</span><span class="p">)</span>
+        <span class="n">kw_data_options_use_prev_date</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data_options_use_prev_date&#39;</span><span
+            class="p">,</span> <span class="n">iinfo</span><span class="o">.</span><span class="n">data_options_use_prev_date</span><span
+            class="p">)</span>
+
+        <span class="n">session</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">session_get</span><span class="p">()</span>
+        <span class="c1"># Use default session timezone to maintain data granularity</span>
+        <span class="n">kw_timezone</span> <span class="o">=</span> <span class="n">session</span><span
+            class="o">.</span><span class="n">tz</span>
+
+        <span class="n">sess_start_time</span><span class="p">,</span> <span class="n">sess_decision_time</span><span
+            class="p">,</span> <span class="n">sess_execution_time</span><span class="p">,</span> <span class="n">next_sess_date</span> <span
+            class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span>
+
+        <span class="n">decision_px</span><span class="p">,</span> <span class="n">exec_px</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datafeed</span><span
+            class="o">.</span><span class="n">get_raw_prices</span><span class="p">(</span><span
+            class="n">asset</span><span class="o">.</span><span class="n">ticker</span><span class="p">,</span>
+                                                            <span class="n">source_type</span><span
+            class="o">=</span><span class="n">kw_source_type</span><span class="p">,</span>
+                                                            <span class="n">dt_list</span><span class="o">=</span><span
+            class="p">[</span><span class="n">sess_decision_time</span><span class="p">,</span> <span class="n">sess_execution_time</span><span
+            class="p">],</span>
+                                                            <span class="n">timezone</span><span class="o">=</span><span
+            class="n">kw_timezone</span><span class="p">,</span>
+                                                            <span class="n">date_start</span><span
+            class="o">=</span><span class="n">sess_decision_time</span><span class="p">,</span>
+                                                            <span class="n">date_end</span><span class="o">=</span><span
+            class="n">sess_execution_time</span><span class="p">,</span>
+                                                            <span class="n">data_options_use_prev_date</span><span
+            class="o">=</span><span class="n">kw_data_options_use_prev_date</span>
+                                                            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">decision_px</span><span class="p">,</span> <span
+            class="n">exec_px</span>
+
+<div class="viewcode-block" id="DataManager.chains_futures_get"><a class="viewcode-back"
+                                                                   href="../../datamanager-class.html#tmqrfeed.manager.DataManager.chains_futures_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">chains_futures_get</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">instrument</span><span class="p">:</span> <span
+        class="nb">str</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span
+        class="n">datetime</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span
+        class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span
+        class="o">-&gt;</span> <span class="n">FutureContract</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get future contract from futures chains</span>
+
+<span class="sd">        :param instrument: Full-qualified instrument name</span>
+<span class="sd">        :param date: current date </span>
+<span class="sd">        :param offset: future expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)</span>
+<span class="sd">        :return: Future contract</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fut_chain</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span
+            class="n">get_fut_chain</span><span class="p">(</span><span class="n">instrument</span><span
+            class="p">)</span>
+        <span class="k">return</span> <span class="n">fut_chain</span><span class="o">.</span><span class="n">get_contract</span><span
+            class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">offset</span><span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="DataManager.chains_options_get"><a class="viewcode-back"
+                                                                   href="../../datamanager-class.html#tmqrfeed.manager.DataManager.chains_options_get">[docs]</a>    <span
+        class="k">def</span> <span class="nf">chains_options_get</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">instrument</span><span class="p">:</span> <span
+        class="nb">str</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span
+        class="n">datetime</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span
+        class="n">FutureContract</span><span class="p">,</span> <span class="n">OptionChain</span><span
+        class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find future+option chain by given criteria</span>
+
+<span class="sd">        :param instrument: Full-qualified instrument name</span>
+<span class="sd">        :param date: current date</span>
+<span class="sd">        :param kwargs: </span>
+<span class="sd">            - &#39;opt_offset&#39; - option expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)</span>
+<span class="sd">            - &#39;opt_min_days&#39; - minimal days count until option expiration (default: 2)</span>
+<span class="sd">            - &#39;opt_codes&#39; - include options codes only (default: [] i.e. include all)</span>
+<span class="sd">            - &#39;error_limit&#39; - ChainNotFoundError error limit, useful to increase when you are trying to get far &#39;opt_offset&#39; (default: 4)</span>
+<span class="sd">        :return: (tuple) FutureContract, OptionChain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">opt_offset</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span
+            class="n">get</span><span class="p">(</span><span class="s1">&#39;opt_offset&#39;</span><span
+            class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">opt_min_days</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;opt_min_days&#39;</span><span class="p">,</span> <span class="mi">2</span><span
+            class="p">)</span>
+        <span class="n">opt_codes</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;opt_codes&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">error_limit</span> <span class="o">=</span> <span class="n">kwargs</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;error_limit&#39;</span><span class="p">,</span> <span class="mi">4</span><span
+            class="p">)</span>
+
+
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">opt_offset</span><span class="p">,</span> <span class="nb">int</span><span
+            class="p">)</span> <span class="ow">or</span> <span class="n">opt_offset</span> <span class="o">&lt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;&#39;opt_offset&#39; must be int &gt;= 0, got {type(opt_offset)} </span><span class="si">{opt_offset}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">opt_min_days</span><span class="p">,</span> <span class="nb">int</span><span
+            class="p">)</span> <span class="ow">or</span> <span class="n">opt_min_days</span> <span
+            class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;opt_min_days&#39; must be int  &gt;= 0, got {type(opt_min_days)} </span><span
+            class="si">{opt_min_days}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">error_limit</span><span class="p">,</span> <span class="nb">int</span><span
+            class="p">)</span> <span class="ow">or</span> <span class="n">error_limit</span> <span
+            class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;&#39;error_limit&#39; must be int &gt; 0, got {type(error_limit)} </span><span class="si">{error_limit}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">fut_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">err_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Getting future contract by offset</span>
+                <span class="n">fut</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">chains_futures_get</span><span class="p">(</span><span class="n">instrument</span><span class="p">,</span> <span
+            class="n">date</span><span class="p">,</span> <span class="n">fut_offset</span><span class="p">)</span>
+                <span class="c1"># Getting options chains list for the future</span>
+                <span class="n">opt_chain_list</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span
+            class="n">get_option_chains</span><span class="p">(</span><span class="n">fut</span><span class="p">)</span>
+                <span class="c1"># Trying to find option with expiration by offset and days_to_exp &gt; opt_min_days</span>
+                <span class="n">option_chain</span> <span class="o">=</span> <span class="n">opt_chain_list</span><span
+            class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">date</span><span
+            class="p">,</span> <span class="n">opt_offset</span><span class="p">,</span> <span class="n">min_days</span><span
+            class="o">=</span><span class="n">opt_min_days</span><span class="p">,</span> <span
+            class="n">opt_codes</span><span class="o">=</span><span class="n">opt_codes</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">fut</span><span class="p">,</span> <span class="n">option_chain</span>
+            <span class="k">except</span> <span class="n">ChainNotFoundError</span> <span class="k">as</span> <span
+            class="n">exc</span><span class="p">:</span>
+                <span class="c1"># Chain is not found, probably few days till expiration or no data</span>
+                <span class="n">err_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># Try to seek next future contract</span>
+                <span class="n">fut_offset</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># Taking into account options expiration that OK, but skipped by opt_offset</span>
+                <span class="n">opt_offset</span> <span class="o">=</span> <span class="nb">max</span><span
+            class="p">(</span><span class="n">opt_offset</span> <span class="o">-</span> <span class="n">exc</span><span
+            class="o">.</span><span class="n">option_offset_skipped</span><span class="p">,</span> <span
+            class="mi">0</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">err_count</span> <span class="o">==</span> <span class="n">error_limit</span><span
+            class="p">:</span>
+                    <span class="c1"># Too many errors occurred, probably no data or very strict &#39;opt_offset&#39; value</span>
+                    <span class="k">raise</span> <span class="n">ChainNotFoundError</span><span class="p">(</span>
+                        <span class="n">f</span><span class="s2">&quot;Couldn&#39;t find suitable chain, error limit reached. Last error: {str(exc)}. &quot;</span>
+                        <span class="n">f</span><span class="s2">&quot;Try to increase &#39;error_limit&#39; kwarg parameter if you are sure that data is fine.&quot;</span><span
+            class="p">)</span></div></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+</div>
+
+
+</body>
+</html>

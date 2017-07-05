@@ -19,6 +19,7 @@ class ContractBase:
     def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init generic contract from special `tckr` code
+
         :param tckr: Ticker code
         :param datamanager: DataManager instance
         """
@@ -52,6 +53,7 @@ class ContractBase:
     def instrument(self):
         """
         Contract's instrument in <Market>.<Name>
+
         :return:
         """
         return '{0}.{1}'.format(self.market, self.name)
@@ -60,6 +62,7 @@ class ContractBase:
     def market(self):
         """
         Contract's market
+
         :return:
         """
         return self._toks[0]
@@ -68,6 +71,7 @@ class ContractBase:
     def name(self):
         """
         Contract's name without market info
+
         :return:
         """
         return self._toks[2]
@@ -76,6 +80,7 @@ class ContractBase:
     def contract_info(self):
         """
         Return ContractInfo class values
+
         :return: ContractInfo class instance
         """
         return self.dm.datafeed.get_contract_info(self.ticker)
@@ -84,6 +89,7 @@ class ContractBase:
     def instrument_info(self):
         """
         Return underlying instrument info
+
         :return:
         """
         return self.dm.datafeed.get_instrument_info(self.instrument)
@@ -92,6 +98,7 @@ class ContractBase:
     def point_value(self):
         """
         1-point USD value
+
         :return: 
         """
         if self._point_value is None:
@@ -108,6 +115,7 @@ class ContractBase:
     def dollar_pnl(self, prev_price, current_price, qty):
         """
         Calculate dollar PnL for asset
+
         :param prev_price: previous price
         :param current_price: current price
         :param qty:  
@@ -119,6 +127,7 @@ class ContractBase:
     def calc_to_expiration_days(expiration_date, current_date):
         """
         Calculates calendar days to expiration
+
         :param expiration_date: 
         :param current_date: 
         :return: 
@@ -130,7 +139,8 @@ class ContractBase:
 
     def delta(self, date):
         """
-        Get contract delta 
+        Get contract delta
+
         :param date: 
         :return: decision time greeks
         """
@@ -139,6 +149,7 @@ class ContractBase:
     def price(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
         """
         Calculate generic assets's price (also could be used for WhatIF analysis)
+
         :param date: 
         :param ulprice: 
         :param iv_change: 
@@ -156,6 +167,7 @@ class ContractBase:
     def _parse(ticker):
         """
         Parses ticker and returns tokenized list of contract meta information
+
         :param ticker: special `tckr` code
         :return: list of tokens
         """
@@ -169,6 +181,7 @@ class ContractBase:
     def _parse_expiration(self, exp_string):
         """
         Expiration token parsing YYMMDD, if YY < 50 returns 2000s, otherwise 1900s
+
         :param exp_string: expiration strning YYMMDD
         :return: expiration datetime
         """
@@ -233,6 +246,7 @@ class FutureContract(ContractBase):
     def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init future contract from special `tckr` code
+
         :param tckr: Ticker code
         :param datamanager: DataManager instance
         :param kwargs:            
@@ -249,6 +263,7 @@ class FutureContract(ContractBase):
     def name(self):
         """
         Future contract name without market information, US.F.CL.M83.830520 -> CLM83
+
         :return:
         """
         return self._toks[2] + self._toks[3]
@@ -257,6 +272,7 @@ class FutureContract(ContractBase):
     def instrument(self):
         """
         Future contract instrument information: US.F.CL.M83.830520 -> US.CL
+
         :return:
         """
         return '{0}.{1}'.format(self.market, self._toks[2])
@@ -265,6 +281,7 @@ class FutureContract(ContractBase):
     def underlying(self):
         """
         Future contract underlying (equals to contract.instrument): US.F.CL.M83.830520 -> US.CL
+
         :return:
         """
         return self.instrument
@@ -285,6 +302,7 @@ class FutureContract(ContractBase):
         October	V
         November	X
         December	Z
+
         :param month_letter:
         :return:
         """
@@ -308,10 +326,11 @@ class OptionContract(ContractBase):
     def __init__(self, tckr, datamanager=None, **kwargs):
         """
         Init option contract from special `tckr` code
+
         :param tckr: Ticker code
         :param datamanager: DataManager instance
         :param kwargs: contract init kwargs
-            - 'underlying' - underlying contract instance
+            * 'underlying' - underlying contract instance (by default: get from tckr name)
         """
         super().__init__(tckr, datamanager)
         if self.ctype != 'P' and self.ctype != 'C':
@@ -336,6 +355,7 @@ class OptionContract(ContractBase):
     def name(self):
         """
         Option contract name without market information, US.C.F-ZB-H11-110322.110121@89.0 -> ZBH11.110121@89.0
+
         :return:
         """
         return '{0}.{1}@{2}'.format(self.underlying.name, self._toks[3], self._toks[4])
@@ -344,6 +364,7 @@ class OptionContract(ContractBase):
     def instrument(self):
         """
         Option contract instrument information: US.C.F-ZB-H11-110322.110121@89.0 -> US.ZB
+
         :return:
         """
         return self.underlying.instrument
@@ -355,6 +376,7 @@ class OptionContract(ContractBase):
 
         Example: US.C.F-ZB-H11-110322.110121@89.0 -> US.F.ZB.H11.110322 future instance
         US.C.S-AAPL.110121@89.0 -> US.S.AAPL for stock options
+
         :return: FutureContract class instance or ContractBase class instance
         """
         if self._underlying is None:
@@ -367,6 +389,10 @@ class OptionContract(ContractBase):
 
     @property
     def point_value(self):
+        """
+        Point value of option contract
+        :return:
+        """
         if self._point_value is None:
             iinfo = self.instrument_info
             if iinfo.ticksize_options == 0.0 or iinfo.tickvalue_options == 0.0:
@@ -380,12 +406,18 @@ class OptionContract(ContractBase):
 
     @property
     def data_source(self):
+        """
+        DataSource name of OptionContract
+
+        :return:
+        """
         return self.instrument_info.data_options_src
 
     def set_pricing_context(self, date, ul_decision_px, ul_exec_px, option_decision_iv, option_exec_iv,
                             risk_free_rate=0.0):
         """
         Set recent date pricing context for option contract
+
         :param date: 
         :param ul_decision_px: 
         :param ul_exec_px: 
@@ -399,6 +431,7 @@ class OptionContract(ContractBase):
     def get_pricing_context(self, date):
         """
         Fetch pricing context for option contract from cache, otherwise from DataManager
+
         :param date: 
         :return: 
         """
@@ -417,6 +450,7 @@ class OptionContract(ContractBase):
     def to_expiration_days(self, date):
         """
         Calendar days to option expiration
+
         :param date: 
         :return: 
         """
@@ -425,6 +459,7 @@ class OptionContract(ContractBase):
     def to_expiration_years_from_days(self, days_to_expiration):
         """
         Calculate years to expriration from days
+
         :param days_to_expiration: 
         :return: 
         """
@@ -433,6 +468,7 @@ class OptionContract(ContractBase):
     def _calc_price(self, ulprice, days_to_expiration, rfr, iv):
         """
         Price option contract using fast Black-Scholes algorithm
+
         :param ulprice: 
         :param days_to_expiration: 
         :param rfr: 
@@ -446,6 +482,7 @@ class OptionContract(ContractBase):
     def _calc_greeks(self, ulprice, days_to_expiration, rfr, iv):
         """
         Calculate greeks using fast Black-Scholes algorithm
+
         :param ulprice: 
         :param days_to_expiration: 
         :param rfr: 
@@ -459,6 +496,7 @@ class OptionContract(ContractBase):
     def iv(self, date):
         """
         Get option IV for date
+
         :param date: required date
         :return: decision time IV
         """
@@ -468,6 +506,7 @@ class OptionContract(ContractBase):
     def delta(self, date):
         """
         Get option delta greek at the decision time
+
         :param date: 
         :return: decision time greeks
         """
@@ -475,7 +514,8 @@ class OptionContract(ContractBase):
 
     def greeks(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
         """
-        Calculate option's greeks at the decision time 
+        Calculate option's greeks at the decision time  (only delta supported so far)
+
         :param date: 
         :param ulprice: 
         :param iv_change: 
@@ -502,6 +542,7 @@ class OptionContract(ContractBase):
     def price(self, date, ulprice=None, iv_change=0.0, days_to_expiration=None, riskfreerate=None):
         """
         Calculate option's price (also could be used for WhatIF analysis)
+
         :param date: 
         :param ulprice: 
         :param iv_change: 

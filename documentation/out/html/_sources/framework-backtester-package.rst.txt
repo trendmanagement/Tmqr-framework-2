@@ -1,0 +1,25 @@
+.. _datamanager-class:
+
+DataManager class
+*****************
+
+This page automatically generated from source code.
+
+.. toctree::
+    :maxdepth: 2
+
+
+``DataManager`` package
+=======================
+.. automodule:: tmqrfeed.manager
+
+.. autoclass:: DataManager
+    :members:
+
+
+
+
+Indices and tables
+==================
+
+* :ref:`index-page`

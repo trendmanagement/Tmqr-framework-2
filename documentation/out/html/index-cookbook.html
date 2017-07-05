@@ -1,0 +1,781 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>EXO Index development cookbook &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="exo-index-development-cookbook">
+                    <span id="index-cookbook"></span>
+                    <h1>EXO Index development cookbook<a class="headerlink" href="#exo-index-development-cookbook"
+                                                         title="Permalink to this headline">¶</a></h1>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="introduction">
+                        <h2>Introduction<a class="headerlink" href="#introduction"
+                                           title="Permalink to this headline">¶</a></h2>
+                        <p>This chapter is focusing on EXO/SmartEXO index development process, refer to <a
+                                class="reference internal" href="index-development.html#index-development"><span
+                                class="std std-ref">Index development description</span></a> to get more information.
+                        </p>
+                    </div>
+                    <div class="section" id="setting-up-data">
+                        <h2>Setting up data<a class="headerlink" href="#setting-up-data"
+                                              title="Permalink to this headline">¶</a></h2>
+                        <p>Typically EXO/SmartEXO uses continuous futures series to make decisions or align position to
+                            times series. But is some
+                            complex cases like multi-instrument spread EXO index we have to set up instruments
+                            manually.</p>
+                        <div class="section" id="generic-exo-set-up">
+                            <h3>Generic EXO set up<a class="headerlink" href="#generic-exo-set-up"
+                                                     title="Permalink to this headline">¶</a></h3>
+                            <p>Example code:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="n">INDEX_CONTEXT</span> <span
+                                        class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="s2">&quot;US.ES&quot;</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;costs_futures&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;costs_options&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+<span class="p">}</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">EXODeltaTargetGeneric</span><span
+                                            class="p">(</span><span class="n">dm</span><span class="p">,</span> <span
+                                            class="o">**</span><span class="n">INDEX_CONTEXT</span><span
+                                            class="p">)</span>
+</pre>
+                                </div>
+                            </div>
+                            <dl class="docutils">
+                                <dt>Passing &#8216;US.ES. as &#8216;instrument&#8217; in index context implicitly
+                                    calling index.setup() method which do 3 typical actions:
+                                </dt>
+                                <dd>
+                                    <ol class="first last arabic simple">
+                                        <li>Set up DataManager&#8217;s trading session (gets these settings from the DB)
+                                            for the &#8216;US.ES&#8217; instrument
+                                        </li>
+                                        <li>Set up DataManager&#8217;s primary quotes using Quotes* Continuous Futures
+                                            with Daily timeframe and <strong>important</strong> decition_time_shift.
+                                            <strong>decition_time_shift</strong> is crucial for indexes and it this
+                                            setting helps to maintain calculation order, i.e. the rule of thumb
+                                            indexes must be calculated before alphas.
+                                        </li>
+                                        <li>Set up of DataManager&#8217;s costs values, by default it uses fixed dollar
+                                            costs per contract.
+                                        </li>
+                                    </ol>
+                                </dd>
+                            </dl>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">you can refer to <code class="xref py py-meth docutils literal"><span
+                                        class="pre">tmqrindex.index_exo_base.IndexEXOBase.setup()</span></code> source
+                                    code to get more information</p>
+                            </div>
+                        </div>
+                        <div class="section" id="custom-exo-set-up">
+                            <h3>Custom EXO set up<a class="headerlink" href="#custom-exo-set-up"
+                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>In complex cases like multi-instrument SpreadEXOs you have to override setup() method in
+                                child EXO class.</p>
+                            <p>Spread EXO index example:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">EXOSpreadIndex</span><span
+                                        class="p">(</span><span class="n">IndexEXOBase</span><span class="p">):</span>
+    <span class="n">_description_short</span> <span class="o">=</span> <span class="s2">&quot;EXO Vanilla Long/Short spread index&quot;</span>
+    <span class="n">_description_long</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="n">_index_name</span> <span class="o">=</span> <span class="s2">&quot;EXOSpreadFixed&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+                                            class="p">,</span> <span class="n">datamanager</span><span
+                                            class="p">,</span> <span class="o">**</span><span
+                                            class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span
+                                            class="fm">__init__</span><span class="p">(</span><span class="n">datamanager</span><span
+                                            class="p">,</span> <span class="o">**</span><span
+                                            class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">PRIMARY_INSTRUMENT</span> <span
+                                            class="o">=</span> <span class="s1">&#39;US.CL&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SECONDARY_INSTRUMENT</span> <span class="o">=</span> <span
+                                            class="s1">&#39;US.CL&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs_futures</span> <span
+                                            class="o">=</span> <span class="mf">3.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs_options</span> <span
+                                            class="o">=</span> <span class="mf">3.0</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span
+                                            class="p">):</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># IMPORTANT! Use trading session of self.PRIMARY_INSTRUMENT</span>
+        <span class="c1">#   All US.CL quotes and positions will use &#39;US.ES&#39; decision and execution time</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                            class="n">session_set</span><span class="p">(</span><span
+                                            class="bp">self</span><span class="o">.</span><span class="n">PRIMARY_INSTRUMENT</span><span
+                                            class="p">,</span> <span class="n">session_instance</span><span
+                                            class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+                                            class="n">session</span><span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Set primary quotes for &#39;US.ES&#39; to align all data to its index</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                            class="n">series_primary_set</span><span class="p">(</span><span class="n">QuoteContFut</span><span
+                                            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+                                            class="n">PRIMARY_INSTRUMENT</span><span class="p">,</span>
+                                   <span class="n">timeframe</span><span class="o">=</span><span
+                                            class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">decision_time_shift</span><span
+                                            class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+                                            class="n">decision_time_shift</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                            class="n">series_extra_set</span><span class="p">(</span><span class="bp">self</span><span
+                                            class="o">.</span><span class="n">SECONDARY_INSTRUMENT</span><span
+                                            class="p">,</span> <span class="n">QuoteContFut</span><span
+                                            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+                                            class="n">SECONDARY_INSTRUMENT</span><span class="p">,</span>
+                                   <span class="n">timeframe</span><span class="o">=</span><span
+                                            class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">decision_time_shift</span><span
+                                            class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+                                            class="n">decision_time_shift</span><span class="p">)</span>
+        <span class="c1">#</span>
+        <span class="c1"># Set index costs (costs are calculated at the final stage, of index equity calculation)</span>
+        <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                            class="n">costs_set</span><span class="p">(</span><span
+                                            class="bp">self</span><span class="o">.</span><span class="n">PRIMARY_INSTRUMENT</span><span
+                                            class="o">.</span><span class="n">split</span><span class="p">(</span><span
+                                            class="s1">&#39;.&#39;</span><span class="p">)[</span><span
+                                            class="mi">0</span><span class="p">],</span> <span
+                                            class="n">Costs</span><span class="p">(</span><span
+                                            class="n">per_contract</span><span class="o">=</span><span
+                                            class="bp">self</span><span class="o">.</span><span
+                                            class="n">costs_futures</span><span class="p">,</span>
+                                                               <span class="n">per_option</span><span class="o">=</span><span
+                                            class="bp">self</span><span class="o">.</span><span
+                                            class="n">costs_options</span><span class="p">))</span>
+</pre>
+                                </div>
+                            </div>
+                            <p>As in case of generic EXO you still have to set up DataManager&#8217;s session, costs and
+                                quotes in the <code class="docutils literal"><span class="pre">setup()</span></code>
+                                method.
+                                As you can see we have added <code class="docutils literal"><span class="pre">self.dm.series_extra_set(self.SECONDARY_INSTRUMENT</span>
+                                    <span class="pre">...)</span></code>
+                                call in the <code class="docutils literal"><span class="pre">setup()</span></code>
+                                method. This line allow us to use SECONDARY_INSTRUMENT&#8217;s continuous futures quotes
+                                in EXO calculations.</p>
+                        </div>
+                    </div>
+                    <div class="section" id="calculating-exo-logic">
+                        <h2>Calculating EXO logic<a class="headerlink" href="#calculating-exo-logic"
+                                                    title="Permalink to this headline">¶</a></h2>
+                        <p>Special method <code class="docutils literal"><span
+                                class="pre">calc_exo_logic(self)</span></code> intended to be used as main EXO logic
+                            method, all SmartEXO regimes, Spread index
+                            legs weights calculation must take place in this method.</p>
+                        <p>Here is an example how you can calculate spread index with SmartEXO like regime:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">calc_exo_logic</span><span
+                                    class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates SmartEXO logic.</span>
+<span class="sd">    NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key=&#39;for_secondary_series&#39;) to</span>
+<span class="sd">          calculate SmartEXO logic</span>
+<span class="sd">    :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Getting quotes</span>
+    <span class="n">primary_quotes</span> <span class="o">=</span> <span class="bp">self</span><span
+                                        class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                        class="n">quotes</span><span class="p">()</span>
+    <span class="n">secondary_quotes</span> <span class="o">=</span> <span class="bp">self</span><span
+                                        class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                        class="n">quotes</span><span class="p">(</span><span class="bp">self</span><span
+                                        class="o">.</span><span class="n">SECONDARY_INSTRUMENT</span><span
+                                        class="p">)</span>
+
+    <span class="c1"># Getting instrument information</span>
+    <span class="n">primary_instrument_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+                                        class="n">dm</span><span class="o">.</span><span
+                                        class="n">instrument_info_get</span><span class="p">(</span><span class="bp">self</span><span
+                                        class="o">.</span><span class="n">PRIMARY_INSTRUMENT</span><span
+                                        class="p">)</span>
+    <span class="n">secondary_instrument_info</span> <span class="o">=</span> <span class="bp">self</span><span
+                                        class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+                                        class="n">instrument_info_get</span><span class="p">(</span><span class="bp">self</span><span
+                                        class="o">.</span><span class="n">SECONDARY_INSTRUMENT</span><span
+                                        class="p">)</span>
+
+    <span class="c1"># Calculating point value</span>
+    <span class="n">primary_instrument_point_value</span> <span class="o">=</span> <span class="mf">1.0</span> <span
+                                        class="o">/</span> <span class="n">primary_instrument_info</span><span
+                                        class="o">.</span><span class="n">ticksize</span> <span class="o">*</span> <span
+                                        class="n">primary_instrument_info</span><span class="o">.</span><span class="n">tickvalue</span>
+    <span class="n">secondary_instrument_point_value</span> <span class="o">=</span> <span class="mf">1.0</span> <span
+                                        class="o">/</span> <span class="n">secondary_instrument_info</span><span
+                                        class="o">.</span><span class="n">ticksize</span> <span class="o">*</span> <span
+                                        class="n">secondary_instrument_info</span><span class="o">.</span><span
+                                        class="n">tickvalue</span>
+
+    <span class="c1"># Calculating USD value price series</span>
+    <span class="n">primary_usd_value</span> <span class="o">=</span> <span class="n">primary_quotes</span><span
+                                        class="p">[</span><span class="s1">&#39;c&#39;</span><span
+                                        class="p">]</span> <span class="o">*</span> <span class="n">primary_instrument_point_value</span>
+    <span class="n">secondary_usd_value</span> <span class="o">=</span> <span class="n">secondary_quotes</span><span
+                                        class="p">[</span><span class="s1">&#39;c&#39;</span><span
+                                        class="p">]</span> <span class="o">*</span> <span class="n">secondary_instrument_point_value</span>
+
+    <span class="c1"># Calculating USD value ratio per 10 contracts</span>
+    <span class="n">usd_ratio</span> <span class="o">=</span> <span class="n">primary_usd_value</span> <span
+                                        class="o">/</span> <span class="n">secondary_usd_value</span>
+
+    <span class="c1"># Add extra logic to illustrate how SmartEXO can be implemeted</span>
+    <span class="c1"># Define bull trend regime as close of primary &gt; moving_average(primary, 20-periods)</span>
+    <span class="n">primary_in_bull_trend</span> <span class="o">=</span> <span class="n">primary_quotes</span><span
+                                        class="p">[</span><span class="s1">&#39;c&#39;</span><span
+                                        class="p">]</span> <span class="o">&gt;</span> <span
+                                        class="n">primary_quotes</span><span class="p">[</span><span class="s1">&#39;c&#39;</span><span
+                                        class="p">]</span><span class="o">.</span><span class="n">rolling</span><span
+                                        class="p">(</span><span class="mi">20</span><span class="p">)</span><span
+                                        class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="c1"># We have to return pandas.DataFrame class</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span
+                                        class="p">({</span>
+        <span class="s1">&#39;usd_ratio&#39;</span><span class="p">:</span> <span class="n">usd_ratio</span><span
+                                        class="p">,</span>
+
+        <span class="c1"># Optionally include spread prices</span>
+        <span class="s1">&#39;primary_usd_value&#39;</span><span class="p">:</span> <span
+                                        class="n">primary_usd_value</span><span class="p">,</span>
+        <span class="s1">&#39;secondary_usd_value&#39;</span><span class="p">:</span> <span class="n">secondary_usd_value</span><span
+                                        class="p">,</span>
+
+        <span class="c1"># Include SMART EXO regime</span>
+        <span class="s1">&#39;primary_in_bull_trend&#39;</span><span class="p">:</span> <span class="n">primary_in_bull_trend</span><span
+                                        class="p">,</span>
+    <span class="p">})</span>
+</pre>
+                            </div>
+                        </div>
+                        <div class="figure" id="id1">
+                            <a class="reference internal image-reference"
+                               href="_images/index_exo_calc_usd_spread.jpg"><img alt=""
+                                                                                 src="_images/index_exo_calc_usd_spread.jpg"
+                                                                                 style="width: 770.0px; height: 248.0px;"/></a>
+                            <p class="caption"><span class="caption-text">Result of calculation of the code above</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="section" id="constructing-exo-position">
+                        <h2>Constructing EXO position<a class="headerlink" href="#constructing-exo-position"
+                                                        title="Permalink to this headline">¶</a></h2>
+                        <p>After we prepared EXO information for position construction we are ready to construct dollar
+                            value spread position.</p>
+                        <p><code class="docutils literal"><span class="pre">construct_position()</span></code> method
+                            used to initial position construction, you get access to the <strong>Position</strong> class
+                            instance
+                            of the index via <code class="docutils literal"><span class="pre">pos</span></code>
+                            parameter, current datetime of position construction via <code
+                                    class="docutils literal"><span class="pre">dt</span></code> parameter and <code
+                                    class="docutils literal"><span class="pre">calc_exo_logic</span></code>
+                            results slice at date <code class="docutils literal"><span class="pre">dt</span></code></p>
+                        <p>construct_position method definition:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">construct_position</span><span
+                                    class="p">(</span><span class="bp">self</span><span class="p">,</span> <span
+                                    class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+                                    class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        EXO position construction method</span>
+
+<span class="sd">        NOTE!: this method only called when there is no active position for &#39;dt&#39;</span>
+<span class="sd">        :param dt: current datetime</span>
+<span class="sd">        :param pos: Position instance</span>
+<span class="sd">        :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">        :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+</pre>
+                            </div>
+                        </div>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">This method called only when there is no active position for actual date
+                                (i.e. <code class="docutils literal"><span class="pre">dt</span></code> parameter)</p>
+                        </div>
+                        <p>Now we are ready to create spread position on futures, using USD weighted size of legs, with
+                            elements of dynamic SmartEXO
+                            hedging.</p>
+                        <p>Follow the comments in the code:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">construct_position</span><span
+                                    class="p">(</span><span class="bp">self</span><span class="p">,</span> <span
+                                    class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+                                    class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    EXO position construction method</span>
+
+<span class="sd">    NOTE!: this method only called when there is no active position for &#39;dt&#39;</span>
+<span class="sd">    :param dt: current datetime</span>
+<span class="sd">    :param pos: Position instance</span>
+<span class="sd">    :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">    :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Getting active futures and options chains</span>
+    <span class="n">fut_primary</span><span class="p">,</span> <span class="n">opt_chain_primary</span> <span class="o">=</span> <span
+                                        class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+                                        class="o">.</span><span class="n">chains_options_get</span><span
+                                        class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+                                        class="n">PRIMARY_INSTRUMENT</span><span class="p">,</span> <span
+                                        class="n">dt</span><span class="p">)</span>
+    <span class="n">fut_secondary</span><span class="p">,</span> <span class="n">opt_chain_secondary</span> <span
+                                        class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+                                        class="n">dm</span><span class="o">.</span><span
+                                        class="n">chains_options_get</span><span class="p">(</span><span
+                                        class="bp">self</span><span class="o">.</span><span class="n">SECONDARY_INSTRUMENT</span><span
+                                        class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+    <span class="c1"># Getting logic_df slice information</span>
+    <span class="c1"># Example of slice data:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &gt; print(logic_df)</span>
+<span class="sd">    primary_in_bull_trend      False</span>
+<span class="sd">    primary_usd_value         103788</span>
+<span class="sd">    secondary_usd_value        44880</span>
+<span class="sd">    usd_ratio                2.31256</span>
+<span class="sd">    Name: 2016-05-02 12:40:00-07:00, dtype: object</span>
+
+<span class="sd">    &gt; print(logic_df[&#39;usd_ratio&#39;])</span>
+<span class="sd">    2.31256</span>
+
+<span class="sd">    &gt; print(logic_df[&#39;primary_usd_value&#39;])</span>
+<span class="sd">    103788</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># You can easily access data calculated in calc_exo_logic() metod by</span>
+    <span class="c1"># logic_df[&#39;primary_usd_value&#39;]</span>
+    <span class="c1"># logic_df[&#39;some_column_name&#39;]</span>
+    <span class="n">usd_ratio</span> <span class="o">=</span> <span class="n">logic_df</span><span
+                                        class="p">[</span><span class="s1">&#39;usd_ratio&#39;</span><span
+                                        class="p">]</span>
+    <span class="n">primary_in_bull_trend</span> <span class="o">=</span> <span class="n">logic_df</span><span
+                                        class="p">[</span><span class="s1">&#39;primary_in_bull_trend&#39;</span><span
+                                        class="p">]</span>
+
+    <span class="c1"># PRIMARY long</span>
+    <span class="n">primary_qty</span> <span class="o">=</span> <span class="mf">10.0</span>
+    <span class="n">pos</span><span class="o">.</span><span class="n">add_transaction</span><span
+                                        class="p">(</span><span class="n">dt</span><span class="p">,</span> <span
+                                        class="n">fut_primary</span><span class="p">,</span> <span
+                                        class="n">primary_qty</span><span class="p">)</span>
+    <span class="c1"># SECONDARY short</span>
+    <span class="n">secondary_qty</span> <span class="o">=</span> <span class="nb">round</span><span
+                                        class="p">(</span><span class="n">primary_qty</span> <span
+                                        class="o">*</span> <span class="n">usd_ratio</span><span class="p">)</span>
+    <span class="n">pos</span><span class="o">.</span><span class="n">add_transaction</span><span
+                                        class="p">(</span><span class="n">dt</span><span class="p">,</span> <span
+                                        class="n">fut_secondary</span><span class="p">,</span> <span
+                                        class="o">-</span><span class="n">secondary_qty</span><span class="p">)</span>
+
+
+    <span class="c1"># Usign SmartEXO hedge style</span>
+    <span class="k">if</span> <span class="n">primary_in_bull_trend</span><span class="p">:</span>
+        <span class="c1"># Add primary long call if primary_in_bull_trend</span>
+        <span class="n">target_delta</span> <span class="o">=</span> <span class="mf">0.15</span>
+        <span class="n">hedge_qty</span> <span class="o">=</span> <span class="nb">round</span><span
+                                        class="p">(</span><span class="n">primary_qty</span> <span
+                                        class="o">*</span> <span class="n">target_delta</span><span class="p">)</span>
+
+        <span class="n">pos</span><span class="o">.</span><span class="n">add_transaction</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">,</span> <span
+                                        class="n">opt_chain_primary</span><span class="o">.</span><span
+                                        class="n">find</span><span class="p">(</span><span class="n">dt</span><span
+                                        class="p">,</span> <span class="n">target_delta</span><span
+                                        class="p">,</span> <span class="s1">&#39;C&#39;</span><span
+                                        class="p">,</span> <span class="n">how</span><span class="o">=</span><span
+                                        class="s1">&#39;delta&#39;</span><span class="p">),</span> <span class="n">hedge_qty</span><span
+                                        class="p">)</span>
+</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section" id="managing-exo-position">
+                        <h2>Managing EXO position<a class="headerlink" href="#managing-exo-position"
+                                                    title="Permalink to this headline">¶</a></h2>
+                        <p>The final part of valid EXO index is a position management, every position management should
+                            contain at least expiring
+                            contracts rollover checks and execution.</p>
+                        <p>To handle position management you should implement <code class="docutils literal"><span
+                                class="pre">manage_position()</span></code> method:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">manage_position</span><span
+                                    class="p">(</span><span class="bp">self</span><span class="p">,</span> <span
+                                    class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+                                    class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+       <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       Manages opened position (rollover checks/closing, delta hedging, etc)</span>
+<span class="sd">       :param dt: current datetime</span>
+<span class="sd">       :param pos: Position instance</span>
+<span class="sd">       :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">       :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">       &quot;&quot;&quot;</span>
+</pre>
+                            </div>
+                        </div>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">Arguments meaning is exactly the same as for <code class="docutils literal"><span
+                                    class="pre">construct_position()</span></code>, so you can use same techniques to
+                                manage
+                                position or to get <code class="docutils literal"><span
+                                        class="pre">logic_df</span></code> values.</p>
+                        </div>
+                        <dl class="docutils">
+                            <dt>You can manage position in different ways, the most common ways are:</dt>
+                            <dd>
+                                <ul class="first last simple">
+                                    <li>Check if some assets in the position are about to be expired</li>
+                                    <li>X days passed after last transaction occurrence</li>
+                                    <li>Check position delta threshold</li>
+                                    <li>Check values of metric calcilated in <code class="docutils literal"><span
+                                            class="pre">calc_exo_logic()</span></code></li>
+                                    <li>Combination of approaches above</li>
+                                </ul>
+                            </dd>
+                        </dl>
+                        <p>Here is a sample code:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">manage_position</span><span
+                                    class="p">(</span><span class="bp">self</span><span class="p">,</span> <span
+                                    class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+                                    class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Manages opened position (rollover checks/closing, delta hedging, etc)</span>
+<span class="sd">    :param dt: current datetime</span>
+<span class="sd">    :param pos: Position instance</span>
+<span class="sd">    :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">    :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#</span>
+    <span class="c1"># Check expiration moment</span>
+    <span class="c1"># Or you can check custom days to expiration values</span>
+    <span class="c1">#  pos.almost_expired_ratio(dt, rollover_days_before_fut=5, rollover_days_before_opt=7)</span>
+    <span class="k">if</span> <span class="n">pos</span><span class="o">.</span><span
+                                        class="n">almost_expired_ratio</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span> <span class="o">&gt;</span> <span
+                                        class="mi">0</span><span class="p">:</span>
+        <span class="n">pos</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># Check business days after last transaction</span>
+    <span class="c1">#</span>
+    <span class="n">pos_last_transaction_date</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span
+                                        class="n">last_transaction_date</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span
+                                        class="s2">&quot;Last transaction date: </span><span class="si">{0}</span><span
+                                        class="s2">&quot;</span><span class="o">.</span><span
+                                        class="n">format</span><span class="p">(</span><span class="n">pos_last_transaction_date</span><span
+                                        class="p">))</span>
+    <span class="n">days_after_last_trans</span> <span class="o">=</span> <span class="n">relativedelta</span><span
+                                        class="p">(</span><span class="n">dt</span><span class="p">,</span> <span
+                                        class="n">pos_last_transaction_date</span><span class="p">)</span><span
+                                        class="o">.</span><span class="n">bdays</span>
+
+    <span class="k">if</span> <span class="n">days_after_last_trans</span> <span class="o">&gt;</span> <span class="mi">7</span><span
+                                        class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span
+                                        class="s2">&quot;Business days &gt; 7, closing position&quot;</span><span
+                                        class="p">)</span>
+        <span class="c1"># Close the position</span>
+        <span class="n">pos</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span>
+        <span class="c1"># Avoid following checks</span>
+        <span class="k">return</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># Delta based rebalance</span>
+    <span class="c1">#</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span
+                                        class="n">delta</span><span class="p">(</span><span class="n">dt</span><span
+                                        class="p">)</span>
+    <span class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span class="mf">0.7</span><span
+                                        class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span
+                                        class="s2">&quot;Delta &gt; 0.7&quot;</span><span class="p">)</span>
+        <span class="c1"># Close the position</span>
+        <span class="n">pos</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span>
+        <span class="c1"># Avoid following checks</span>
+        <span class="k">return</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># logic_df based rebalance</span>
+    <span class="c1">#</span>
+    <span class="n">primary_in_bull_trend</span> <span class="o">=</span> <span class="n">logic_df</span><span
+                                        class="p">[</span><span class="s1">&#39;primary_in_bull_trend&#39;</span><span
+                                        class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">primary_in_bull_trend</span><span
+                                        class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span
+                                        class="s2">&quot;not primary_in_bull_trend&quot;</span><span class="p">)</span>
+        <span class="c1"># Close the position</span>
+        <span class="n">pos</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span
+                                        class="n">dt</span><span class="p">)</span>
+        <span class="c1"># Avoid following checks</span>
+        <span class="k">return</span>
+</pre>
+                            </div>
+                        </div>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p>For this particular sample EXO it&#8217;s normal to close full position, for more
+                                sophisticated EXO indexes it could
+                                be possible to implement partial position management, for example open/close only hedge
+                                option leg.</p>
+                            <p class="last"><strong>IMPORTANT</strong> The position management in the framework is
+                                pretty smart, it calculates only transactions as a
+                                difference of the position between previous date. For example if you had a opened ES
+                                future at previous date,
+                                then due some reason you have decided to close the position at current date, and then
+                                opened same ES future,
+                                you <strong>will have not</strong> to pay any costs, because the position remained the
+                                same compared to previous date.</p>
+                        </div>
+                    </div>
+                    <div class="section" id="building-index">
+                        <h2>Building index<a class="headerlink" href="#building-index"
+                                             title="Permalink to this headline">¶</a></h2>
+                        <p>To build EXO index inside Jupyter notebook you need to run the following lines of code:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="n">dm</span> <span class="o">=</span> <span
+                                    class="n">DataManager</span><span class="p">(</span> <span class="c1">#date_start=datetime(2016, 5, 1),  # Optional</span>
+                  <span class="c1">#date_end=datetime(2017, 5, 1)     # Optional</span>
+<span class="p">)</span>
+<span class="n">INDEX_CONTEXT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="s2">&quot;US.ES&quot;</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_futures&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_options&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+<span class="p">}</span>
+<span class="c1"># Assuming that you have defined EXOSpreadIndex() class in some cell above</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">EXOSpreadIndex</span><span class="p">(</span><span
+                                        class="n">dm</span><span class="p">,</span> <span class="o">**</span><span
+                                        class="n">INDEX_CONTEXT</span><span class="p">)</span>
+
+<span class="c1"># Running index</span>
+<span class="n">index</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># You can run index.save() to make index data and position available for the EXO based alphas</span>
+<span class="c1"># index.save()</span>
+</pre>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section" id="getting-index-information">
+                        <h2>Getting index information<a class="headerlink" href="#getting-index-information"
+                                                        title="Permalink to this headline">¶</a></h2>
+                        <p>Every index must have <code class="docutils literal"><span class="pre">data</span></code> and
+                            <code class="docutils literal"><span class="pre">position</span></code> attributes.</p>
+                        <p><code class="docutils literal"><span class="pre">data</span></code> - represents
+                            pandas.DataFrame of index&#8217;s position PnL, for EXO index this is a result of call
+                            <code class="docutils literal"><span class="pre">index.data</span> <span
+                                    class="pre">=</span> <span class="pre">index.position.get_pnl_series()</span></code>
+                        </p>
+                        <div class="figure" id="id2">
+                            <a class="reference internal image-reference" href="_images/index_exo_data_columns.jpg"><img
+                                    alt="" src="_images/index_exo_data_columns.jpg"
+                                    style="width: 1065.0px; height: 249.0px;"/></a>
+                            <p class="caption"><span
+                                    class="caption-text">index.data DataFrame example and column names</span></p>
+                        </div>
+                        <p><code class="docutils literal"><span class="pre">position</span></code> - represents build
+                            and manager position of the EXO it also can be used in alphas, alpha code can replicate
+                            EXO index position, refer to the <code class="docutils literal"><span
+                                    class="pre">Position</span></code> class documentation to get more information.</p>
+                    </div>
+                    <div class="section" id="using-saved-index-information-in-alphas">
+                        <h2>Using saved index information in alphas<a class="headerlink"
+                                                                      href="#using-saved-index-information-in-alphas"
+                                                                      title="Permalink to this headline">¶</a></h2>
+                        <p>Alphas can use any index as a primary source of quotes or position. For example StrategyAlpha
+                            base class uses EXO index
+                            as a primary source of quotes and the index&#8217;s position as the primary alpha&#8217;s
+                            position, i.e. replicates the EXO position.</p>
+                        <p>Refer to <code class="xref py py-meth docutils literal"><span class="pre">tmqrstrategy.strategy_alpha.StrategyAlpha.setup()</span></code>
+                            and <code class="xref py py-meth docutils literal"><span class="pre">tmqrstrategy.strategy_alpha.StrategyAlpha.calculate_position()</span></code>
+                            source code to get more information.</p>
+                    </div>
+                    <div class="section" id="index-naming-and-description">
+                        <h2>Index naming and description<a class="headerlink" href="#index-naming-and-description"
+                                                           title="Permalink to this headline">¶</a></h2>
+                        <p>Each index uses pre-defined constants for naming:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">EXOSpreadIndex</span><span
+                                    class="p">(</span><span class="n">IndexEXOBase</span><span class="p">):</span>
+    <span class="n">_description_short</span> <span class="o">=</span> <span class="s2">&quot;EXO Vanilla Long/Short spread index&quot;</span>
+    <span class="n">_description_long</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">_index_name</span> <span class="o">=</span> <span class="s2">&quot;EXOSpreadFixed&quot;</span>
+
+<span class="o">.....</span>
+
+<span class="c1"># Init index</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">EXOSpreadIndex</span><span class="p">(</span><span
+                                        class="n">dm</span><span class="p">,</span> <span
+                                        class="n">instrument</span><span class="o">=</span><span class="s2">&quot;US.ES&quot;</span><span
+                                        class="p">,</span> <span class="n">costs_futures</span><span
+                                        class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span
+                                        class="n">costs_options</span><span class="o">=</span><span
+                                        class="mf">3.0</span><span class="p">)</span>
+
+<span class="c1"># or equivalent</span>
+<span class="n">INDEX_CONTEXT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="s2">&quot;US.ES&quot;</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_futures&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_options&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+<span class="p">}</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">EXOSpreadIndex</span><span class="p">(</span><span
+                                        class="n">dm</span><span class="p">,</span> <span class="o">**</span><span
+                                        class="n">INDEX_CONTEXT</span><span class="p">)</span>
+
+<span class="o">&gt;</span> <span class="nb">print</span><span class="p">(</span><span class="n">index</span><span
+                                        class="o">.</span><span class="n">index_name</span><span class="p">)</span>
+<span class="s1">&#39;US.ES_EXOSpreadFixed&#39;</span>
+</pre>
+                            </div>
+                        </div>
+                        <p>Usually you have to set up <code class="docutils literal"><span class="pre">instrument</span></code>
+                            keyword for index to get index name like &#8216;US.ES_EXOSpreadFixed&#8217;.</p>
+                        <p>Call <code class="docutils literal"><span class="pre">index.index_name</span></code> to get
+                            full-qualified index name, also used as key name of the index in the DB.</p>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">EXO Index development cookbook</a>
+                    <ul>
+                        <li><a class="reference internal" href="#introduction">Introduction</a></li>
+                        <li><a class="reference internal" href="#setting-up-data">Setting up data</a>
+                            <ul>
+                                <li><a class="reference internal" href="#generic-exo-set-up">Generic EXO set up</a></li>
+                                <li><a class="reference internal" href="#custom-exo-set-up">Custom EXO set up</a></li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#calculating-exo-logic">Calculating EXO logic</a></li>
+                        <li><a class="reference internal" href="#constructing-exo-position">Constructing EXO
+                            position</a></li>
+                        <li><a class="reference internal" href="#managing-exo-position">Managing EXO position</a></li>
+                        <li><a class="reference internal" href="#building-index">Building index</a></li>
+                        <li><a class="reference internal" href="#getting-index-information">Getting index
+                            information</a></li>
+                        <li><a class="reference internal" href="#using-saved-index-information-in-alphas">Using saved
+                            index information in alphas</a></li>
+                        <li><a class="reference internal" href="#index-naming-and-description">Index naming and
+                            description</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/index-cookbook.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/index-cookbook.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

@@ -12,26 +12,31 @@ from tmqrfeed.chains import FutureChain, OptionChain, OptionChainList
 from math import isnan
 from tmqrfeed.assetsession import AssetSession
 import pytz
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
 class DataManager:
     """
-    Utility class used for data management of the strategy. 
+    Utility class used for data management of the strategy.
+
     Also this class will be used for following purposes:
-    * Quotes building - acts as a container for a different quotes types produced by Quote* classes.
-    * Quotes aligning - if several quotes sources utilized with different timestamps layout
-    * Return positions structure - contracts names and information for each date of the dataseries
-    * Quotes sanity checks - warns if one of the series are delayed or has data holes
-    * Data access interface and container - stores all data requested by strategies/contracts and provides interface for data management
-    * Smart chains fetching - selects actual options and futures chains by several criterias
-    * Quotes caching - reduces DB calls and speedup data access if this data is already fetched 
-    * Extradata fetching - fetch extradata (like indexes or non-price data) from the DB and properly align this data    
+
+        * Quotes building - acts as a container for a different quotes types produced by Quote* classes.
+        * Quotes aligning - if several quotes sources utilized with different timestamps layout
+        * Return positions structure - contracts names and information for each date of the dataseries
+        * Quotes sanity checks - warns if one of the series are delayed or has data holes
+        * Data access interface and container - stores all data requested by strategies/contracts and provides interface for data management
+        * Smart chains fetching - selects actual options and futures chains by several criterias
+        * Quotes caching - reduces DB calls and speedup data access if this data is already fetched
+        * Extradata fetching - fetch extradata (like indexes or non-price data) from the DB and properly align this data
     """
 
     def __init__(self, **kwargs):
         """
         Init DataManager class
-        :param kwargs: 
+
+        :param kwargs:
+            * 'datafeed' - low-level datafeed class instance (by default: DataFeed)
         """
         # Initiate low-level datafeed
         feed = kwargs.get('datafeed', None)
@@ -64,11 +69,22 @@ class DataManager:
         # Actual session
         self._session = None  # type: AssetSession
 
+    def instrument_info_get(self, instrument: str) -> InstrumentInfo:
+        """
+        Returns information about instrument
+
+        :param instrument: full qualified instrument name, for example 'US.ES'
+        :return: InstrumentInfo class instance
+        """
+
+        return self.datafeed.get_instrument_info(instrument)
+
     def session_get(self) -> AssetSession:
         """
         Returns trading session for all DataManager quotes, session settings should be set by call of the
         datamanager.session_set(...) method.
-        :return:
+
+        :return: AssetSession
         """
         if self._session is None:
             raise SettingsError("Session is not set, call datamanager.session_set(...) first.")
@@ -87,13 +103,17 @@ class DataManager:
             Load instrument (or market default) session from the DB by instrument name (example: 'US.ES')
         Mode 2: Custom session
             To initiate custom session, you should set the BOTH 'session_list' and 'tz' params (and exclude instrument param)
+        Mode 3: Custom AssetSession instance
+            You can initiate custom AssetSession class instance
 
         'instrument' and (both 'session_list' and 'tz') parameters are mutually exclusive
 
         :param instrument: Full qualified name of the instrument to load from the DB (like 'US.ES')
         :param session_instance: AssetSession class instance
         :param session_list: list of the session params
-            Example:
+
+            For example::
+
                 session_list = [
                     # Default session
                     {
@@ -111,6 +131,7 @@ class DataManager:
                     'start': '01:32'                 # Start of the session time (uses 'tz' param time zone!)
                     },
                 ]
+
         :param tz: see 'pytz' package's list of available timezones
         :return: AssetSession instance
         """
@@ -153,9 +174,10 @@ class DataManager:
     def costs_set(self, market: str, costs: Costs) -> None:
         """
         Initiate costs settings for position PnL calculations
+
         :param market: market name
         :param costs: Costs class instance
-        :return: 
+        :return: None
         """
         if not isinstance(costs, Costs):
             raise ArgumentError("'costs' argument must be instance/or derived from tmqrfeed.costs.Costs class")
@@ -164,6 +186,7 @@ class DataManager:
     def costs_get(self, asset: ContractBase, qty: float) -> float:
         """
         Calculate costs based on 'asset'.market and qty
+
         :param asset: ContractBase instance
         :param qty: transaction qty
         :return: costs value in dollars
@@ -177,10 +200,23 @@ class DataManager:
     def series_primary_set(self, quote_engine_cls, *args, **kwargs) -> None:
         """
         Fetch main series used for algorithm and strategy calculations
+
         :param quote_engine_cls: Quote* class
         :param args: positional arguments for given Quote* class
         :param kwargs: kwargs for given Quote* class
         :return: None
+
+        Usually this method is used in Index or Strategy setup() methods by following way::
+
+            # To set continuous futures index for 'US.ES' instrument with decision_time_shift (for index usage)
+            self.dm.series_primary_set(QuoteContFut, 'US.ES',
+                                       timeframe='D', decision_time_shift=self.decision_time_shift)
+
+
+            # To set pre-saved index series as primary quotes and series
+            self.dm.series_primary_set(QuoteIndex, "US.ES_ContFut", set_session=True, check_session=True)
+
+            # NOTE: refer to tmqrfeed.quotes package documentation for QuoteContFut/QuoteIndex params description
         """
         if self._primary_quotes is not None:
             raise DataManagerError("series_primary_set() already called, only one instance of primary quotes allowed")
@@ -193,6 +229,7 @@ class DataManager:
     def series_extra_set(self, name, quote_engine_cls, *args, **kwargs) -> None:
         """
         Fetch additional series, align them to primary series and save by 'name'
+
         :param name: Extra series name for further access
         :param quote_engine_cls: Quote* class
         :param args: positional arguments for given Quote* class
@@ -220,6 +257,7 @@ class DataManager:
     def quotes(self, series_key: str = None) -> pd.DataFrame:
         """
         Get aligned primary or extra quotes data
+
         :param series_key: extra_series key, or if None - return primary series
         :return: pd.DataFrame of series
         """
@@ -244,6 +282,7 @@ class DataManager:
     def quotes_range_set(self, range_start: datetime = None, range_end: datetime = None) -> None:
         """
         Set quotes date range returned by DataManager.quotes() method
+
         :param range_start: starting date
         :param range_end: end date
         :return: nothing
@@ -263,6 +302,7 @@ class DataManager:
     def position(self, position_key: str = None) -> Position:
         """
         Get aligned primary or extra position instance
+
         :param position_key: extra_series key, or if None - return primary series
         :return: pd.DataFrame of series
         """
@@ -308,6 +348,7 @@ class DataManager:
     def series_get(self, asset: ContractBase, **kwargs) -> pd.DataFrame:
         """
         Get asset's raw series from the DB
+
         :param asset: asset instance
         :param kwargs: DataFeed get_raw_series() **kwargs
         :return: series DataFrame
@@ -327,6 +368,13 @@ class DataManager:
                                             )
 
     def riskfreerate_get(self, asset: ContractBase, date: datetime) -> float:
+        """
+        Returns RFR for asset's market at 'date'
+
+        :param asset:
+        :param date:
+        :return: risk free rate value
+        """
         rfr_series = self.datafeed.get_riskfreerate_series(asset.market)
 
         try:
@@ -342,6 +390,7 @@ class DataManager:
     def price_get(self, asset: ContractBase, date: datetime, **kwargs) -> Tuple[float, float]:
         """
         Get price at decision and execution time for given asset
+
         :param asset: Contract class instance
         :param date: timestamp for price
         :return: Tuple of [decision_px, exec_px]
@@ -441,6 +490,7 @@ class DataManager:
     def chains_futures_get(self, instrument: str, date: datetime, offset: int = 0) -> FutureContract:
         """
         Get future contract from futures chains
+
         :param instrument: Full-qualified instrument name
         :param date: current date 
         :param offset: future expiration offset, 0 - front month, +1 - front+1, etc. (default: 0)
@@ -452,6 +502,7 @@ class DataManager:
     def chains_options_get(self, instrument: str, date: datetime, **kwargs) -> Tuple[FutureContract, OptionChain]:
         """
         Find future+option chain by given criteria
+
         :param instrument: Full-qualified instrument name
         :param date: current date
         :param kwargs: 

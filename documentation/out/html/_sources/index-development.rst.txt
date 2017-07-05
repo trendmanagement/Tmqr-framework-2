@@ -1,0 +1,103 @@
+.. _index-development:
+
+=============================
+Index development description
+=============================
+
+:ref:`index-page`
+
+.. toctree::
+    :maxdepth: 2
+
+Index algorithms taxonomy
++++++++++++++++++++++++++
+
+Indexes are abstract algorithms used for pre-calculation of data commonly used by alphas. There will be 2 types of
+indexes: **position based** index and **informational** index.
+The general purpose of indexes in information sharing between alphas and in decreasing workload (otherwise each alpha
+should do many calculations at every run). Indexes will calculate slightly before decision time (about 2-5 minutes before).
+
+* **Position based indexes** – are very similar to old EXO or SmartEXO algorithms, they intended to build time series
+  for further analysis by alphas. I've decided to prebuild EXOs because it's pretty slow operation to calculate EXO for
+  every alpha we have. Possible use of position based indexes: EXO/SmartEXO building, multi-legged spreads building
+  (including multi-instrument spreads or baskets).
+
+* **Informational indexes** – these indexes will be used for decision making for alphas.
+
+  Examples:
+
+  1. Non-price data storage – index for COT, economic news calendar, fundamental data information, etc.
+  2. Custom volatility indexes for instruments – based on custom VX approaches
+  3. Custom option pricing models – we can store custom theoretical value for each strike and trade current price mismatches.
+  4. Futures forward curve analysis – we can calculate some curve metrics and analyze them inside alphas
+  5. Intraday quotes analysis – we can analyze price path behavior inside trading session and calculate different sentiment metrics.
+
+
+Index development
++++++++++++++++++
+
+Refer to :ref:`index-cookbook` to get more recipes.
+
+Base index API
+~~~~~~~~~~~~~~
+Index API is pretty straightforward IndexBase has 2 main methods to implement:
+    * ``setup()`` - developer should init quotes, costs and session settings inside this method. Refer to source code of ``tmqrindex.index_exo_base.IndexEXOBase.setup()`` method to check out genetic usage of EXO index.
+
+    * ``set_data_and_position()`` - the method of index logic, here you can define calculation of the informational index or
+      custom position generation. Refer to source code of ``tmqrindex.index_exo_base.IndexEXOBase.set_data_and_position()`` to
+      get knowledge how EXO index works.
+
+EXO/SmartEXO index API
+~~~~~~~~~~~~~~~~~~~~~~
+EXO/SmartEXO indexes are derived from IndexBase class and providing other API for the end-developer.
+
+There are 4 main methods:
+
+.. autoclass:: tmqrindex.index_exo_base.IndexEXOBase
+    :members: calc_exo_logic, manage_position, construct_position
+
+Index deployment
+++++++++++++++++
+To deploy index source code you should commit index to the repository, then you can load index to the Jupyter notebooks or
+run in online scripts environment.
+
+Example code how to run Index::
+
+    from deployed_package_path import EXODeployedIndex
+    from tmqrfeed.manager import DataManager
+
+    # Init data engine
+    dm = DataManager()
+
+    # Set some index specific settings
+    INDEX_CONTEXT = {
+        'instrument': "US.ES",
+        'costs_futures': 3.0,
+        'costs_options': 3.0,
+    }
+    index = EXODeployedIndex(dm, **INDEX_CONTEXT)
+
+    # Run index calculation
+    index.run()
+
+    # Save index quotes and positions to the DB
+    index.save()
+
+.. note::
+    There is no special script implemented for Index online use, the code above is a good starting point
+
+Index design features
++++++++++++++++++++++
+* Indexes contain session information about asset, some indexes could use custom sessions (for example, spread indexes
+  which using different instruments). To maintain sanity of alphas' results only allowed to use indexes with same session
+  setting within single alpha. Also alphas which uses EXO/SmartEXO index quotes for decision making able to load session
+  settings from the pre-saved index sessions.
+
+* All indexes have ``desision_time_shift`` property it's an offset in minutes from the decision time, so it's implied that
+  all indexes MUST be calculated ``desision_time_shift`` minutes before typical decision time (by default ``desision_time_shift``
+  is equal to 5 minutes)
+
+* All indexes are calculated from scratch at each run, to implement updates developer have to implement update logic
+  explicitly inside ``<index>.set_data_and_position()`` method
+
+

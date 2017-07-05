@@ -1,0 +1,486 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Alpha development description &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="alpha-development-description">
+                    <span id="alpha-development"></span>
+                    <h1>Alpha development description<a class="headerlink" href="#alpha-development-description"
+                                                        title="Permalink to this headline">¶</a></h1>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="alpha-development-guidelines">
+                        <h2>Alpha development guidelines<a class="headerlink" href="#alpha-development-guidelines"
+                                                           title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="alpha-code-structure">
+                            <h3>Alpha code structure<a class="headerlink" href="#alpha-code-structure"
+                                                       title="Permalink to this headline">¶</a></h3>
+                            <p>Each alpha should implement 3 main methods:</p>
+                            <ul class="simple">
+                                <li><code class="docutils literal"><span class="pre">setup()</span></code> In this
+                                    method you should implement quotes fetching and commissions settings, and any
+                                    preparations for alpha
+                                    calculations. `
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">calculate()</span></code> This is
+                                    main alpha calculation method, this method must return alpha exposure dataframe, you
+                                    can use
+                                    self.exposure() helper method to produce exposure from entry/exit rules, or make it
+                                    by your own.
+                                </li>
+                                <li><code class="docutils literal"><span class="pre">calculate_position()</span></code>
+                                    This method used for position construction based on exposure information returned
+                                    from
+                                    calculate(), here you can initiate (replicate) EXO index position or setup any
+                                    custom position you want.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="section" id="id1">
+                            <h3>Alpha development<a class="headerlink" href="#id1"
+                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>In the development phase you will be able to run alphas inside notebooks, fine-tune
+                                parameters, once alpha has been saved (i.e. deployed),
+                                all parameters be stored in the DB. You should set the context only once at the first
+                                time alpha is deployed, then the
+                                context will be loaded automatically on each alpha.load() call.</p>
+                            <p>So you need set all of the parameters only once, if you would like to change params of
+                                deployed alpha you should rerun
+                                this alpha omitting alpha.load() call.</p>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">Due to stochastic (random) nature of some algorithms (like ML or
+                                    GeneticOptimizer), there is no guarantee that
+                                    you will get same results. It&#8217;s very dangerous to rewrite and rerun alphas
+                                    which are already deployed and in the
+                                    production, better to create new version of alpha and gracefully disengage old
+                                    version.</p>
+                            </div>
+                        </div>
+                        <div class="section" id="setting-alpha-context">
+                            <h3>Setting alpha context<a class="headerlink" href="#setting-alpha-context"
+                                                        title="Permalink to this headline">¶</a></h3>
+                            <p><strong>General settings</strong></p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="s1">&#39;name&#39;</span><span
+                                        class="p">:</span> <span
+                                        class="s1">&#39;ES_NewFramework_MACross_Genetic&#39;</span><span
+                                        class="p">,</span> <span class="c1"># Global alpha name, which be used for load/save to DB</span>
+
+<span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="p">{</span> <span class="c1"># Strategy specific settings</span>
+        <span class="c1"># These settings only applycable for alphas derived from StrategyAlpha strategy</span>
+        <span class="c1"># StrategyAlpha - is a classic EXO/SmartEXO based alpha</span>
+        <span class="s1">&#39;index_name&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;US.ES_ContFutEOD&#39;</span><span
+                                            class="p">,</span>      <span class="c1"># Name of EXO index to trade</span>
+        <span class="s1">&#39;costs_per_option&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+        <span class="s1">&#39;costs_per_contract&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+    <span class="p">},</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><strong>Walk-forward optimization parameters</strong></p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span
+                                        class="s1">&#39;wfo_params&#39;</span><span class="p">:</span> <span
+                                        class="p">{</span>
+        <span class="s1">&#39;window_type&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;rolling&#39;</span><span class="p">,</span>  <span
+                                            class="c1"># Rolling window for IIS values: rolling or expanding</span>
+        <span class="s1">&#39;period&#39;</span><span class="p">:</span> <span class="s1">&#39;M&#39;</span><span
+                                            class="p">,</span>             <span class="c1"># Period of rolling window &#39;M&#39; - monthly or &#39;W&#39; - weekly</span>
+        <span class="s1">&#39;oos_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span
+                                            class="p">,</span>          <span class="c1"># Number of months is OOS period</span>
+        <span class="s1">&#39;iis_periods&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>         <span
+                                            class="c1"># Number of months in IIS rolling window and minimal test period len</span>
+                                   <span class="c1"># (only applicable for &#39;window_type&#39; == &#39;rolling&#39;)</span>
+    <span class="p">},</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><strong>Optimizer class parameters</strong></p>
+                            <p>By design alpha can use any optimization algorithm, OptimizerClass permutates &#8216;opt_params&#8217;
+                                and calculate alphas using these params, then it select best alphas by alpha.score()
+                                method results, and finally call alpha.pick() to
+                                select best performing alphas for each WFO step.</p>
+                            <p>&#8216;optimizer_class_kwargs&#8217; - OptimizerClass parameters, refer to source code to
+                                get more info.</p>
+                            <p>Example:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span
+                                        class="s1">&#39;wfo_optimizer_class&#39;</span><span class="p">:</span> <span
+                                        class="n">OptimizerGenetic</span><span class="p">,</span>
+<span class="s1">&#39;wfo_optimizer_class_kwargs&#39;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s1">&#39;nbest_count&#39;</span><span class="p">:</span> <span class="mi">3</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;nbest_fitness_method&#39;</span><span class="p">:</span> <span class="s1">&#39;max&#39;</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;population_size&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s1">&#39;number_generations&#39;</span><span class="p">:</span> <span class="mi">30</span><span
+                                            class="p">,</span>
+    <span class="c1"># &#39;rand_seed&#39;: 1, # Uncomment this parameter to make genetic results repeatable</span>
+<span class="p">},</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><strong>Alpha&#8217;s optimization parameters</strong></p>
+                            <p>The order of &#8216;opt_params&#8217; list should be the same as arguments order in
+                                alpha.calculate() method for particular alpha:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span
+                                        class="s1">&#39;wfo_opt_params&#39;</span><span class="p">:</span> <span
+                                        class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;period_slow&#39;</span><span class="p">,</span> <span
+                                            class="p">[</span><span class="mi">10</span><span class="p">,</span> <span
+                                            class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span
+                                            class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span
+                                            class="mi">70</span><span class="p">,</span> <span class="mi">90</span><span
+                                            class="p">,</span> <span class="mi">110</span><span class="p">]),</span>
+    <span class="p">(</span><span class="s1">&#39;period_fast&#39;</span><span class="p">,</span> <span
+                                            class="p">[</span><span class="mi">1</span><span class="p">,</span> <span
+                                            class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span
+                                            class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span
+                                            class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span
+                                            class="p">])</span>
+<span class="p">],</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><strong>WFO Scoring functions params</strong>
+                                - &#8216;wfo_members_count&#8217; - number of picked alphas at each out-of-sample WFO
+                                step
+                                - &#8216;wfo_costs_per_contract&#8217; - costs in USD per contract used in WFO scoring
+                                functions (used only for alphas picking!, you should set costs explicitly for each alpha
+                                in the alpha.setup() method)
+                                - &#8216;wfo_scoring_type&#8217; - type of scoring function to rank alphas on in-sample
+                                period of WFO</p>
+                            <p>Example:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span
+                                        class="s1">&#39;wfo_members_count&#39;</span><span class="p">:</span> <span
+                                        class="mi">1</span><span class="p">,</span>
+<span class="s1">&#39;wfo_costs_per_contract&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span
+                                            class="p">,</span>
+<span class="s1">&#39;wfo_scoring_type&#39;</span><span class="p">:</span> <span class="s1">&#39;netprofit&#39;</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><strong>ALL SETTINGS IN ONE</strong>:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="n">ALPHA_CONTEXT</span> <span
+                                        class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;ES_NewFramework_MACross_Genetic&#39;</span><span
+                                            class="p">,</span> <span class="c1"># Global alpha name, which be used for load/save from DB</span>
+    <span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="p">{</span> <span class="c1"># Strategy specific settings</span>
+        <span class="c1"># These settings only applycable for alphas derived from StrategyAlpha strategy</span>
+        <span class="c1"># StrategyAlpha - is a classic EXO/SmartEXO based alpha</span>
+        <span class="s1">&#39;index_name&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;US.ES_ContFutEOD&#39;</span><span
+                                            class="p">,</span>      <span class="c1"># Name of EXO index to trade</span>
+        <span class="s1">&#39;costs_per_option&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+        <span class="s1">&#39;costs_per_contract&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                            class="p">,</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;wfo_params&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;window_type&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;rolling&#39;</span><span class="p">,</span>  <span
+                                            class="c1"># Rolling window for IIS values: rolling or expanding</span>
+        <span class="s1">&#39;period&#39;</span><span class="p">:</span> <span class="s1">&#39;M&#39;</span><span
+                                            class="p">,</span>  <span class="c1"># Period of rolling window &#39;M&#39; - monthly or &#39;W&#39; - weekly</span>
+        <span class="s1">&#39;oos_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span
+                                            class="p">,</span>  <span class="c1"># Number of months is OOS period</span>
+        <span class="s1">&#39;iis_periods&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+        <span class="c1"># Number of months in IIS rolling window (only applicable for &#39;window_type&#39; == &#39;rolling&#39;)</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;wfo_optimizer_class&#39;</span><span class="p">:</span> <span
+                                            class="n">OptimizerBase</span><span class="p">,</span>
+    <span class="s1">&#39;wfo_optimizer_class_kwargs&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;nbest_count&#39;</span><span class="p">:</span> <span class="mi">3</span><span
+                                            class="p">,</span>
+        <span class="s1">&#39;nbest_fitness_method&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;max&#39;</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;wfo_opt_params&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;period_slow&#39;</span><span class="p">,</span> <span
+                                            class="p">[</span><span class="mi">10</span><span class="p">,</span> <span
+                                            class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span
+                                            class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span
+                                            class="mi">70</span><span class="p">,</span> <span class="mi">90</span><span
+                                            class="p">,</span> <span class="mi">110</span><span class="p">]),</span>
+        <span class="p">(</span><span class="s1">&#39;period_fast&#39;</span><span class="p">,</span> <span
+                                            class="p">[</span><span class="mi">1</span><span class="p">,</span> <span
+                                            class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span
+                                            class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span
+                                            class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span
+                                            class="p">])</span>
+    <span class="p">],</span>
+    <span class="s1">&#39;wfo_members_count&#39;</span><span class="p">:</span> <span class="mi">1</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;wfo_costs_per_contract&#39;</span><span class="p">:</span> <span class="mf">0.0</span><span
+                                            class="p">,</span>
+    <span class="s1">&#39;wfo_scoring_type&#39;</span><span class="p">:</span> <span
+                                            class="s1">&#39;netprofit&#39;</span>
+<span class="p">}</span>
+</pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="section" id="how-to-run-alphas">
+                            <h3>How to run alphas<a class="headerlink" href="#how-to-run-alphas"
+                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>While you are in development phase you can run alpha without saving (i.e. deployment). On
+                                each call of <code class="docutils literal"><span class="pre">alpha.run()</span></code>,
+                                framework engine launches the WFO optimization from the beginning of the history.</p>
+                            <p>Example:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="c1"># DataManager is a core class of the framework</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">DataManager</span><span class="p">()</span>
+
+<span class="c1"># Init alpha class and run</span>
+<span class="c1"># SomeCustomAlphasStrategyClass - has to be defined in the notebook or imported from other location</span>
+<span class="c1"># ALPHA_CONTEXT - is a settings dictionary</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="n">SomeCustomAlphasStrategyClass</span><span
+                                            class="p">(</span><span class="n">dm</span><span class="p">,</span> <span
+                                            class="o">**</span><span class="n">ALPHA_CONTEXT</span><span
+                                            class="p">)</span>
+
+<span class="c1"># Run alpha&#39;s WFO optimization from scratch</span>
+<span class="n">alpha</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre>
+                                </div>
+                            </div>
+                            <p><a class="reference external"
+                                  href="https://10.0.1.2:8889/notebooks/alphas/Alpha%20HOWTO.ipynb">Refer to alpha
+                                sample notebook</a></p>
+                        </div>
+                        <div class="section" id="how-to-deploy-alphas">
+                            <h3>How to deploy alphas<a class="headerlink" href="#how-to-deploy-alphas"
+                                                       title="Permalink to this headline">¶</a></h3>
+                            <p>Once alpha has been deployed all context information and settings are stored inside the
+                                DB. To run and update deployed
+                                alpha you have to save alpha module to the one of the framework packages (for example
+                                <code class="docutils literal"><span class="pre">tmqralphas</span></code>) and then
+                                create
+                                notebook which uses alpha class from imported package. Saving alphas classes defined in
+                                the notebook source code is not
+                                allowed and raise error.</p>
+                            <p><strong>Deployment process</strong></p>
+                            <blockquote>
+                                <div>
+                                    <ol class="arabic">
+                                        <li><p class="first">Once you have developed new alpha class, fine tuned
+                                            parameters you have to commit alpha source code to the Git and
+                                            make reference to this class via &#8216;import&#8217; statement. This step
+                                            only applicable to brand new alpha classes, if you are changing
+                                            just optimization params or settings in the ALPHA_CONTEXT, you have not to
+                                            do this deployment step!</p>
+                                        </li>
+                                        <li><p class="first">You should run imported alpha and do <code
+                                                class="docutils literal"><span class="pre">alpha.save()</span></code>
+                                            step
+                                            Example:</p>
+                                            <div class="highlight-default">
+                                                <div class="highlight"><pre><span></span><span class="c1"># Load deployed alpha module</span>
+<span class="kn">from</span> <span class="nn">tmqrstrategy.tests.debug_alpha_prototype</span> <span
+                                                            class="k">import</span> <span class="n">AlphaGeneric</span>
+
+<span class="c1"># DataManager is a core class of the framework</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">DataManager</span><span class="p">()</span>
+
+<span class="c1"># Init alpha class and run</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="n">AlphaGeneric</span><span class="p">(</span><span
+                                                            class="n">dm</span><span class="p">,</span> <span class="o">**</span><span
+                                                            class="n">ALPHA_CONTEXT</span><span class="p">)</span>
+
+<span class="c1"># Run alpha&#39;s WFO optimization from scratch</span>
+<span class="n">alpha</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Do saving (i.e. deployment)</span>
+<span class="n">alpha</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li><p class="first">That&#8217;s it, alpha has been deployment, now you have to
+                                            run updates of alphas</p>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </blockquote>
+                        </div>
+                        <div class="section" id="how-to-run-alphas-in-online">
+                            <h3>How to run alphas in online<a class="headerlink" href="#how-to-run-alphas-in-online"
+                                                              title="Permalink to this headline">¶</a></h3>
+                            <p>You just need to call <code class="docutils literal"><span
+                                    class="pre">alpha.load()</span></code> then <code class="docutils literal"><span
+                                    class="pre">alpha.run()</span></code> then <code class="docutils literal"><span
+                                    class="pre">alpha.save()</span></code>. Deployed alphas are updated by calling
+                                <code class="docutils literal"><span class="pre">alpha.run()</span></code>.</p>
+                            <p>Example code:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span
+                                        class="c1"># Load deployed alpha module</span>
+<span class="kn">from</span> <span class="nn">tmqrstrategy.tests.debug_alpha_prototype</span> <span
+                                            class="k">import</span> <span class="n">AlphaGeneric</span>
+
+<span class="c1"># Or load Strategy base</span>
+<span class="kn">from</span> <span class="nn">tmqrstrategy</span> <span class="k">import</span> <span class="n">StrategyBase</span>
+
+<span class="c1"># Init the environment</span>
+<span class="n">dm2</span> <span class="o">=</span> <span class="n">DataManager</span><span class="p">()</span>
+
+<span class="c1"># Do first run</span>
+<span class="n">alpha_name</span> <span class="o">=</span> <span class="n">ALPHA_CONTEXT</span><span
+                                            class="p">[</span><span class="s1">&#39;name&#39;</span><span
+                                            class="p">]</span>
+
+<span class="c1"># Call &lt;AlphaClass&gt;.load(datamanager, alpha_name)</span>
+<span class="n">saved_alpha</span> <span class="o">=</span> <span class="n">AlphaGeneric</span><span
+                                            class="o">.</span><span class="n">load</span><span class="p">(</span><span
+                                            class="n">dm2</span><span class="p">,</span> <span
+                                            class="n">alpha_name</span><span class="p">)</span>
+
+<span class="c1"># BOTH METHODS ARE EQUAL!</span>
+
+<span class="c1"># Call StrategyBase.load(datamanager, alpha_name)</span>
+<span class="c1"># StrategyBase - can be more usefun in online scripts</span>
+<span class="n">saved_alpha</span> <span class="o">=</span> <span class="n">StrategyBase</span><span
+                                            class="o">.</span><span class="n">load</span><span class="p">(</span><span
+                                            class="n">dm2</span><span class="p">,</span> <span
+                                            class="n">alpha_name</span><span class="p">)</span>
+
+<span class="c1"># The alpha.run() - only calculate recent data, and do another WFO step if required</span>
+<span class="n">saved_alpha</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Save it again!</span>
+<span class="n">saved_alpha</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+
+<span class="c1">#</span>
+<span class="c1"># Finally you are ready to process alpha&#39;s positions for campaings!</span>
+<span class="c1">#</span>
+</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Alpha development description</a>
+                    <ul>
+                        <li><a class="reference internal" href="#alpha-development-guidelines">Alpha development
+                            guidelines</a>
+                            <ul>
+                                <li><a class="reference internal" href="#alpha-code-structure">Alpha code structure</a>
+                                </li>
+                                <li><a class="reference internal" href="#id1">Alpha development</a></li>
+                                <li><a class="reference internal" href="#setting-alpha-context">Setting alpha
+                                    context</a></li>
+                                <li><a class="reference internal" href="#how-to-run-alphas">How to run alphas</a></li>
+                                <li><a class="reference internal" href="#how-to-deploy-alphas">How to deploy alphas</a>
+                                </li>
+                                <li><a class="reference internal" href="#how-to-run-alphas-in-online">How to run alphas
+                                    in online</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/alpha-development.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/alpha-development.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

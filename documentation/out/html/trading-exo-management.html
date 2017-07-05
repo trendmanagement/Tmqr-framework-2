@@ -1,0 +1,414 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>EXO management &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="exo-management">
+                    <span id="trading-exo-management"></span>
+                    <h1>EXO management<a class="headerlink" href="#exo-management"
+                                         title="Permalink to this headline">¶</a></h1>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="how-exo-scripts-work">
+                        <h2>How EXO scripts work<a class="headerlink" href="#how-exo-scripts-work"
+                                                   title="Permalink to this headline">¶</a></h2>
+                    </div>
+                    <div class="section" id="how-to-add-new-product-or-exo">
+                        <h2>How to add new product or EXO<a class="headerlink" href="#how-to-add-new-product-or-exo"
+                                                            title="Permalink to this headline">¶</a></h2>
+                        <p>All setting for EXO generation and product list are stored in <code class="docutils literal"><span
+                                class="pre">scripts/settings.py</span></code></p>
+                        <p>Main options:</p>
+                        <ul class="simple">
+                            <li><code class="docutils literal"><span class="pre">INSTRUMENTS_LIST</span></code> - list
+                                of products used for calculations (this list used by <code
+                                        class="docutils literal"><span class="pre">install.py</span></code> script for
+                                <code class="docutils literal"><span class="pre">supervisor</span></code> configuration
+                                files generation)
+                            </li>
+                            <li><code class="docutils literal"><span class="pre">EXO_LIST</span></code> - list of EXO
+                                algorithms and names
+                            </li>
+                        </ul>
+                        <div class="section" id="to-add-new-product">
+                            <h3>To add new product<a class="headerlink" href="#to-add-new-product"
+                                                     title="Permalink to this headline">¶</a></h3>
+                            <ol class="arabic simple">
+                                <li>Type in new <code class="docutils literal"><span
+                                        class="pre">exchangesymbol</span></code> name to the <code
+                                        class="docutils literal"><span class="pre">INSTRUMENTS_LIST</span></code></li>
+                                <li>Run the <code class="docutils literal"><span class="pre">python3.5</span> <span
+                                        class="pre">scripts/settings_exo.py</span></code> for syntax errors checks
+                                    (empty output means - <strong>no</strong> syntax errors)
+                                </li>
+                                <li>Check or add new rollover regime for new asset if it is necessary in <code
+                                        class="docutils literal"><span class="pre">exobuilder/algorithms/rollover_helper.py</span></code>
+                                    (default regime is rollover each month)
+                                </li>
+                                <li>Commit and push changes to GitHub and log in to the server</li>
+                                <li>Run deployment process as described at <a class="reference internal"
+                                                                              href="server-code-deployment.html#server-code-deployment"><span
+                                        class="std std-ref">New code or scripts deployment</span></a> but without
+                                    <strong>service supervisor restart</strong> step
+                                </li>
+                                <li>Run EXO batch backfill <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">./exo_batch_update.py</span></code> (<strong>important</strong> you
+                                    need to wait until backfill process is finished)
+                                </li>
+                                <li>Run on the server <code class="docutils literal"><span class="pre">cd</span> <span
+                                        class="pre">/var/data/tmqrengine/scripts/</span></code> and then <code
+                                        class="docutils literal"><span class="pre">python3.5</span> <span class="pre">./install.py</span></code>,
+                                    this script will clear the logs and deploy new settings for online trading. Also
+                                    <code class="docutils literal"><span class="pre">supervisor</span> <span
+                                            class="pre">service</span></code> will be restarted.
+                                </li>
+                                <li>Make sure that new product is present in <code class="docutils literal"><span
+                                        class="pre">supervisorctl</span> <span class="pre">status</span></code> command
+                                    output, otherwise try to restart it manually one more time <code
+                                            class="docutils literal"><span class="pre">service</span> <span class="pre">supervisor</span>
+                                        <span class="pre">restart</span></code></li>
+                                <li>Plot EXO graphs in <a class="reference external"
+                                                          href="https://10.0.1.2:8888/notebooks/tools/EXO%20viewer.ipynb">https://10.0.1.2:8888/notebooks/tools/EXO%20viewer.ipynb</a>
+                                    notebook to make sure that all EXOs have enough historical data and backfilled
+                                    properly.
+                                </li>
+                            </ol>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">Name of the product <strong>must</strong> reflect <code
+                                        class="docutils literal"><span class="pre">exchangesymbol</span></code> field of
+                                    <code class="docutils literal"><span class="pre">instruments</span></code> MongoDB
+                                    collection</p>
+                            </div>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">If you&#8217;ve forgot to run <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">./exo_batch_update.py</span></code>, and EXO series already filled
+                                    by online data, first of all you need manually remove EXO series from DB and then
+                                    restart <code class="docutils literal"><span class="pre">exo_batch_update.py</span></code>
+                                    script.</p>
+                            </div>
+                        </div>
+                        <div class="section" id="to-add-new-exo">
+                            <h3>To add new EXO<a class="headerlink" href="#to-add-new-exo"
+                                                 title="Permalink to this headline">¶</a></h3>
+                            <ol class="arabic">
+                                <li><p class="first">Add new tested EXO python file to <code
+                                        class="docutils literal"><span class="pre">exobuilder/algorithms</span></code>
+                                </p>
+                                </li>
+                                <li>
+                                    <dl class="first docutils">
+                                        <dt>Edit <code class="docutils literal"><span class="pre">scripts/settings_exo.py</span></code>
+                                            file
+                                        </dt>
+                                        <dd>
+                                            <ul class="first last">
+                                                <li>
+                                                    <dl class="first docutils">
+                                                        <dt>Add new import statement to the header of the file</dt>
+                                                        <dd><p class="first">For example:</p>
+                                                            <div class="last highlight-default">
+                                                                <div class="highlight"><pre><span></span><span
+                                                                        class="kn">from</span> <span class="nn">exobuilder.algorithms.exo_continous_fut</span> <span
+                                                                        class="k">import</span> <span class="n">EXOContinuousFut</span>
+<span class="kn">from</span> <span class="nn">exobuilder.algorithms.new_exo_module</span> <span class="k">import</span> <span
+                                                                            class="n">NewEXOClassName</span>
+</pre>
+                                                                </div>
+                                                            </div>
+                                                        </dd>
+                                                    </dl>
+                                                </li>
+                                                <li>
+                                                    <dl class="first docutils">
+                                                        <dt>Add new EXO item to <code class="docutils literal"><span
+                                                                class="pre">EXO_LIST</span></code></dt>
+                                                        <dd><p class="first">For example:</p>
+                                                            <div class="last highlight-default">
+                                                                <div class="highlight"><pre><span></span><span
+                                                                        class="n">EXO_LIST</span> <span
+                                                                        class="o">=</span> <span class="p">[</span>
+<span class="p">{</span>
+    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;CollarBW&#39;</span><span
+                                                                            class="p">,</span>
+    <span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="n">EXOBrokenwingCollar</span><span
+                                                                            class="p">,</span>
+<span class="p">},</span>
+<span class="o">....</span>
+<span class="p">{</span>
+    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;NewExoName&#39;</span><span
+                                                                            class="p">,</span>
+    <span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="n">NewEXOClassName</span><span
+                                                                            class="p">,</span>   <span class="c1"># As in import statement above</span>
+<span class="p">}</span>
+<span class="p">]</span>
+</pre>
+                                                                </div>
+                                                            </div>
+                                                        </dd>
+                                                    </dl>
+                                                </li>
+                                            </ul>
+                                        </dd>
+                                    </dl>
+                                </li>
+                                <li><p class="first">Run the <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">scripts/settings_exo.py</span></code> for syntax errors checks
+                                    (empty output means - <strong>no</strong> syntax errors)</p>
+                                </li>
+                                <li><p class="first">Commit and push changes to GitHub and log in to the server</p>
+                                </li>
+                                <li><p class="first">Run deployment process as described at <a
+                                        class="reference internal"
+                                        href="server-code-deployment.html#server-code-deployment"><span
+                                        class="std std-ref">New code or scripts deployment</span></a>, don&#8217;t
+                                    forget to run <code class="docutils literal"><span class="pre">service</span> <span
+                                            class="pre">supervisor</span> <span class="pre">restart</span></code> to
+                                    refresh changes</p>
+                                </li>
+                                <li><p class="first">Run EXO batch backfill <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">./exo_batch_update.py</span></code></p>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="section" id="to-add-new-smartexo">
+                            <h3>To add new SmartEXO<a class="headerlink" href="#to-add-new-smartexo"
+                                                      title="Permalink to this headline">¶</a></h3>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">This section related to new class based SmartEXOs implemented in
+                                    2016-12-08</p>
+                            </div>
+                            <ol class="arabic simple">
+                                <li>Make sure that class based SmartEXO is working properly from the notebook</li>
+                                <li>Delete all temporary generated history running <code class="docutils literal"><span
+                                        class="pre">smart_utils.clear_smartexo()</span></code> in SmartEXO notebook from
+                                    <em>Deployment</em> section
+                                </li>
+                                <li>Copy &#8216;import&#8217; statements from the header of the notebook and class
+                                    source code from cell
+                                </li>
+                                <li>Add copied text to new EXO python file to <code class="docutils literal"><span
+                                        class="pre">exobuilder/algorithms</span></code></li>
+                                <li>Rename SmartEXO class from SmartEXOGeneric to another name, it should be unique</li>
+                                <li>Define <code class="docutils literal"><span class="pre">ASSET_LIST</span></code>
+                                    value to set required list of products for this SmartEXO or set it to <code
+                                            class="docutils literal"><span class="pre">None</span></code> if you need to
+                                    run this SmartEXO on all assets.
+                                </li>
+                                <li>Run steps 2 and 3 from EXO deployment manual above</li>
+                                <li>Commit and push changes to GitHub and log in to the server</li>
+                                <li>Run EXO batch backfill <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">./exo_batch_update.py</span></code>. Refer to <a
+                                        class="reference internal"
+                                        href="server-code-deployment.html#server-code-deployment"><span
+                                        class="std std-ref">New code or scripts deployment</span></a> to get information
+                                    how to execute long-running tasks.
+                                </li>
+                                <li>Run <code class="docutils literal"><span class="pre">python3.5</span> <span
+                                        class="pre">./install.py</span></code> to add new SmartEXO to online setup
+                                </li>
+                                <li>Run <code class="docutils literal"><span class="pre">python3.5</span> <span
+                                        class="pre">./alpha_rebalancer.py</span></code> if you need to get generic
+                                    alphas for this EXO (for example <em>Buy and hold EXO</em>) ASAP, or wait until
+                                    scheduled launch of the alpha_rebalancer occurred.
+                                </li>
+                            </ol>
+                            <div class="admonition warning">
+                                <p class="first admonition-title">Warning</p>
+                                <p class="last"><code class="docutils literal"><span class="pre">python3.5</span> <span
+                                        class="pre">./exo_batch_update.py</span></code> is an long running task it&#8217;s
+                                    better to run it overnight or over weekend using</p>
+                            </div>
+                            <div class="section" id="how-to-migrate-from-old-version-of-smartexo-notebook">
+                                <h4>How to migrate from old version of SmartEXO notebook<a class="headerlink"
+                                                                                           href="#how-to-migrate-from-old-version-of-smartexo-notebook"
+                                                                                           title="Permalink to this headline">¶</a>
+                                </h4>
+                                <ol class="arabic">
+                                    <li><p class="first">SmartEXOGeneric class defined in new version of the notebook
+                                        has similar methods new_position_bullish_zone() / new_position_bearish_zone() /
+                                        new_position_neutral_zone / manage_opened_position()</p>
+                                    </li>
+                                    <li><p class="first">Copy&amp;Paste the <code class="docutils literal"><span
+                                            class="pre">trans_list</span> <span class="pre">=</span> <span class="pre">[]</span></code>
+                                        contents from the old notebook to particular methods inside the class. New
+                                        method should only contains trans_list and return statements.</p>
+                                    </li>
+                                    <li>
+                                        <dl class="first docutils">
+                                            <dt>Change Ichimoku regime algorithm parameters if required in the __init__
+                                                method of the class
+                                            </dt>
+                                            <dd><p class="first">For example:</p>
+                                                <div class="last highlight-default">
+                                                    <div class="highlight"><pre><span></span><span class="k">def</span> <span
+                                                            class="nf">__init__</span><span class="p">(</span><span
+                                                            class="bp">self</span><span class="p">,</span> <span
+                                                            class="n">symbol</span><span class="p">,</span> <span
+                                                            class="n">direction</span><span class="p">,</span> <span
+                                                            class="n">date</span><span class="p">,</span> <span
+                                                            class="n">datasource</span><span class="p">,</span> <span
+                                                            class="o">**</span><span class="n">kwargs</span><span
+                                                            class="p">):</span>
+   <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span
+                                                                class="p">(</span><span class="n">symbol</span><span
+                                                                class="p">,</span> <span class="n">direction</span><span
+                                                                class="p">,</span> <span class="n">date</span><span
+                                                                class="p">,</span> <span
+                                                                class="n">datasource</span><span class="p">,</span>
+                    <span class="c1">#</span>
+                    <span class="c1"># Change following values if you need to customize Ichimoku settings</span>
+                    <span class="c1">#</span>
+                    <span class="n">conversion_line_period</span> <span class="o">=</span> <span
+                                                                class="mi">9</span><span class="p">,</span>
+                    <span class="n">base_line_period</span><span class="o">=</span><span class="mi">26</span><span
+                                                                class="p">,</span>
+                    <span class="n">leading_spans_lookahead_period</span><span class="o">=</span><span
+                                                                class="mi">52</span><span class="p">,</span>
+                    <span class="n">leading_span_b_period</span><span class="o">=</span><span class="mi">52</span>
+                   <span class="p">)</span>
+</pre>
+                                                    </div>
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </li>
+                                    <li><p class="first">Run new class based notebook to compare results</p>
+                                    </li>
+                                    <li><p class="first">Follow SmartEXO deployment instructions if necessary</p>
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">EXO management</a>
+                    <ul>
+                        <li><a class="reference internal" href="#how-exo-scripts-work">How EXO scripts work</a></li>
+                        <li><a class="reference internal" href="#how-to-add-new-product-or-exo">How to add new product
+                            or EXO</a>
+                            <ul>
+                                <li><a class="reference internal" href="#to-add-new-product">To add new product</a></li>
+                                <li><a class="reference internal" href="#to-add-new-exo">To add new EXO</a></li>
+                                <li><a class="reference internal" href="#to-add-new-smartexo">To add new SmartEXO</a>
+                                    <ul>
+                                        <li><a class="reference internal"
+                                               href="#how-to-migrate-from-old-version-of-smartexo-notebook">How to
+                                            migrate from old version of SmartEXO notebook</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/trading-exo-management.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/trading-exo-management.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

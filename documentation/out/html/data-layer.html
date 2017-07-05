@@ -1,0 +1,245 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Framework introduction (start here) &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="framework-introduction-start-here">
+                    <span id="framework-introduction"></span>
+                    <h1>Framework introduction (start here)<a class="headerlink"
+                                                              href="#framework-introduction-start-here"
+                                                              title="Permalink to this headline">¶</a></h1>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="introduction">
+                        <h2>Introduction<a class="headerlink" href="#introduction"
+                                           title="Permalink to this headline">¶</a></h2>
+                        <p>This framework has been designed to be as developer friendly as possible. As a developer you
+                            should learn and master few
+                            concepts which will help you to build Indexes and Alphas using full strength of tools.</p>
+                        <div class="section" id="data-and-position">
+                            <h3>Data and position<a class="headerlink" href="#data-and-position"
+                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>To become fluent in the framework&#8217;s indexes and alphas development you have to
+                                master only 2 core classes.</p>
+                            <ul class="simple">
+                                <li>All aspects of data management are build based on Pandas package, typically all
+                                    quotes and price series are <a class="reference external"
+                                                                   href="https://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html">Pandas.DataFrames</a>
+                                    All access to data is provided by <a class="reference internal"
+                                                                         href="datamanager-class.html#datamanager-class"><span
+                                            class="std std-ref">DataManager class</span></a>, probably this is a core of
+                                    entire framework.
+                                </li>
+                                <li>All indexes and alphas are using <a class="reference internal"
+                                                                        href="position-class.html#position-class"><span
+                                        class="std std-ref">Position class</span></a> to build, manage and make
+                                    calculations.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="section" id="datamanager">
+                        <h2>DataManager<a class="headerlink" href="#datamanager"
+                                          title="Permalink to this headline">¶</a></h2>
+                        <p>The class which is manages everything. You can always refer to autogenerated information
+                            about <a class="reference internal" href="datamanager-class.html#datamanager-class"><span
+                                    class="std std-ref">DataManager class</span></a>.</p>
+                        <p>In this section you will find description of common DataManager applications.</p>
+                        <div class="section" id="setting-quotes-series">
+                            <h3>Setting quotes series<a class="headerlink" href="#setting-quotes-series"
+                                                        title="Permalink to this headline">¶</a></h3>
+                            <p>The main purpose of the DataManager class is to get the quotes data for particular
+                                instrument or index from the DB.
+                                There are 2 main ways to set the data <code class="docutils literal"><span class="pre">datamanager.series_primary_set(...)</span></code>
+                                and <code class="docutils literal"><span class="pre">series_extra_set(...)</span></code>.
+                                Primary series
+                                are used for initiation of data series, you <strong>must call</strong> <code
+                                        class="docutils literal"><span class="pre">series_primary_set(...)</span></code>
+                                every time, because datetime series of
+                                primary quotes is used as anchor for extra series (a.k.a. secondary series) or position
+                                calculation.</p>
+                            <p>To set up primary quotes you have to use one of the <a class="reference internal"
+                                                                                      href="quote-modules.html#quote-modules"><span
+                                    class="std std-ref">Quote* modules</span></a> by the following way:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="c1"># To set continuous futures index for &#39;US.ES&#39; instrument with decision_time_shift (for index usage)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_primary_set</span><span
+                                            class="p">(</span><span class="n">QuoteContFut</span><span
+                                            class="p">,</span> <span class="s1">&#39;US.ES&#39;</span><span
+                                            class="p">,</span> <span class="n">timeframe</span><span
+                                            class="o">=</span><span class="s1">&#39;D&#39;</span><span
+                                            class="p">)</span>
+                           <span class="c1"># decision_time_shift=self.decision_time_shift) # This setting is optional for alphas and required for indexes!</span>
+
+
+<span class="c1"># To set pre-saved index series as primary quotes and series</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_primary_set</span><span
+                                            class="p">(</span><span class="n">QuoteIndex</span><span class="p">,</span> <span
+                                            class="s2">&quot;US.ES_ContFut&quot;</span><span class="p">,</span> <span
+                                            class="n">set_session</span><span class="o">=</span><span
+                                            class="kc">True</span><span class="p">,</span> <span
+                                            class="n">check_session</span><span class="o">=</span><span
+                                            class="kc">True</span><span class="p">)</span>
+</pre>
+                                </div>
+                            </div>
+                            <p>To set up secondary quotes you have to call series_extra_set(...) with one of the <a
+                                    class="reference internal" href="quote-modules.html#quote-modules"><span
+                                    class="std std-ref">Quote* modules</span></a>, also you need
+                                to define key-name for secondary quotes series that will be used for quotes access
+                                later:</p>
+                            <div class="highlight-default">
+                                <div class="highlight"><pre><span></span><span class="c1"># To set continuous futures index for &#39;US.CL&#39; instrument with decision_time_shift (for index usage)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_extra_set</span><span
+                                            class="p">(</span><span
+                                            class="s1">&#39;secondary_future_key_name&#39;</span><span
+                                            class="p">,</span> <span class="n">QuoteContFut</span><span
+                                            class="p">,</span> <span class="s1">&#39;US.CL&#39;</span><span
+                                            class="p">,</span> <span class="n">timeframe</span><span
+                                            class="o">=</span><span class="s1">&#39;D&#39;</span><span
+                                            class="p">)</span>
+                         <span class="c1"># decision_time_shift=self.decision_time_shift) # This setting is optional for alphas and required for indexes!</span>
+
+<span class="c1"># To set pre-saved index series as secondary quotes and series</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">series_extra_set</span><span
+                                            class="p">(</span><span class="s1">&#39;secondary_index_key_name&#39;</span><span
+                                            class="p">,</span> <span class="n">QuoteIndex</span><span class="p">,</span> <span
+                                            class="s2">&quot;US.ES_Fancy_SmartEXO_Index&quot;</span><span
+                                            class="p">,</span> <span class="n">set_session</span><span
+                                            class="o">=</span><span class="kc">True</span><span class="p">,</span> <span
+                                            class="n">check_session</span><span class="o">=</span><span
+                                            class="kc">True</span><span class="p">)</span>
+</pre>
+                                </div>
+                            </div>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <ul class="last simple">
+                                    <li>You must always define <code class="docutils literal"><span class="pre">datamanager.series_primary_set(...)</span></code>
+                                    </li>
+                                    <li>You must always call <code class="docutils literal"><span class="pre">datamanager.session_set()</span></code>
+                                        before quotes initiation
+                                    </li>
+                                    <li>Extra (a.k.a. secondary) series already aligned to the primary series by date
+                                    </li>
+                                    <li>You must define <code class="docutils literal"><span class="pre">decision_time_shift</span></code>
+                                        argument when you are working on index, and mustn&#8217;t in case of alpha
+                                        development
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Framework introduction (start here)</a>
+                    <ul>
+                        <li><a class="reference internal" href="#introduction">Introduction</a>
+                            <ul>
+                                <li><a class="reference internal" href="#data-and-position">Data and position</a></li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#datamanager">DataManager</a>
+                            <ul>
+                                <li><a class="reference internal" href="#setting-quotes-series">Setting quotes
+                                    series</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/data-layer.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/data-layer.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

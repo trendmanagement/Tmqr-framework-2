@@ -37,7 +37,8 @@ class IndexEXOBase(IndexBase):
 
     def set_data_and_position(self):
         """
-        Setting continuous futures series and positions directly
+        You don't need to override this method unless you need more control
+
         :return: 
         """
 
@@ -76,8 +77,8 @@ class IndexEXOBase(IndexBase):
     def calc_exo_logic(self):
         """
         Calculates SmartEXO logic.
-        NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key='for_secondary_series') to 
-              calculate SmartEXO logic
+        NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key='for_secondary_series') to calculate SmartEXO logic
+
         :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)
         """
         pass
@@ -85,6 +86,7 @@ class IndexEXOBase(IndexBase):
     def manage_position(self, dt, pos, logic_df):
         """
         Manages opened position (rollover checks/closing, delta hedging, etc)
+
         :param dt: current datetime
         :param pos: Position instance
         :param logic_df: result of calc_exo_logic()[dt]  if applicable
@@ -95,6 +97,7 @@ class IndexEXOBase(IndexBase):
     def construct_position(self, dt, pos, logic_df):
         """
         EXO position construction method
+
         :param dt: current datetime
         :param pos: Position instance
         :param logic_df: result of calc_exo_logic()[dt]  if applicable

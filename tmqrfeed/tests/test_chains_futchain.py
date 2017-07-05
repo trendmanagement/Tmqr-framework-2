@@ -97,7 +97,7 @@ class FutChainTestCase(unittest.TestCase):
     def test_bisect(self):
 
         date = datetime(2012, 1, 1)
-        fut_idx = self.chain.bisect_right(self.chain._futchain, date.date())
+        fut_idx = self.chain._bisect_right(self.chain._futchain, date.date())
         self.assertEqual(('US.F.CL.H12.120222', pd.Timestamp('2011-11-17 00:00:00').date(),
                           pd.Timestamp('2012-02-20 00:00:00').date()),
                          self.chain._futchain[fut_idx]

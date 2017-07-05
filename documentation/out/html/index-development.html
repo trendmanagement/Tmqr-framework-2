@@ -1,0 +1,414 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Index development description &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="index-development-description">
+                    <span id="index-development"></span>
+                    <h1>Index development description<a class="headerlink" href="#index-development-description"
+                                                        title="Permalink to this headline">¶</a></h1>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="index-algorithms-taxonomy">
+                        <h2>Index algorithms taxonomy<a class="headerlink" href="#index-algorithms-taxonomy"
+                                                        title="Permalink to this headline">¶</a></h2>
+                        <p>Indexes are abstract algorithms used for pre-calculation of data commonly used by alphas.
+                            There will be 2 types of
+                            indexes: <strong>position based</strong> index and <strong>informational</strong> index.
+                            The general purpose of indexes in information sharing between alphas and in decreasing
+                            workload (otherwise each alpha
+                            should do many calculations at every run). Indexes will calculate slightly before decision
+                            time (about 2-5 minutes before).</p>
+                        <ul>
+                            <li><p class="first"><strong>Position based indexes</strong> – are very similar to old EXO
+                                or SmartEXO algorithms, they intended to build time series
+                                for further analysis by alphas. I&#8217;ve decided to prebuild EXOs because it&#8217;s
+                                pretty slow operation to calculate EXO for
+                                every alpha we have. Possible use of position based indexes: EXO/SmartEXO building,
+                                multi-legged spreads building
+                                (including multi-instrument spreads or baskets).</p>
+                            </li>
+                            <li><p class="first"><strong>Informational indexes</strong> – these indexes will be used for
+                                decision making for alphas.</p>
+                                <p>Examples:</p>
+                                <ol class="arabic simple">
+                                    <li>Non-price data storage – index for COT, economic news calendar, fundamental data
+                                        information, etc.
+                                    </li>
+                                    <li>Custom volatility indexes for instruments – based on custom VX approaches</li>
+                                    <li>Custom option pricing models – we can store custom theoretical value for each
+                                        strike and trade current price mismatches.
+                                    </li>
+                                    <li>Futures forward curve analysis – we can calculate some curve metrics and analyze
+                                        them inside alphas
+                                    </li>
+                                    <li>Intraday quotes analysis – we can analyze price path behavior inside trading
+                                        session and calculate different sentiment metrics.
+                                    </li>
+                                </ol>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="section" id="id1">
+                        <h2>Index development<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a>
+                        </h2>
+                        <p>Refer to <a class="reference internal" href="index-cookbook.html#index-cookbook"><span
+                                class="std std-ref">EXO Index development cookbook</span></a> to get more recipes.</p>
+                        <div class="section" id="base-index-api">
+                            <h3>Base index API<a class="headerlink" href="#base-index-api"
+                                                 title="Permalink to this headline">¶</a></h3>
+                            <dl class="docutils">
+                                <dt>Index API is pretty straightforward IndexBase has 2 main methods to implement:</dt>
+                                <dd>
+                                    <ul class="first last simple">
+                                        <li><code class="docutils literal"><span class="pre">setup()</span></code> -
+                                            developer should init quotes, costs and session settings inside this method.
+                                            Refer to source code of <code class="docutils literal"><span class="pre">tmqrindex.index_exo_base.IndexEXOBase.setup()</span></code>
+                                            method to check out genetic usage of EXO index.
+                                        </li>
+                                        <li><code class="docutils literal"><span
+                                                class="pre">set_data_and_position()</span></code> - the method of index
+                                            logic, here you can define calculation of the informational index or
+                                            custom position generation. Refer to source code of <code
+                                                    class="docutils literal"><span class="pre">tmqrindex.index_exo_base.IndexEXOBase.set_data_and_position()</span></code>
+                                            to
+                                            get knowledge how EXO index works.
+                                        </li>
+                                    </ul>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="section" id="exo-smartexo-index-api">
+                            <h3>EXO/SmartEXO index API<a class="headerlink" href="#exo-smartexo-index-api"
+                                                         title="Permalink to this headline">¶</a></h3>
+                            <p>EXO/SmartEXO indexes are derived from IndexBase class and providing other API for the
+                                end-developer.</p>
+                            <p>There are 4 main methods:</p>
+                            <dl class="class">
+                                <dt id="tmqrindex.index_exo_base.IndexEXOBase">
+                                    <em class="property">class </em><code class="descclassname">tmqrindex.index_exo_base.</code><code
+                                        class="descname">IndexEXOBase</code><span class="sig-paren">(</span><em>datamanager</em>,
+                                    <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal"
+                                                                                        href="_modules/tmqrindex/index_exo_base.html#IndexEXOBase"><span
+                                        class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                    href="#tmqrindex.index_exo_base.IndexEXOBase"
+                                                                                    title="Permalink to this definition">¶</a>
+                                </dt>
+                                <dd>
+                                    <dl class="method">
+                                        <dt id="tmqrindex.index_exo_base.IndexEXOBase.calc_exo_logic">
+                                            <code class="descname">calc_exo_logic</code><span class="sig-paren">(</span><span
+                                                class="sig-paren">)</span><a class="reference internal"
+                                                                             href="_modules/tmqrindex/index_exo_base.html#IndexEXOBase.calc_exo_logic"><span
+                                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                            href="#tmqrindex.index_exo_base.IndexEXOBase.calc_exo_logic"
+                                                                                            title="Permalink to this definition">¶</a>
+                                        </dt>
+                                        <dd><p>Calculates SmartEXO logic.
+                                            NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key=&#8217;for_secondary_series&#8217;)
+                                            to calculate SmartEXO logic</p>
+                                            <table class="docutils field-list" frame="void" rules="none">
+                                                <col class="field-name"/>
+                                                <col class="field-body"/>
+                                                <tbody valign="top">
+                                                <tr class="field-odd field">
+                                                    <th class="field-name">Returns:</th>
+                                                    <td class="field-body">Pandas.DataFrame with index like in
+                                                        dm.quotes() (i.e. primary quotes)
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="method">
+                                        <dt id="tmqrindex.index_exo_base.IndexEXOBase.construct_position">
+                                            <code class="descname">construct_position</code><span
+                                                class="sig-paren">(</span><em>dt</em>, <em>pos</em>,
+                                            <em>logic_df</em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/tmqrindex/index_exo_base.html#IndexEXOBase.construct_position"><span
+                                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                            href="#tmqrindex.index_exo_base.IndexEXOBase.construct_position"
+                                                                                            title="Permalink to this definition">¶</a>
+                                        </dt>
+                                        <dd><p>EXO position construction method</p>
+                                            <table class="docutils field-list" frame="void" rules="none">
+                                                <col class="field-name"/>
+                                                <col class="field-body"/>
+                                                <tbody valign="top">
+                                                <tr class="field-odd field">
+                                                    <th class="field-name">Parameters:</th>
+                                                    <td class="field-body">
+                                                        <ul class="first simple">
+                                                            <li><strong>dt</strong> &#8211; current datetime</li>
+                                                            <li><strong>pos</strong> &#8211; Position instance</li>
+                                                            <li><strong>logic_df</strong> &#8211; result of
+                                                                calc_exo_logic()[dt] if applicable
+                                                            </li>
+                                                        </ul>
+                                                    </td>
+                                                </tr>
+                                                <tr class="field-even field">
+                                                    <th class="field-name">Returns:</th>
+                                                    <td class="field-body"><p class="first last">nothing, manages
+                                                        &#8216;pos&#8217; in place</p>
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="method">
+                                        <dt id="tmqrindex.index_exo_base.IndexEXOBase.manage_position">
+                                            <code class="descname">manage_position</code><span
+                                                class="sig-paren">(</span><em>dt</em>, <em>pos</em>,
+                                            <em>logic_df</em><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/tmqrindex/index_exo_base.html#IndexEXOBase.manage_position"><span
+                                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                            href="#tmqrindex.index_exo_base.IndexEXOBase.manage_position"
+                                                                                            title="Permalink to this definition">¶</a>
+                                        </dt>
+                                        <dd><p>Manages opened position (rollover checks/closing, delta hedging, etc)</p>
+                                            <table class="docutils field-list" frame="void" rules="none">
+                                                <col class="field-name"/>
+                                                <col class="field-body"/>
+                                                <tbody valign="top">
+                                                <tr class="field-odd field">
+                                                    <th class="field-name">Parameters:</th>
+                                                    <td class="field-body">
+                                                        <ul class="first simple">
+                                                            <li><strong>dt</strong> &#8211; current datetime</li>
+                                                            <li><strong>pos</strong> &#8211; Position instance</li>
+                                                            <li><strong>logic_df</strong> &#8211; result of
+                                                                calc_exo_logic()[dt] if applicable
+                                                            </li>
+                                                        </ul>
+                                                    </td>
+                                                </tr>
+                                                <tr class="field-even field">
+                                                    <th class="field-name">Returns:</th>
+                                                    <td class="field-body"><p class="first last">nothing, manages
+                                                        &#8216;pos&#8217; in place</p>
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </dd>
+                                    </dl>
+
+                                    <dl class="method">
+                                        <dt id="tmqrindex.index_exo_base.IndexEXOBase.set_data_and_position">
+                                            <code class="descname">set_data_and_position</code><span
+                                                class="sig-paren">(</span><span class="sig-paren">)</span><a
+                                                class="reference internal"
+                                                href="_modules/tmqrindex/index_exo_base.html#IndexEXOBase.set_data_and_position"><span
+                                                class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                            href="#tmqrindex.index_exo_base.IndexEXOBase.set_data_and_position"
+                                                                                            title="Permalink to this definition">¶</a>
+                                        </dt>
+                                        <dd><p>You don&#8217;t need to override this method unless you need more
+                                            control</p>
+                                            <table class="docutils field-list" frame="void" rules="none">
+                                                <col class="field-name"/>
+                                                <col class="field-body"/>
+                                                <tbody valign="top">
+                                                <tr class="field-odd field">
+                                                    <th class="field-name">Returns:</th>
+                                                    <td class="field-body"></td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </dd>
+                                    </dl>
+
+                                </dd>
+                            </dl>
+
+                        </div>
+                    </div>
+                    <div class="section" id="index-deployment">
+                        <h2>Index deployment<a class="headerlink" href="#index-deployment"
+                                               title="Permalink to this headline">¶</a></h2>
+                        <p>To deploy index source code you should commit index to the repository, then you can load
+                            index to the Jupyter notebooks or
+                            run in online scripts environment.</p>
+                        <p>Example code how to run Index:</p>
+                        <div class="highlight-default">
+                            <div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">deployed_package_path</span> <span
+                                    class="k">import</span> <span class="n">EXODeployedIndex</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.manager</span> <span class="k">import</span> <span class="n">DataManager</span>
+
+<span class="c1"># Init data engine</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">DataManager</span><span class="p">()</span>
+
+<span class="c1"># Set some index specific settings</span>
+<span class="n">INDEX_CONTEXT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;instrument&#39;</span><span class="p">:</span> <span class="s2">&quot;US.ES&quot;</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_futures&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+    <span class="s1">&#39;costs_options&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                        class="p">,</span>
+<span class="p">}</span>
+<span class="n">index</span> <span class="o">=</span> <span class="n">EXODeployedIndex</span><span
+                                        class="p">(</span><span class="n">dm</span><span class="p">,</span> <span
+                                        class="o">**</span><span class="n">INDEX_CONTEXT</span><span class="p">)</span>
+
+<span class="c1"># Run index calculation</span>
+<span class="n">index</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Save index quotes and positions to the DB</span>
+<span class="n">index</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre>
+                            </div>
+                        </div>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">There is no special script implemented for Index online use, the code above
+                                is a good starting point</p>
+                        </div>
+                    </div>
+                    <div class="section" id="index-design-features">
+                        <h2>Index design features<a class="headerlink" href="#index-design-features"
+                                                    title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li>Indexes contain session information about asset, some indexes could use custom sessions
+                                (for example, spread indexes
+                                which using different instruments). To maintain sanity of alphas&#8217; results only
+                                allowed to use indexes with same session
+                                setting within single alpha. Also alphas which uses EXO/SmartEXO index quotes for
+                                decision making able to load session
+                                settings from the pre-saved index sessions.
+                            </li>
+                            <li>All indexes have <code class="docutils literal"><span
+                                    class="pre">desision_time_shift</span></code> property it&#8217;s an offset in
+                                minutes from the decision time, so it&#8217;s implied that
+                                all indexes MUST be calculated <code class="docutils literal"><span class="pre">desision_time_shift</span></code>
+                                minutes before typical decision time (by default <code class="docutils literal"><span
+                                        class="pre">desision_time_shift</span></code>
+                                is equal to 5 minutes)
+                            </li>
+                            <li>All indexes are calculated from scratch at each run, to implement updates developer have
+                                to implement update logic
+                                explicitly inside <code class="docutils literal"><span class="pre">&lt;index&gt;.set_data_and_position()</span></code>
+                                method
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Index development description</a>
+                    <ul>
+                        <li><a class="reference internal" href="#index-algorithms-taxonomy">Index algorithms
+                            taxonomy</a></li>
+                        <li><a class="reference internal" href="#id1">Index development</a>
+                            <ul>
+                                <li><a class="reference internal" href="#base-index-api">Base index API</a></li>
+                                <li><a class="reference internal" href="#exo-smartexo-index-api">EXO/SmartEXO index
+                                    API</a></li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#index-deployment">Index deployment</a></li>
+                        <li><a class="reference internal" href="#index-design-features">Index design features</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/index-development.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/index-development.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

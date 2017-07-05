@@ -1,0 +1,302 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tmqrindex.index_exo_base &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: '../../',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tmqrindex.index_exo_base</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">tmqrindex.index_base</span> <span
+                        class="k">import</span> <span class="n">IndexBase</span><span class="p">,</span> <span
+                        class="n">INSTRUMENT_NA</span>
+<span class="kn">from</span> <span class="nn">tmqr.errors</span> <span class="k">import</span> <span class="n">ArgumentError</span><span
+                        class="p">,</span> <span class="n">ChainNotFoundError</span><span class="p">,</span> <span
+                        class="n">QuoteNotFoundError</span><span class="p">,</span> <span class="n">SettingsError</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.quotes.quote_contfut</span> <span class="k">import</span> <span
+                        class="n">QuoteContFut</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.costs</span> <span class="k">import</span> <span
+                        class="n">Costs</span>
+<span class="kn">from</span> <span class="nn">tmqr.logs</span> <span class="k">import</span> <span class="n">log</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.position</span> <span class="k">import</span> <span class="n">Position</span>
+
+
+<div class="viewcode-block" id="IndexEXOBase"><a class="viewcode-back"
+                                                 href="../../index-cookbook.html#tmqrindex.index_exo_base.IndexEXOBase">[docs]</a><span
+        class="k">class</span> <span class="nc">IndexEXOBase</span><span class="p">(</span><span
+        class="n">IndexBase</span><span class="p">):</span>
+    <span class="n">_description_short</span> <span class="o">=</span> <span class="s2">&quot;EOD continuous futures series produced by QuoteContFut algorithm&quot;</span>
+    <span class="n">_description_long</span> <span class="o">=</span> <span class="s2">&quot;EOD continuous futures series produced by QuoteContFut algorithm. &quot;</span> \
+                        <span class="s2">&quot;Quotes and positions are included&quot;</span>
+
+    <span class="n">_index_name</span> <span class="o">=</span> <span class="s2">&quot;EXOBase&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">,</span> <span class="o">**</span><span
+            class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span
+            class="fm">__init__</span><span class="p">(</span><span class="n">datamanager</span><span class="p">,</span> <span
+            class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">instrument</span> <span
+            class="o">==</span> <span class="n">INSTRUMENT_NA</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;You must define &#39;instrument&#39; in **kwargs&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs_futures</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;costs_futures&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span
+            class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs_options</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;costs_options&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="c1"># Load instrument session from the DB</span>
+        <span class="c1"># And store session settings</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">session</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">session_set</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">instrument</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">session_set</span><span class="p">(</span><span class="n">session_instance</span><span
+            class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">series_primary_set</span><span class="p">(</span><span class="n">QuoteContFut</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">instrument</span><span class="p">,</span>
+                                   <span class="n">timeframe</span><span class="o">=</span><span
+            class="s1">&#39;D&#39;</span><span class="p">,</span> <span class="n">decision_time_shift</span><span
+            class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">decision_time_shift</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">costs_set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">instrument</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span
+            class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span
+            class="p">],</span> <span class="n">Costs</span><span class="p">(</span><span
+            class="n">per_contract</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">costs_futures</span><span class="p">,</span>
+                                                               <span class="n">per_option</span><span class="o">=</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">costs_options</span><span class="p">))</span>
+
+<div class="viewcode-block" id="IndexEXOBase.set_data_and_position"><a class="viewcode-back"
+                                                                       href="../../index-cookbook.html#tmqrindex.index_exo_base.IndexEXOBase.set_data_and_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">set_data_and_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        You don&#39;t need to override this method unless you need more control</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">Position</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="p">,</span> <span
+            class="n">decision_time_shift</span><span class="o">=</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">decision_time_shift</span><span class="p">)</span>
+
+        <span class="n">exo_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">calc_exo_logic</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">dt</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">quotes</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span
+            class="p">:</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pos</span><span class="o">.</span><span class="n">keep_previous_position</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">)</span>
+
+                <span class="c1"># Getting SmartEXO logic data point for current date</span>
+                <span class="n">logic_df</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">exo_df</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span
+            class="nb">len</span><span class="p">(</span><span class="n">exo_df</span><span class="p">)</span> <span
+            class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">logic_df</span> <span class="o">=</span> <span class="n">exo_df</span><span
+            class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">dt</span><span
+            class="p">]</span>
+                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                        <span class="k">pass</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">manage_position</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+            class="p">,</span> <span class="n">logic_df</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span><span class="o">.</span><span
+            class="n">has_position</span><span class="p">(</span><span class="n">dt</span><span class="p">):</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span
+            class="p">(</span><span class="s1">&#39;Opening new position&#39;</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;Date: </span><span
+            class="si">{dt}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">construct_position</span><span
+            class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+            class="p">,</span> <span class="n">logic_df</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span
+            class="p">(</span><span class="n">f</span><span class="s1">&#39;Position</span><span
+            class="se">\n</span><span class="s1"> {repr(pos)}&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">ChainNotFoundError</span> <span class="k">as</span> <span
+            class="n">exc</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;ChainNotFoundError: </span><span
+            class="si">{dt}</span><span class="s2">: </span><span class="si">{exc}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">QuoteNotFoundError</span> <span class="k">as</span> <span
+            class="n">exc2</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;QuoteNotFoundError: </span><span
+            class="si">{dt}</span><span class="s2">: </span><span class="si">{exc2}</span><span class="s2">&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span
+            class="n">pos</span><span class="o">.</span><span class="n">get_pnl_series</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span
+            class="o">=</span> <span class="n">pos</span></div>
+
+<div class="viewcode-block" id="IndexEXOBase.calc_exo_logic"><a class="viewcode-back"
+                                                                href="../../index-cookbook.html#tmqrindex.index_exo_base.IndexEXOBase.calc_exo_logic">[docs]</a>    <span
+        class="k">def</span> <span class="nf">calc_exo_logic</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates SmartEXO logic.</span>
+<span class="sd">        NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key=&#39;for_secondary_series&#39;) to calculate SmartEXO logic</span>
+
+<span class="sd">        :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="IndexEXOBase.manage_position"><a class="viewcode-back"
+                                                                 href="../../index-cookbook.html#tmqrindex.index_exo_base.IndexEXOBase.manage_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">manage_position</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">pos</span><span
+        class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Manages opened position (rollover checks/closing, delta hedging, etc)</span>
+
+<span class="sd">        :param dt: current datetime</span>
+<span class="sd">        :param pos: Position instance</span>
+<span class="sd">        :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">        :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="IndexEXOBase.construct_position"><a class="viewcode-back"
+                                                                    href="../../index-cookbook.html#tmqrindex.index_exo_base.IndexEXOBase.construct_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">construct_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span
+        class="n">pos</span><span class="p">,</span> <span class="n">logic_df</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        EXO position construction method</span>
+
+<span class="sd">        :param dt: current datetime</span>
+<span class="sd">        :param pos: Position instance</span>
+<span class="sd">        :param logic_df: result of calc_exo_logic()[dt]  if applicable</span>
+<span class="sd">        :return: nothing, manages &#39;pos&#39; in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">index_name</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index_name</span> <span
+            class="o">==</span> <span class="s1">&#39;EXOBase&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span><span class="s2">&quot;You must replace default &#39;_index_name&#39; in child class source code&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.instrument}</span><span
+            class="s2">_</span><span class="si">{self._index_name}</span><span class="s2">&quot;</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+</div>
+
+
+</body>
+</html>

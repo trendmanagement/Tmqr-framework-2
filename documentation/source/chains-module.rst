@@ -1,0 +1,25 @@
+.. _chains-module:
+
+Chains module
+*************
+
+This page automatically generated from source code.
+
+:ref:`index-page`
+
+.. toctree::
+:maxdepth: 3
+
+
+``Chains`` module
+=================
+
+.. automodule:: tmqrfeed.chains
+
+
+
+
+Indices and tables
+==================
+
+* :ref:`index-page`

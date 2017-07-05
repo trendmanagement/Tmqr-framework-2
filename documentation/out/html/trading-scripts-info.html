@@ -1,0 +1,253 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Trading scripts information &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="trading-scripts-information">
+                    <span id="trading-scripts-info"></span>
+                    <h1>Trading scripts information<a class="headerlink" href="#trading-scripts-information"
+                                                      title="Permalink to this headline">¶</a></h1>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="installation-and-settings">
+                        <h2>Installation and settings<a class="headerlink" href="#installation-and-settings"
+                                                        title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="install-py">
+                            <h3><code class="docutils literal"><span class="pre">install.py</span></code><a
+                                    class="headerlink" href="#install-py" title="Permalink to this headline">¶</a></h3>
+                        </div>
+                        <div class="section" id="module-scripts.settings">
+                            <span id="settings-py"></span>
+                            <h3><code class="docutils literal"><span class="pre">settings.py</span></code><a
+                                    class="headerlink" href="#module-scripts.settings"
+                                    title="Permalink to this headline">¶</a></h3>
+                        </div>
+                    </div>
+                    <div class="section" id="data-management">
+                        <h2>Data management<a class="headerlink" href="#data-management"
+                                              title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="assetindex-updater-py">
+                            <h3><code class="docutils literal"><span class="pre">assetindex_updater.py</span></code><a
+                                    class="headerlink" href="#assetindex-updater-py" title="Permalink to this headline">¶</a>
+                            </h3>
+                        </div>
+                        <div class="section" id="module-scripts.quotes_notification">
+                            <span id="quotes-notification-py"></span>
+                            <h3><code class="docutils literal"><span class="pre">quotes_notification.py</span></code><a
+                                    class="headerlink" href="#module-scripts.quotes_notification"
+                                    title="Permalink to this headline">¶</a></h3>
+                            <p>Quotes notification script</p>
+                            <p>Used in online trading setup, checks if last bar time of the last quote for particular
+                                instrument &gt; decision time fires
+                                <code class="docutils literal"><span class="pre">new_quote</span></code> event to
+                                RabbitMQ and launches full execution chain NewQuote -&gt; ExoCalculation -&gt;
+                                NewEXOQuote -&gt; AlphaCalcultation -&gt; PositionQtyUpdate</p>
+                            <p>Poll interval: 15 secs</p>
+                        </div>
+                    </div>
+                    <div class="section" id="exo-management">
+                        <h2>EXO management<a class="headerlink" href="#exo-management"
+                                             title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="exo-builder-py">
+                            <h3><code class="docutils literal"><span class="pre">exo_builder.py</span></code><a
+                                    class="headerlink" href="#exo-builder-py" title="Permalink to this headline">¶</a>
+                            </h3>
+                        </div>
+                        <div class="section" id="exo-batch-update-py">
+                            <h3><code class="docutils literal"><span class="pre">exo_batch_update.py</span></code><a
+                                    class="headerlink" href="#exo-batch-update-py"
+                                    title="Permalink to this headline">¶</a></h3>
+                        </div>
+                    </div>
+                    <div class="section" id="alpha-management">
+                        <h2>Alpha management<a class="headerlink" href="#alpha-management"
+                                               title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="alpha-rebalancer-py">
+                            <h3><code class="docutils literal"><span class="pre">alpha_rebalancer.py</span></code><a
+                                    class="headerlink" href="#alpha-rebalancer-py"
+                                    title="Permalink to this headline">¶</a></h3>
+                        </div>
+                        <div class="section" id="module-scripts.alpha_online">
+                            <span id="alpha-online-py"></span>
+                            <h3><code class="docutils literal"><span class="pre">alpha_online.py</span></code><a
+                                    class="headerlink" href="#module-scripts.alpha_online"
+                                    title="Permalink to this headline">¶</a></h3>
+                            <p>Online alpha execution script for generic alphas (calculated for each EXO)</p>
+                        </div>
+                        <div class="section" id="module-scripts.alpha_online_custom">
+                            <span id="alpha-online-custom-py"></span>
+                            <h3><code class="docutils literal"><span class="pre">alpha_online_custom.py</span></code><a
+                                    class="headerlink" href="#module-scripts.alpha_online_custom"
+                                    title="Permalink to this headline">¶</a></h3>
+                            <p>Online alpha execution script for custom alphas (calculated for only particular EXO)</p>
+                        </div>
+                    </div>
+                    <div class="section" id="trading-scripts">
+                        <h2>Trading scripts<a class="headerlink" href="#trading-scripts"
+                                              title="Permalink to this headline">¶</a></h2>
+                        <div class="section" id="trading-online-py">
+                            <h3><code class="docutils literal"><span class="pre">trading_online.py</span></code><a
+                                    class="headerlink" href="#trading-online-py"
+                                    title="Permalink to this headline">¶</a></h3>
+                        </div>
+                        <div class="section" id="module-scripts.trading_positions_archive">
+                            <span id="trading-positions-archive-py"></span>
+                            <h3><code class="docutils literal"><span
+                                    class="pre">trading_positions_archive.py</span></code><a class="headerlink"
+                                                                                             href="#module-scripts.trading_positions_archive"
+                                                                                             title="Permalink to this headline">¶</a>
+                            </h3>
+                            <p>Scheduled script for account positions archiving</p>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Trading scripts information</a>
+                    <ul>
+                        <li><a class="reference internal" href="#installation-and-settings">Installation and
+                            settings</a>
+                            <ul>
+                                <li><a class="reference internal" href="#install-py"><code
+                                        class="docutils literal"><span class="pre">install.py</span></code></a></li>
+                                <li><a class="reference internal" href="#module-scripts.settings"><code
+                                        class="docutils literal"><span class="pre">settings.py</span></code></a></li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#data-management">Data management</a>
+                            <ul>
+                                <li><a class="reference internal" href="#assetindex-updater-py"><code
+                                        class="docutils literal"><span
+                                        class="pre">assetindex_updater.py</span></code></a></li>
+                                <li><a class="reference internal" href="#module-scripts.quotes_notification"><code
+                                        class="docutils literal"><span class="pre">quotes_notification.py</span></code></a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#exo-management">EXO management</a>
+                            <ul>
+                                <li><a class="reference internal" href="#exo-builder-py"><code class="docutils literal"><span
+                                        class="pre">exo_builder.py</span></code></a></li>
+                                <li><a class="reference internal" href="#exo-batch-update-py"><code
+                                        class="docutils literal"><span class="pre">exo_batch_update.py</span></code></a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#alpha-management">Alpha management</a>
+                            <ul>
+                                <li><a class="reference internal" href="#alpha-rebalancer-py"><code
+                                        class="docutils literal"><span class="pre">alpha_rebalancer.py</span></code></a>
+                                </li>
+                                <li><a class="reference internal" href="#module-scripts.alpha_online"><code
+                                        class="docutils literal"><span class="pre">alpha_online.py</span></code></a>
+                                </li>
+                                <li><a class="reference internal" href="#module-scripts.alpha_online_custom"><code
+                                        class="docutils literal"><span class="pre">alpha_online_custom.py</span></code></a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#trading-scripts">Trading scripts</a>
+                            <ul>
+                                <li><a class="reference internal" href="#trading-online-py"><code
+                                        class="docutils literal"><span class="pre">trading_online.py</span></code></a>
+                                </li>
+                                <li><a class="reference internal" href="#module-scripts.trading_positions_archive"><code
+                                        class="docutils literal"><span
+                                        class="pre">trading_positions_archive.py</span></code></a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/trading-scripts-info.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/trading-scripts-info.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

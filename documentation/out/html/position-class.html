@@ -1,0 +1,699 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Position class &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="position-class">
+                    <span id="id1"></span>
+                    <h1>Position class<a class="headerlink" href="#position-class"
+                                         title="Permalink to this headline">¶</a></h1>
+                    <p>This page automatically generated from source code.</p>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="id2">
+                        <h2><code class="docutils literal"><span class="pre">Position</span></code> class<a
+                                class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+                        <span class="target" id="module-tmqrfeed.position"></span>
+                        <dl class="class">
+                            <dt id="tmqrfeed.position.Position">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.position.</code><code
+                                    class="descname">Position</code><span class="sig-paren">(</span><em>datamanager</em>,
+                                <em>position_dict: collections.OrderedDict = None</em>, <em>**kwargs</em><span
+                                    class="sig-paren">)</span><a class="reference internal"
+                                                                 href="_modules/tmqrfeed/position.html#Position"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.position.Position"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Universal position management class for all types of strategies</p>
+                                <p>Init the Position instance</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body">
+                                            <ul class="first last simple">
+                                                <li><strong>datamanager</strong> &#8211; DataManager class instance</li>
+                                                <li><strong>position_dict</strong> &#8211; position dictionary</li>
+                                                <li><strong>kwargs</strong> &#8211; position init keyword args</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.add_net_position">
+                                        <code class="descname">add_net_position</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime, net_position_dict:
+                                        typing.Dict[tmqrfeed.contracts.ContractBase, typing.Tuple[[float, float],
+                                        float]], qty: float = 1.0</em><span class="sig-paren">)</span> &rarr; None<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.add_net_position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.add_net_position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Add net position at given date.
+                                        This method adds to current position holdings, and calculates required
+                                        transactions to maintain the new position.</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; datetime</li>
+                                                        <li><strong>net_position_dict</strong> &#8211;
+                                                            Dict[ContractBase, Tuple(decision_px, exec_px, qty)
+                                                        </li>
+                                                        <li><strong>qty</strong> &#8211; qty times of the net_position,
+                                                            negative values allowed
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">nothing, changes position
+                                                    in place</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.add_transaction">
+                                        <code class="descname">add_transaction</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em>, <em>asset:
+                                        tmqrfeed.contracts.ContractBase</em>, <em>qty: float</em><span
+                                            class="sig-paren">)</span> &rarr; None<a class="reference internal"
+                                                                                     href="_modules/tmqrfeed/position.html#Position.add_transaction"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.add_transaction"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Add new transaction for the position at given date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; transaction date</li>
+                                                        <li><strong>asset</strong> &#8211; ContractBase derived class
+                                                            instance
+                                                        </li>
+                                                        <li><strong>qty</strong> &#8211; transaction qty</li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">nothing, changes position
+                                                    in place</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.almost_expired_ratio">
+                                        <code class="descname">almost_expired_ratio</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em>, <em>rollover_days_before_fut:
+                                        int = None</em>, <em>rollover_days_before_opt: int = None</em><span
+                                            class="sig-paren">)</span> &rarr; float<a class="reference internal"
+                                                                                      href="_modules/tmqrfeed/position.html#Position.almost_expired_ratio"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.almost_expired_ratio"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Return the fraction of contracts in the position &#8216;rollover_days_before&#8217;
+                                        near expiration</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; current date</li>
+                                                        <li><strong>rollover_days_before_fut</strong> &#8211; Days
+                                                            before futures rollover (default: uses InstrumentInfo
+                                                            values)
+                                                        </li>
+                                                        <li><strong>rollover_days_before_opt</strong> &#8211; Days
+                                                            before options rollover (default: uses InstrumentInfo
+                                                            values)
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">0.0 - if no contracts of
+                                                    the position are near expiration, 1.0 - if all contracts about to be
+                                                    expired,
+                                                    value in range 0.0 &lt; almost_expired_ratio &lt; 1.0 if only part
+                                                    of the position near expiration</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.close">
+                                        <code class="descname">close</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em><span class="sig-paren">)</span> &rarr; None<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.close"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.close"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Close all position at given date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">nothing, changes position in place</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.delta">
+                                        <code class="descname">delta</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em><span class="sig-paren">)</span> &rarr; float<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.delta"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.delta"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculate position delta</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211; calculation date
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">delta value, if no position returns 0.0</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="classmethod">
+                                    <dt id="tmqrfeed.position.Position.deserialize">
+                                        <em class="property">classmethod </em><code
+                                            class="descname">deserialize</code><span class="sig-paren">(</span><em>pos_data</em>,
+                                        <em>datamanager=None</em>, <em>as_readonly=False</em><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/position.html#Position.deserialize"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.deserialize"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Deserialize position data from MongoDB format</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>pos_data</strong> &#8211;</li>
+                                                        <li><strong>datamanager</strong> &#8211; DataManager instance
+                                                            for position&#8217;s assets
+                                                        </li>
+                                                        <li><strong>as_readonly</strong> &#8211; return
+                                                            PositionReadOnlyView instead of the Position instance
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">Position class or
+                                                    PositionReadOnlyView class instance</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.get_asset_price">
+                                        <code class="descname">get_asset_price</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em>, <em>asset:
+                                        tmqrfeed.contracts.ContractBase</em><span class="sig-paren">)</span> &rarr;
+                                        typing.Tuple[float, float]<a class="reference internal"
+                                                                     href="_modules/tmqrfeed/position.html#Position.get_asset_price"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.get_asset_price"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get asset prices from position holdings
+                                        (used for quick price caching, not applicable for options)</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; required date</li>
+                                                        <li><strong>asset</strong> &#8211; ContractBase class instance
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">tuple (decision_price,
+                                                    exec_price)</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.get_net_position">
+                                        <code class="descname">get_net_position</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em><span
+                                            class="sig-paren">)</span> &rarr;
+                                        typing.Dict[tmqrfeed.contracts.ContractBase, typing.Tuple[[float, float],
+                                        float]]<a class="reference internal"
+                                                  href="_modules/tmqrfeed/position.html#Position.get_net_position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.get_net_position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get net position at given date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211; date of position
+                                                    slice
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.get_pnl_series">
+                                        <code class="descname">get_pnl_series</code><span
+                                            class="sig-paren">(</span><span class="sig-paren">)</span> &rarr;
+                                        pandas.core.frame.DataFrame<a class="reference internal"
+                                                                      href="_modules/tmqrfeed/position.html#Position.get_pnl_series"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.get_pnl_series"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Calculates position PnL series for all transactions, also additional
+                                        execution info provided</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">pandas.DataFrame</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.has_position">
+                                        <code class="descname">has_position</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em><span class="sig-paren">)</span> &rarr; bool<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.has_position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.has_position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Return True is position has recorded position values at
+                                        &#8216;date&#8217;</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211;</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">boolean</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.keep_previous_position">
+                                        <code class="descname">keep_previous_position</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em><span
+                                            class="sig-paren">)</span> &rarr; None<a class="reference internal"
+                                                                                     href="_modules/tmqrfeed/position.html#Position.keep_previous_position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.keep_previous_position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Keeps position at previous day</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211; current date</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">nothing, changes position in place</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.last_transaction_date">
+                                        <code class="descname">last_transaction_date</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime</em><span
+                                            class="sig-paren">)</span> &rarr; datetime.datetime<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.last_transaction_date"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.last_transaction_date"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns the date when last transaction occurred</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body"><strong>date</strong> &#8211; current date</td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">date of last position change (i.e. transaction
+                                                    occurrence)
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="staticmethod">
+                                    <dt id="tmqrfeed.position.Position.merge">
+                                        <em class="property">static </em><code class="descname">merge</code><span
+                                            class="sig-paren">(</span><em>datamanager</em>, <em>positions_list:
+                                        list</em><span class="sig-paren">)</span><a class="reference internal"
+                                                                                    href="_modules/tmqrfeed/position.html#Position.merge"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.merge"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Merges list of Positions to single Position class instance. Useful for
+                                        campaign position building, alpha members position, etc.</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>datamanager</strong> &#8211; DataManager instance
+                                                        </li>
+                                                        <li><strong>positions_list</strong> &#8211; list of Position
+                                                            class instances to merge
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last"></p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.serialize">
+                                        <code class="descname">serialize</code><span class="sig-paren">(</span><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/position.html#Position.serialize"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.serialize"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Serialize position data to compatible for MongoDB format</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"></td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.position.Position.set_net_position">
+                                        <code class="descname">set_net_position</code><span
+                                            class="sig-paren">(</span><em>date: datetime.datetime, net_position_dict:
+                                        typing.Dict[tmqrfeed.contracts.ContractBase, typing.Tuple[[float, float],
+                                        float]]</em><span class="sig-paren">)</span> &rarr; None<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/position.html#Position.set_net_position"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.position.Position.set_net_position"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Set net position at given date (overwrites old position if it exists). This
+                                        method intended to be used
+                                        by low-level Quote* algorithms to initiate positions, generic strategies should
+                                        use add_net_position() method.</p>
+                                        <p>This method allow to change position at the previous date, use with care this
+                                            could ruin data validity.</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; datetime</li>
+                                                        <li><strong>net_position_dict</strong> &#8211;
+                                                            Dict[ContractBase, Tuple(decision_px, exec_px, qty)
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">nothing, changes position
+                                                    in place</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                        <dl class="class">
+                            <dt id="tmqrfeed.position.PositionReadOnlyView">
+                                <em class="property">class </em><code
+                                    class="descclassname">tmqrfeed.position.</code><code class="descname">PositionReadOnlyView</code><span
+                                    class="sig-paren">(</span><em>datamanager</em>, <em>position_dict=None</em>, <em>**kwargs</em><span
+                                    class="sig-paren">)</span><a class="reference internal"
+                                                                 href="_modules/tmqrfeed/position.html#PositionReadOnlyView"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.position.PositionReadOnlyView"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Position read only view used to view precalculated Index position with
+                                decision_time_shift
+                                this class used as proxy to get position using original decision time of the
+                                instrument.</p>
+                                <p>Only get_net_position() method allowed, other methods will raise
+                                    PositionReadOnlyError()</p>
+                            </dd>
+                        </dl>
+
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Position class</a>
+                    <ul>
+                        <li><a class="reference internal" href="#id2"><code class="docutils literal"><span class="pre">Position</span></code>
+                            class</a></li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/position-class.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/position-class.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

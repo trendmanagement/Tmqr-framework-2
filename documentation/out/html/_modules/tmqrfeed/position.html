@@ -1,0 +1,1441 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tmqrfeed.position &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: '../../',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tmqrfeed.position</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span
+                        class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">tmqr.errors</span> <span class="k">import</span> <span class="n">ArgumentError</span><span
+                        class="p">,</span> <span class="n">PositionNotFoundError</span><span class="p">,</span> <span
+                        class="n">PositionQuoteNotFoundError</span><span class="p">,</span> <span class="n">PositionReadOnlyError</span><span
+                        class="p">,</span> \
+    <span class="n">AssetExpiredError</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.contracts</span> <span class="k">import</span> <span class="n">ContractBase</span>
+<span class="kn">from</span> <span class="nn">tmqr.logs</span> <span class="k">import</span> <span class="n">log</span>
+<span class="kn">from</span> <span class="nn">tmqr.settings</span> <span class="k">import</span> <span class="n">QDATE_MIN</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span
+                        class="n">timedelta</span><span class="p">,</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">lz4</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span
+                        class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span
+                        class="p">,</span> <span class="n">List</span>
+<span class="kn">from</span> <span class="nn">tmqr.serialization</span> <span class="k">import</span> <span class="n">object_save_compress</span><span
+                        class="p">,</span> <span class="n">object_load_decompress</span>
+
+<span class="c1"># Position tuple constants</span>
+<span class="n">iDPX</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Decision price</span>
+<span class="n">iEPX</span> <span class="o">=</span> <span class="mi">1</span>  <span
+                        class="c1"># Execution price</span>
+<span class="n">iQTY</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Qty</span>
+
+<div class="viewcode-block" id="Position"><a class="viewcode-back"
+                                             href="../../position-class.html#tmqrfeed.position.Position">[docs]</a><span
+        class="k">class</span> <span class="nc">Position</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Universal position management class for all types of strategies</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">,</span> <span
+            class="n">position_dict</span><span class="p">:</span> <span class="n">OrderedDict</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span
+            class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init the Position instance</span>
+
+<span class="sd">        :param datamanager: DataManager class instance</span>
+<span class="sd">        :param position_dict: position dictionary</span>
+<span class="sd">        :param kwargs: position init keyword args</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">position_dict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span
+            class="o">=</span> <span class="n">position_dict</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span
+            class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span class="o">=</span> <span
+            class="n">datamanager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span
+            class="n">kwargs</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># Private methods</span>
+    <span class="c1">#</span>
+    <span class="c1">#</span>
+
+    <span class="k">def</span> <span class="nf">_prev_day_key</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets previous day key which is less than &#39;date&#39;</span>
+
+<span class="sd">        :param date: if date is None returns date of the last key</span>
+<span class="sd">        :return: previous date key datetime</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># This method intended to be used for &#39;keep_previous_position&#39; method</span>
+        <span class="c1"># And it&#39;s expected that this loop will iterate only 1-2 steps</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span
+            class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">k</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span
+            class="n">date</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">k</span>
+
+        <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PositionNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Position doesn&#39;t have any records&quot;</span><span
+            class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PositionNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Position at the day less than </span><span class="si">{date}</span><span
+            class="s2"> is not found&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_position_validity</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">net_position_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks the input data validity to prevent position data corruption</span>
+
+<span class="sd">        :param net_position_dict: dict of {asset: (decision_px, exec_px, qty), ... }</span>
+<span class="sd">        :return: nothing</span>
+<span class="sd">        :raises: ArgumentError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span
+            class="n">net_position_dict</span><span class="p">,</span> <span class="nb">dict</span><span
+            class="p">):</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s2">&quot;&#39;net_position_dict&#39; must be dictionary type&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span class="n">pos_value</span> <span
+            class="ow">in</span> <span class="n">net_position_dict</span><span class="o">.</span><span
+            class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span><span class="n">asset</span><span class="p">,</span> <span
+            class="n">ContractBase</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;net_position_dict&#39; keys must be ContractBase derived class instance, &quot;</span>
+                                    <span class="n">f</span><span
+            class="s2">&quot;but got type {type(asset)}&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span
+            class="p">(</span><span class="n">pos_value</span><span class="p">,</span> <span
+            class="nb">tuple</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;net_position_dict&#39; values must be tuples, but got type {type(pos_value)}&quot;</span><span
+            class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">pos_value</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span
+            class="p">:</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;&#39;net_position_dict&#39; values must be tuples of (decision_px, exec_px, qty),&quot;</span>
+                                    <span class="n">f</span><span
+            class="s2">&quot; but got different length </span><span class="si">{pos_value}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1">#</span>
+    <span class="c1"># Position save/load</span>
+    <span class="c1">#</span>
+    <span class="c1">#</span>
+
+<div class="viewcode-block" id="Position.serialize"><a class="viewcode-back"
+                                                       href="../../position-class.html#tmqrfeed.position.Position.serialize">[docs]</a>    <span
+        class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Serialize position data to compatible for MongoDB format</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">OrderedDict</span><span
+            class="p">()</span>
+        <span class="k">for</span> <span class="n">dt</span><span class="p">,</span> <span
+            class="n">asset_dict</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_position</span><span class="o">.</span><span class="n">items</span><span
+            class="p">():</span>
+            <span class="n">asset_dict_converted</span> <span class="o">=</span> <span class="n">result</span><span
+            class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">dt</span><span
+            class="p">,</span> <span class="p">{})</span>
+
+            <span class="n">asset_keys</span> <span class="o">=</span> <span class="nb">tuple</span><span
+            class="p">(</span><span class="n">asset_dict</span><span class="o">.</span><span class="n">keys</span><span
+            class="p">())</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span
+            class="n">asset_keys</span><span class="p">:</span>
+                <span class="n">asset_dict_converted</span><span class="p">[</span><span class="n">k</span><span
+            class="o">.</span><span class="n">ticker</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">asset_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+        <span class="n">res_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span
+            class="n">object_save_compress</span><span class="p">(</span><span class="n">result</span><span
+            class="p">),</span>
+            <span class="s1">&#39;kwargs&#39;</span><span class="p">:</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">res_dict</span></div>
+
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Position.deserialize"><a class="viewcode-back"
+                                                         href="../../position-class.html#tmqrfeed.position.Position.deserialize">[docs]</a>    <span
+        class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span class="bp">cls</span><span
+        class="p">,</span> <span class="n">pos_data</span><span class="p">,</span> <span
+        class="n">datamanager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span
+        class="n">as_readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Deserialize position data from MongoDB format</span>
+
+<span class="sd">        :param pos_data: </span>
+<span class="sd">        :param datamanager: DataManager instance for position&#39;s assets</span>
+<span class="sd">        :param as_readonly: return PositionReadOnlyView instead of the Position instance</span>
+<span class="sd">        :return: Position class or PositionReadOnlyView class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">deserialized_kwargs</span> <span class="o">=</span> <span class="n">pos_data</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;kwargs&#39;</span><span
+            class="p">,</span> <span class="p">{})</span>
+        <span class="n">pos_dict</span> <span class="o">=</span> <span class="n">object_load_decompress</span><span
+            class="p">(</span><span class="n">pos_data</span><span class="p">[</span><span
+            class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">OrderedDict</span><span
+            class="p">()</span>
+        <span class="k">for</span> <span class="n">dt</span><span class="p">,</span> <span
+            class="n">asset_dict</span> <span class="ow">in</span> <span class="n">pos_dict</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">asset_dict_converted</span> <span class="o">=</span> <span class="n">result</span><span
+            class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">dt</span><span
+            class="p">,</span> <span class="p">{})</span>
+
+            <span class="n">asset_keys</span> <span class="o">=</span> <span class="nb">tuple</span><span
+            class="p">(</span><span class="n">asset_dict</span><span class="o">.</span><span class="n">keys</span><span
+            class="p">())</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span
+            class="n">asset_keys</span><span class="p">:</span>
+                <span class="n">asset_dict_converted</span><span class="p">[</span><span
+            class="n">ContractBase</span><span class="o">.</span><span class="n">deserialize</span><span
+            class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">datamanager</span><span
+            class="p">)]</span> <span class="o">=</span> <span class="n">asset_dict</span><span class="p">[</span><span
+            class="n">k</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">as_readonly</span><span class="p">:</span>
+            <span class="c1"># TODO: check the position records for exec_time for online-index calculation (in online mode exec_px is unreliable)</span>
+            <span class="k">return</span> <span class="n">PositionReadOnlyView</span><span class="p">(</span><span
+            class="n">datamanager</span><span class="p">,</span> <span class="n">result</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">deserialized_kwargs</span><span
+            class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Position</span><span class="p">(</span><span class="n">datamanager</span><span
+            class="p">,</span> <span class="n">position_dict</span><span class="o">=</span><span class="n">result</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">deserialized_kwargs</span><span
+            class="p">)</span></div>
+
+
+
+    <span class="c1">#</span>
+    <span class="c1"># Position management</span>
+    <span class="c1">#</span>
+    <span class="c1">#</span>
+<div class="viewcode-block" id="Position.almost_expired_ratio"><a class="viewcode-back"
+                                                                  href="../../position-class.html#tmqrfeed.position.Position.almost_expired_ratio">[docs]</a>    <span
+        class="k">def</span> <span class="nf">almost_expired_ratio</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                             <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                             <span class="n">rollover_days_before_fut</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="n">rollover_days_before_opt</span><span class="p">:</span> <span class="nb">int</span> <span
+            class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the fraction of contracts in the position &#39;rollover_days_before&#39; near expiration</span>
+
+<span class="sd">        :param date: current date</span>
+<span class="sd">        :param rollover_days_before_fut: Days before futures rollover (default: uses InstrumentInfo values) </span>
+<span class="sd">        :param rollover_days_before_opt: Days before options rollover (default: uses InstrumentInfo values)</span>
+<span class="sd">        :return: 0.0 - if no contracts of the position are near expiration, 1.0 - if all contracts about to be expired,</span>
+<span class="sd">                 value in range 0.0 &lt; almost_expired_ratio &lt; 1.0 if only part of the position near expiration</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rollover_count</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="n">date</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pos</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="n">pos</span><span class="o">.</span><span
+            class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span
+            class="p">:</span>
+                <span class="c1"># Skipping closed positions</span>
+                <span class="k">continue</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mf">1.0</span>
+
+            <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">ctype</span> <span class="o">==</span> <span class="s1">&#39;F&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rollover_days_before_fut</span> <span
+            class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">rollover_days_before_fut</span> <span
+            class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;&#39;rollover_days_before_fut&#39; must be &gt;= 0&quot;</span><span class="p">)</span>
+                    <span class="n">rollover_fut</span> <span class="o">=</span> <span class="n">rollover_days_before_fut</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">rollover_fut</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">instrument_info</span><span class="o">.</span><span class="n">rollover_days_before</span>
+
+                <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span class="n">to_expiration_days</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span> <span class="o">&lt;=</span> <span
+            class="n">rollover_fut</span><span class="p">:</span>
+                    <span class="n">rollover_count</span> <span class="o">+=</span> <span class="mf">1.0</span>
+
+            <span class="k">elif</span> <span class="n">asset</span><span class="o">.</span><span class="n">ctype</span> <span
+            class="o">==</span> <span class="s1">&#39;P&#39;</span> <span class="ow">or</span> <span
+            class="n">asset</span><span class="o">.</span><span class="n">ctype</span> <span class="o">==</span> <span
+            class="s1">&#39;C&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rollover_days_before_opt</span> <span
+            class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">rollover_days_before_opt</span> <span
+            class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;&#39;rollover_days_before_opt&#39; must be &gt;= 0&quot;</span><span class="p">)</span>
+                    <span class="n">rollover_opt</span> <span class="o">=</span> <span class="n">rollover_days_before_opt</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">rollover_opt</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">instrument_info</span><span class="o">.</span><span class="n">rollover_days_before_options</span>
+
+                <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span class="n">to_expiration_days</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span> <span class="o">&lt;=</span> <span
+            class="n">rollover_opt</span><span class="p">:</span>
+                    <span class="n">rollover_count</span> <span class="o">+=</span> <span class="mf">1.0</span>
+
+        <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span
+            class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">rollover_count</span> <span class="o">/</span> <span
+            class="n">count</span></div>
+
+<div class="viewcode-block" id="Position.delta"><a class="viewcode-back"
+                                                   href="../../position-class.html#tmqrfeed.position.Position.delta">[docs]</a>    <span
+        class="k">def</span> <span class="nf">delta</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+        class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate position delta</span>
+
+<span class="sd">        :param date: calculation date</span>
+<span class="sd">        :return: delta value, if no position returns 0.0</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">delta_value</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">get_net_position</span><span class="p">(</span><span class="n">date</span><span
+            class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">delta_value</span> <span class="o">+=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">delta</span><span class="p">(</span><span class="n">date</span><span
+            class="p">)</span> <span class="o">*</span> <span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">delta_value</span></div>
+
+<div class="viewcode-block" id="Position.last_transaction_date"><a class="viewcode-back"
+                                                                   href="../../position-class.html#tmqrfeed.position.Position.last_transaction_date">[docs]</a>    <span
+        class="k">def</span> <span class="nf">last_transaction_date</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span
+        class="n">datetime</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+        class="n">datetime</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the date when last transaction occurred</span>
+
+<span class="sd">        :param date: current date</span>
+<span class="sd">        :return: date of last position change (i.e. transaction occurrence)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">date_min_tz</span> <span class="o">=</span> <span class="n">QDATE_MIN</span>
+        <span class="k">if</span> <span class="n">date</span><span class="o">.</span><span class="n">tzinfo</span> <span
+            class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Replacing TZ-info for QDATE_MIN to avoid errors</span>
+            <span class="c1"># TypeError: can&#39;t compare offset-naive and offset-aware datetimes</span>
+            <span class="n">date_min_tz</span> <span class="o">=</span> <span class="n">date_min_tz</span><span
+            class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span
+            class="o">=</span><span class="n">date</span><span class="o">.</span><span class="n">tzinfo</span><span
+            class="p">)</span>
+
+        <span class="n">curr_pos</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">curr_date</span> <span class="o">=</span> <span class="n">date_min_tz</span>
+
+        <span class="k">for</span> <span class="n">dt</span><span class="p">,</span> <span
+            class="n">prev_pos</span> <span class="ow">in</span> <span class="nb">reversed</span><span
+            class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_position</span><span
+            class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">dt</span> <span class="o">&gt;</span> <span
+            class="n">date</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">curr_date</span> <span class="o">!=</span> <span class="n">date_min_tz</span><span
+            class="p">:</span>
+                <span class="c1"># Get all assets for both dates</span>
+                <span class="n">assets_set</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">(</span><span class="n">prev_pos</span><span class="o">.</span><span class="n">keys</span><span
+            class="p">())</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span
+            class="n">curr_pos</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="k">for</span> <span class="n">asset</span> <span class="ow">in</span> <span class="n">assets_set</span><span
+            class="p">:</span>
+                    <span class="c1"># Get position QTY, 0.0 qty by default if asset is not exists for particular date</span>
+                    <span class="n">pos_rec_current_qty</span> <span class="o">=</span> <span
+            class="n">curr_pos</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="n">asset</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span
+            class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span
+            class="p">))[</span><span class="n">iQTY</span><span class="p">]</span>
+                    <span class="n">pos_rec_prev_qty</span> <span class="o">=</span> <span
+            class="n">prev_pos</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="n">asset</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span
+            class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span
+            class="p">))[</span><span class="n">iQTY</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">pos_rec_current_qty</span> <span class="o">-</span> <span
+            class="n">pos_rec_prev_qty</span> <span class="o">!=</span> <span class="mi">0</span><span
+            class="p">:</span>
+                        <span class="c1"># Transaction occurred</span>
+                        <span class="k">return</span> <span class="n">curr_date</span>
+
+            <span class="n">curr_date</span> <span class="o">=</span> <span class="n">dt</span>
+            <span class="n">curr_pos</span> <span class="o">=</span> <span class="n">prev_pos</span>
+        <span class="k">return</span> <span class="n">curr_date</span></div>
+
+
+<div class="viewcode-block" id="Position.close"><a class="viewcode-back"
+                                                   href="../../position-class.html#tmqrfeed.position.Position.close">[docs]</a>    <span
+        class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span>
+              <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Close all position at given date</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: nothing, changes position in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos_dict</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_position</span><span class="o">.</span><span
+            class="n">setdefault</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="p">{})</span>
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="n">pos_dict</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Apply zero-qty to all position records, but keep the prices</span>
+            <span class="n">pos_dict</span><span class="p">[</span><span class="n">asset</span><span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">],</span> <span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iEPX</span><span class="p">],</span> <span class="mf">0.0</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Position.set_net_position"><a class="viewcode-back"
+                                                              href="../../position-class.html#tmqrfeed.position.Position.set_net_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">set_net_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                         <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                         <span class="n">net_position_dict</span><span class="p">:</span> <span
+            class="n">Dict</span><span class="p">[</span><span class="n">ContractBase</span><span
+            class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">]])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set net position at given date (overwrites old position if it exists). This method intended to be used</span>
+<span class="sd">        by low-level Quote* algorithms to initiate positions, generic strategies should use add_net_position() method.</span>
+<span class="sd">        </span>
+<span class="sd">        This method allow to change position at the previous date, use with care this could ruin data validity.</span>
+
+<span class="sd">        :param date: datetime</span>
+<span class="sd">        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)</span>
+<span class="sd">        :return: nothing, changes position in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Do sanity checks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_position_validity</span><span
+            class="p">(</span><span class="n">net_position_dict</span><span class="p">)</span>
+
+        <span class="c1"># Overwrite the position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_position</span><span
+            class="p">[</span><span class="n">date</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">net_position_dict</span></div>
+
+<div class="viewcode-block" id="Position.keep_previous_position"><a class="viewcode-back"
+                                                                    href="../../position-class.html#tmqrfeed.position.Position.keep_previous_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">keep_previous_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                               <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Keeps position at previous day</span>
+
+<span class="sd">        :param date: current date</span>
+<span class="sd">        :return:  nothing, changes position in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">date</span> <span class="o">&lt;</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_prev_day_key</span><span
+            class="p">(</span><span class="n">date</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">):</span>
+                <span class="c1"># check if &#39;date&#39; &gt;= last date of the position</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;Managing position at date less then last available date is not allowed&#39;</span><span
+            class="p">)</span>
+            <span class="k">if</span> <span class="n">date</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Position already has record at </span><span
+            class="si">{date}</span><span class="s2">, you should call &quot;</span>
+                                    <span class="n">f</span><span class="s2">&quot;position.keep_previous_position() before all position actions and only once.&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">updated_position</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">prev_position</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">get_net_position</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_prev_day_key</span><span
+            class="p">(</span><span class="n">date</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="n">prev_position</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.0</span><span
+            class="p">:</span>
+                    <span class="c1"># Skipping closed position</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># Get actual prices for position</span>
+                <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
+            class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">price</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span>
+
+                <span class="n">updated_position</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span
+            class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
+            class="p">,</span> <span class="n">pos_rec</span><span class="p">[</span><span class="n">iQTY</span><span
+            class="p">])</span>
+
+            <span class="c1"># Add updated position record at specified date</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_net_position</span><span
+            class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="n">updated_position</span><span class="p">,</span> <span class="n">qty</span><span class="o">=</span><span
+            class="mf">1.0</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">PositionNotFoundError</span> <span class="k">as</span> <span
+            class="n">exc</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;keep_previous_position: {str(exc)}&#39;</span><span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="Position.add_net_position"><a class="viewcode-back"
+                                                              href="../../position-class.html#tmqrfeed.position.Position.add_net_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">add_net_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                         <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                         <span class="n">net_position_dict</span><span class="p">:</span> <span
+            class="n">Dict</span><span class="p">[</span><span class="n">ContractBase</span><span
+            class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">]],</span>
+                         <span class="n">qty</span><span class="p">:</span> <span class="nb">float</span> <span
+            class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add net position at given date. </span>
+<span class="sd">        This method adds to current position holdings, and calculates required transactions to maintain the new position.</span>
+
+<span class="sd">        :param date: datetime</span>
+<span class="sd">        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)</span>
+<span class="sd">        :param qty: qty times of the net_position, negative values allowed</span>
+<span class="sd">        :return: nothing, changes position in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span> <span class="ow">and</span> <span class="n">date</span> <span
+            class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_prev_day_key</span><span class="p">(</span><span class="n">date</span><span
+            class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># check if &#39;date&#39; &gt;= last date of the position</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;Managing position at date less then last available date is not allowed&#39;</span><span
+            class="p">)</span>
+
+        <span class="c1"># Do sanity checks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_position_validity</span><span
+            class="p">(</span><span class="n">net_position_dict</span><span class="p">)</span>
+
+        <span class="n">pos_dict</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_position</span><span class="o">.</span><span
+            class="n">setdefault</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="p">{})</span>
+
+        <span class="k">if</span> <span class="n">qty</span> <span class="o">==</span> <span class="mf">0.0</span><span
+            class="p">:</span>
+            <span class="c1"># If qty is 0.0, just skip position calculation (assumming that position is zero)</span>
+            <span class="c1"># but keep date record for empty position, that will allow maintain flat equity line of the position</span>
+            <span class="k">return</span>
+
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">new_position</span> <span class="ow">in</span> <span class="n">net_position_dict</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Searching existing positions first</span>
+            <span class="n">current_position</span> <span class="o">=</span> <span class="n">pos_dict</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
+            class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">price</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">current_position</span><span
+            class="p">:</span>
+                <span class="n">pos_dict</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span
+            class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
+            class="p">,</span> <span class="n">new_position</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">*</span> <span class="n">qty</span><span
+            class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pos_dict</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span
+            class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
+            class="p">,</span> <span class="n">new_position</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">*</span> <span class="n">qty</span> <span
+            class="o">+</span> <span class="n">current_position</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Position.add_transaction"><a class="viewcode-back"
+                                                             href="../../position-class.html#tmqrfeed.position.Position.add_transaction">[docs]</a>    <span
+        class="k">def</span> <span class="nf">add_transaction</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span>
+                        <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                        <span class="n">asset</span><span class="p">:</span> <span class="n">ContractBase</span><span
+            class="p">,</span>
+                        <span class="n">qty</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add new transaction for the position at given date</span>
+
+<span class="sd">        :param date: transaction date</span>
+<span class="sd">        :param asset: ContractBase derived class instance</span>
+<span class="sd">        :param qty: transaction qty</span>
+<span class="sd">        :return: nothing, changes position in place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">qty</span> <span class="o">==</span> <span class="mi">0</span><span
+            class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Transaction Qty must be non zero&quot;</span><span
+            class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span> <span class="ow">and</span> <span class="n">date</span> <span
+            class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_prev_day_key</span><span class="p">(</span><span class="n">date</span><span
+            class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># check if &#39;date&#39; &gt;= last date of the position</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;Managing position at date less then last available date is not allowed&#39;</span><span
+            class="p">)</span>
+
+        <span class="n">pos_dict</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_position</span><span class="o">.</span><span
+            class="n">setdefault</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="p">{})</span>
+
+        <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span class="o">=</span> <span
+            class="n">asset</span><span class="o">.</span><span class="n">price</span><span class="p">(</span><span
+            class="n">date</span><span class="p">)</span>
+
+        <span class="c1"># Searching existing positions first</span>
+        <span class="n">pos_record</span> <span class="o">=</span> <span class="n">pos_dict</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pos_record</span><span class="p">:</span>
+            <span class="n">pos_dict</span><span class="p">[</span><span class="n">asset</span><span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">decision_price</span><span
+            class="p">,</span> <span class="n">exec_price</span><span class="p">,</span> <span class="n">qty</span><span
+            class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">pos_record</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">]</span> <span class="o">==</span> <span
+            class="n">decision_price</span>
+            <span class="k">assert</span> <span class="n">pos_record</span><span class="p">[</span><span
+            class="n">iEPX</span><span class="p">]</span> <span class="o">==</span> <span class="n">exec_price</span>
+            <span class="n">pos_dict</span><span class="p">[</span><span class="n">asset</span><span class="p">]</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">pos_record</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">],</span> <span class="n">pos_record</span><span
+            class="p">[</span><span class="n">iEPX</span><span class="p">],</span> <span class="n">qty</span> <span
+            class="o">+</span> <span class="n">pos_record</span><span class="p">[</span><span class="n">iQTY</span><span
+            class="p">])</span></div>
+
+
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Position.merge"><a class="viewcode-back"
+                                                   href="../../position-class.html#tmqrfeed.position.Position.merge">[docs]</a>    <span
+        class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span
+        class="n">datamanager</span><span class="p">,</span> <span class="n">positions_list</span><span
+        class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Merges list of Positions to single Position class instance. Useful for campaign position building, alpha members position, etc.</span>
+
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        :param positions_list: list of Position class instances to merge</span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">merge_pos_record</span><span class="p">(</span><span class="n">result_dict</span><span
+            class="p">,</span> <span class="n">new_dict</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_value</span> <span class="ow">in</span> <span class="n">new_dict</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">result_value</span> <span class="o">=</span> <span class="n">result_dict</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">result_value</span><span
+            class="p">:</span>
+                    <span class="c1"># Asset is not found just add new value</span>
+                    <span class="n">result_dict</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="n">pos_value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Checking the decision and execution prices equality</span>
+                    <span class="k">assert</span> <span class="n">result_value</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">]</span> <span class="o">==</span> <span
+            class="n">pos_value</span><span class="p">[</span><span class="n">iDPX</span><span class="p">]</span>
+                    <span class="k">assert</span> <span class="n">result_value</span><span class="p">[</span><span
+            class="n">iEPX</span><span class="p">]</span> <span class="o">==</span> <span
+            class="n">pos_value</span><span class="p">[</span><span class="n">iEPX</span><span class="p">]</span>
+
+                    <span class="c1"># Summing the qty of position</span>
+                    <span class="n">result_dict</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">result_value</span><span
+            class="p">[</span><span class="n">iDPX</span><span class="p">],</span> <span
+            class="n">result_value</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span> <span class="n">result_value</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">+</span> <span class="n">pos_value</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+
+        <span class="n">result_pos_dict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span
+            class="p">()</span>
+
+        <span class="n">decision_time_shifted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">new_pos_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Get list of unique dates for all positions</span>
+        <span class="n">merged_dates_set</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">()</span>
+        <span class="k">for</span> <span class="n">p_i</span><span class="p">,</span> <span class="n">pos</span> <span
+            class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span
+            class="n">positions_list</span><span class="p">):</span>
+            <span class="n">merged_dates_set</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span
+            class="n">pos</span><span class="o">.</span><span class="n">_position</span><span class="o">.</span><span
+            class="n">keys</span><span class="p">())</span>
+
+            <span class="k">if</span> <span class="s1">&#39;decision_time_shift&#39;</span> <span
+            class="ow">in</span> <span class="n">pos</span><span class="o">.</span><span class="n">kwargs</span><span
+            class="p">:</span>
+                <span class="n">decision_time_shifted</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">if</span> <span class="s1">&#39;decision_time_shift&#39;</span> <span
+            class="ow">in</span> <span class="n">new_pos_kwargs</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">new_pos_kwargs</span><span class="p">[</span><span
+            class="s1">&#39;decision_time_shift&#39;</span><span class="p">]</span> <span class="o">!=</span> <span
+            class="n">pos</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span
+            class="s1">&#39;decision_time_shift&#39;</span><span class="p">]:</span>
+                        <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;Trying to merge positions with different decision time shift&quot;</span><span
+            class="p">)</span>
+                <span class="k">elif</span> <span class="n">p_i</span> <span class="o">==</span> <span
+            class="mi">0</span><span class="p">:</span>
+                    <span class="n">new_pos_kwargs</span><span class="p">[</span><span class="s1">&#39;decision_time_shift&#39;</span><span
+            class="p">]</span> <span class="o">=</span> <span class="n">pos</span><span class="o">.</span><span
+            class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;decision_time_shift&#39;</span><span
+            class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;Trying to merge positions with decision time shift and without it&quot;</span><span
+            class="p">)</span>
+            <span class="k">elif</span> <span class="n">decision_time_shifted</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="s2">&quot;Trying to merge positions with decision time shift and without it&quot;</span><span
+            class="p">)</span>
+
+
+
+        <span class="c1"># Iterate dates in a sorted order</span>
+        <span class="k">for</span> <span class="n">date</span> <span class="ow">in</span> <span class="nb">sorted</span><span
+            class="p">(</span><span class="n">merged_dates_set</span><span class="p">):</span>
+            <span class="n">result_record</span> <span class="o">=</span> <span class="n">result_pos_dict</span><span
+            class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">date</span><span
+            class="p">,</span> <span class="p">{})</span>
+
+            <span class="c1"># Iterate over all positions</span>
+            <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="n">positions_list</span><span
+            class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">pos_record</span> <span class="o">=</span> <span class="n">pos</span><span
+            class="o">.</span><span class="n">_position</span><span class="p">[</span><span class="n">date</span><span
+            class="p">]</span>
+                    <span class="c1"># Merge positions records</span>
+                    <span class="n">merge_pos_record</span><span class="p">(</span><span
+            class="n">result_record</span><span class="p">,</span> <span class="n">pos_record</span><span
+            class="p">)</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+        <span class="k">return</span> <span class="n">Position</span><span class="p">(</span><span
+            class="n">datamanager</span><span class="p">,</span> <span class="n">position_dict</span><span
+            class="o">=</span><span class="n">result_pos_dict</span><span class="p">,</span> <span
+            class="o">**</span><span class="n">new_pos_kwargs</span><span class="p">)</span></div>
+
+    <span class="c1">#</span>
+    <span class="c1"># Position information</span>
+    <span class="c1">#</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">last_date</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_prev_day_key</span><span class="p">(</span><span class="n">date</span><span
+            class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Position.get_asset_price"><a class="viewcode-back"
+                                                             href="../../position-class.html#tmqrfeed.position.Position.get_asset_price">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_asset_price</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span>
+                        <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                        <span class="n">asset</span><span class="p">:</span> <span class="n">ContractBase</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get asset prices from position holdings</span>
+<span class="sd">        (used for quick price caching, not applicable for options)</span>
+
+<span class="sd">        :param date: required date</span>
+<span class="sd">        :param asset: ContractBase class instance        </span>
+<span class="sd">        :return: tuple (decision_price, exec_price)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span class="n">ctype</span> <span
+            class="o">==</span> <span class="s1">&#39;P&#39;</span> <span class="ow">or</span> <span
+            class="n">asset</span><span class="o">.</span><span class="n">ctype</span> <span class="o">==</span> <span
+            class="s1">&#39;C&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PositionQuoteNotFoundError</span><span class="p">(</span><span
+            class="s2">&quot;Options prices in position are irrelevant, &quot;</span>
+                                             <span class="s2">&quot;use direct data feed price fetch&quot;</span><span
+            class="p">)</span>
+
+        <span class="n">assets_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="n">date</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">assets_dict</span><span class="p">:</span>
+            <span class="n">pos_tuple</span> <span class="o">=</span> <span class="n">assets_dict</span><span class="o">.</span><span
+            class="n">get</span><span class="p">(</span><span class="n">asset</span><span class="p">,</span> <span
+            class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pos_tuple</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">pos_tuple</span><span class="p">[</span><span
+            class="mi">0</span><span class="p">],</span> <span class="n">pos_tuple</span><span class="p">[</span><span
+            class="mi">1</span><span class="p">]</span>  <span class="c1"># decision_px, exec_px</span>
+
+        <span class="k">raise</span> <span class="n">PositionQuoteNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;Quote is not found in the position for </span><span class="si">{asset}</span><span
+            class="s1"> at </span><span class="si">{date}</span><span class="s1">&#39;</span><span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="Position.has_position"><a class="viewcode-back"
+                                                          href="../../position-class.html#tmqrfeed.position.Position.has_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">has_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                     <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span
+            class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return True is position has recorded position values at &#39;date&#39;</span>
+
+<span class="sd">        :param date:</span>
+<span class="sd">        :return: boolean</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">date</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span
+            class="ow">and</span> <span class="nb">sum</span><span class="p">((</span><span class="nb">abs</span><span
+            class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">iQTY</span><span
+            class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">[</span><span
+            class="n">date</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span
+            class="p">()))</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="Position.get_net_position"><a class="viewcode-back"
+                                                              href="../../position-class.html#tmqrfeed.position.Position.get_net_position">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_net_position</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span>
+                         <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">Tuple</span><span
+            class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get net position at given date</span>
+
+<span class="sd">        :param date: date of position slice</span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="p">[</span><span class="n">date</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">PositionNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span class="s1">&#39;No positions records found at </span><span
+            class="si">{date}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_calc_transactions</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span>
+                           <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span
+            class="p">,</span>
+                           <span class="n">current_pos</span><span class="p">:</span> <span class="n">Dict</span><span
+            class="p">[</span><span class="n">ContractBase</span><span class="p">,</span> <span
+            class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+                           <span class="n">prev_pos</span><span class="p">:</span> <span class="n">Dict</span><span
+            class="p">[</span><span class="n">ContractBase</span><span class="p">,</span> <span
+            class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span>
+        <span class="n">ContractBase</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span
+            class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate transactions based on current and previous positions records</span>
+
+<span class="sd">        :param date:</span>
+<span class="sd">        :param current_pos: current position record</span>
+<span class="sd">        :param prev_pos: previous position record</span>
+<span class="sd">        :return: transaction dictionary record</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">assert</span> <span class="n">current_pos</span> <span class="ow">is</span> <span
+            class="ow">not</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;current_pos must be initialized&#39;</span>
+
+        <span class="k">if</span> <span class="n">prev_pos</span> <span class="ow">is</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="n">intersected_assets</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">(</span><span class="n">current_pos</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">intersected_assets</span> <span class="o">=</span> <span class="nb">set</span><span
+            class="p">(</span><span class="n">current_pos</span><span class="p">)</span> <span class="o">|</span> <span
+            class="nb">set</span><span class="p">(</span><span class="n">prev_pos</span><span class="p">)</span>
+
+        <span class="n">closed_asset_records</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">asset</span> <span class="ow">in</span> <span class="n">intersected_assets</span><span
+            class="p">:</span>
+            <span class="n">prev_values</span> <span class="o">=</span> <span class="n">prev_pos</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span
+            class="n">prev_pos</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">curr_values</span> <span class="o">=</span> <span class="n">current_pos</span><span
+            class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">prev_values</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+                <span class="n">costs_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">dm</span><span class="o">.</span><span class="n">costs_get</span><span class="p">(</span><span
+            class="n">asset</span><span class="p">,</span> <span class="n">curr_values</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+                <span class="n">pnl_decision</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="n">pnl_execution</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">curr_values</span><span
+            class="p">[</span><span class="n">iDPX</span><span class="p">],</span> <span
+            class="n">curr_values</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span> <span class="n">curr_values</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">],</span>
+                                 <span class="n">pnl_decision</span> <span class="o">+</span> <span class="n">costs_value</span><span
+            class="p">,</span> <span class="n">pnl_execution</span> <span class="o">+</span> <span
+            class="n">costs_value</span><span class="p">,</span> <span class="n">costs_value</span><span
+            class="p">)</span>
+            <span class="k">elif</span> <span class="n">curr_values</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+                <span class="c1"># Skip old closed positions</span>
+                <span class="k">if</span> <span class="n">prev_values</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span
+            class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
+            class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">price</span><span
+            class="p">(</span><span class="n">date</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="n">AssetExpiredError</span> <span
+            class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                        <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
+            class="o">=</span> <span class="n">prev_values</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">],</span> <span class="n">prev_values</span><span
+            class="p">[</span><span class="n">iEPX</span><span class="p">]</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{exc}</span><span
+            class="s2">. Possible data hole detected, asset is not closed before expiration.&quot;</span>
+                                 <span class="n">f</span><span class="s2">&quot; Or you are skipping zero exposures in strategy/index&quot;</span><span
+            class="p">)</span>
+
+                    <span class="n">costs_value</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">costs_get</span><span
+            class="p">(</span><span class="n">asset</span><span class="p">,</span> <span class="o">-</span><span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+
+                    <span class="n">pnl_decision</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">dollar_pnl</span><span class="p">(</span><span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iDPX</span><span
+            class="p">],</span> <span class="n">decision_price</span><span class="p">,</span> <span class="n">prev_values</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+                    <span class="n">pnl_execution</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">dollar_pnl</span><span class="p">(</span><span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span> <span class="n">exec_price</span><span class="p">,</span> <span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+
+                    <span class="n">result</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span
+            class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
+            class="p">,</span> <span class="o">-</span><span class="n">prev_values</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">],</span>
+                                     <span class="n">pnl_decision</span> <span class="o">+</span> <span class="n">costs_value</span><span
+            class="p">,</span> <span class="n">pnl_execution</span> <span class="o">+</span> <span
+            class="n">costs_value</span><span class="p">,</span> <span class="n">costs_value</span><span
+            class="p">)</span>
+
+                    <span class="c1"># Add closed asset record to the position to keep all prices in the position</span>
+                    <span class="c1">#   and decrease DB calls =&gt; increases performance</span>
+                    <span class="n">closed_asset_records</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
+            class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>  <span class="c1"># &lt;- zero qty means position was closed before</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Calculating transactions for existing position</span>
+                <span class="c1"># Note: Do not exclude trans_qty == 0, because in that case PnL is also calculated</span>
+                <span class="n">trans_qty</span> <span class="o">=</span> <span class="n">curr_values</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">]</span> <span class="o">-</span> <span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iQTY</span><span class="p">]</span>
+                <span class="n">costs_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">dm</span><span class="o">.</span><span class="n">costs_get</span><span class="p">(</span><span
+            class="n">asset</span><span class="p">,</span> <span class="n">trans_qty</span><span class="p">)</span>
+                <span class="n">pnl_decision</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">dollar_pnl</span><span class="p">(</span><span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iDPX</span><span
+            class="p">],</span> <span class="n">curr_values</span><span class="p">[</span><span
+            class="n">iDPX</span><span class="p">],</span> <span class="n">prev_values</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+                <span class="n">pnl_execution</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">dollar_pnl</span><span class="p">(</span><span
+            class="n">prev_values</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span> <span class="n">curr_values</span><span class="p">[</span><span
+            class="n">iEPX</span><span class="p">],</span> <span class="n">prev_values</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">])</span>
+
+                <span class="n">result</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">curr_values</span><span
+            class="p">[</span><span class="n">iDPX</span><span class="p">],</span> <span
+            class="n">curr_values</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span> <span class="n">trans_qty</span><span class="p">,</span>
+                                 <span class="n">pnl_decision</span> <span class="o">+</span> <span class="n">costs_value</span><span
+            class="p">,</span> <span class="n">pnl_execution</span> <span class="o">+</span> <span
+            class="n">costs_value</span><span class="p">,</span> <span class="n">costs_value</span><span
+            class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># Add closed contracts records to current_pos</span>
+        <span class="c1">#</span>
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="n">closed_asset_records</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">assert</span> <span class="n">asset</span> <span class="ow">not</span> <span
+            class="ow">in</span> <span class="n">current_pos</span><span class="p">,</span> <span class="s2">&quot;Don&#39;t expect asset in the current position, because it must be closed&quot;</span>
+            <span class="c1"># Add closed position record to store exit prices for it</span>
+            <span class="c1"># This will reduce future DB calls in case of Index&#39;s or Alpha&#39;s positions management</span>
+            <span class="n">current_pos</span><span class="p">[</span><span class="n">asset</span><span
+            class="p">]</span> <span class="o">=</span> <span class="n">pos_rec</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_transactions_stats</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">trans_dict</span><span
+            class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span
+            class="n">ContractBase</span><span class="p">,</span> <span class="n">Tuple</span><span
+            class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span
+            class="p">]]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate transactions stats</span>
+
+<span class="sd">        :param trans_dict:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pnl_change_decision</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">pnl_change_execution</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">ncontracts_executed</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">noptions_executed</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">costs</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">trans</span> <span class="ow">in</span> <span class="n">trans_dict</span><span
+            class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">pnl_change_decision</span> <span class="o">+=</span> <span class="n">trans</span><span
+            class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">pnl_change_execution</span> <span class="o">+=</span> <span class="n">trans</span><span
+            class="p">[</span><span class="mi">4</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">asset</span><span class="o">.</span><span
+            class="n">ctype</span> <span class="ow">in</span> <span class="p">(</span><span
+            class="s1">&#39;P&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span
+            class="p">):</span>
+                <span class="n">noptions_executed</span> <span class="o">+=</span> <span class="nb">abs</span><span
+            class="p">(</span><span class="n">trans</span><span class="p">[</span><span class="mi">2</span><span
+            class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ncontracts_executed</span> <span class="o">+=</span> <span class="nb">abs</span><span
+            class="p">(</span><span class="n">trans</span><span class="p">[</span><span class="mi">2</span><span
+            class="p">])</span>
+
+            <span class="n">costs</span> <span class="o">+=</span> <span class="n">trans</span><span
+            class="p">[</span><span class="mi">5</span><span class="p">]</span>
+
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;pnl_change_decision&#39;</span><span class="p">:</span> <span class="n">pnl_change_decision</span><span
+            class="p">,</span>
+            <span class="s1">&#39;pnl_change_execution&#39;</span><span class="p">:</span> <span class="n">pnl_change_execution</span><span
+            class="p">,</span>
+            <span class="s1">&#39;ncontracts_executed&#39;</span><span class="p">:</span> <span class="n">ncontracts_executed</span><span
+            class="p">,</span>
+            <span class="s1">&#39;noptions_executed&#39;</span><span class="p">:</span> <span class="n">noptions_executed</span><span
+            class="p">,</span>
+            <span class="s1">&#39;costs&#39;</span><span class="p">:</span> <span class="n">costs</span>
+        <span class="p">}</span>
+
+<div class="viewcode-block" id="Position.get_pnl_series"><a class="viewcode-back"
+                                                            href="../../position-class.html#tmqrfeed.position.Position.get_pnl_series">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_pnl_series</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span
+        class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates position PnL series for all transactions, also additional execution info provided</span>
+
+<span class="sd">        :return: pandas.DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pnl_result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">prev_pos</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="n">dt</span><span class="p">,</span> <span
+            class="n">pos_list</span> <span class="ow">in</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_position</span><span class="o">.</span><span class="n">items</span><span
+            class="p">():</span>
+            <span class="n">transactions</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_calc_transactions</span><span class="p">(</span><span class="n">dt</span><span
+            class="p">,</span> <span class="n">pos_list</span><span class="p">,</span> <span
+            class="n">prev_pos</span><span class="p">)</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_transactions_stats</span><span class="p">(</span><span class="n">transactions</span><span
+            class="p">)</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Example:</span>
+<span class="sd">            stats = {</span>
+<span class="sd">            &#39;pnl_change_decision&#39;: pnl_change_decision,</span>
+<span class="sd">            &#39;pnl_change_execution&#39;: pnl_change_execution,</span>
+<span class="sd">            &#39;ncontracts_executed&#39;: ncontracts_executed,</span>
+<span class="sd">            &#39;noptions_executed&#39;: noptions_executed,</span>
+<span class="sd">            &#39;costs&#39;: costs</span>
+<span class="sd">            }</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span
+            class="s1">&#39;dt&#39;</span><span class="p">:</span> <span class="n">dt</span><span class="p">}</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span
+            class="n">stats</span><span class="p">)</span>
+
+            <span class="n">pnl_result</span><span class="o">.</span><span class="n">append</span><span
+            class="p">(</span><span class="n">res</span><span class="p">)</span>
+            <span class="n">prev_pos</span> <span class="o">=</span> <span class="n">pos_list</span>
+
+        <span class="n">df_result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span
+            class="n">DataFrame</span><span class="p">(</span><span class="n">pnl_result</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">df_result</span><span class="p">)</span> <span class="o">&gt;</span> <span
+            class="mi">0</span><span class="p">:</span>
+            <span class="n">df_result</span><span class="o">.</span><span class="n">set_index</span><span
+            class="p">(</span><span class="s1">&#39;dt&#39;</span><span class="p">,</span> <span
+            class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">df_result</span><span class="p">[</span><span
+            class="s1">&#39;equity_decision&#39;</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">df_result</span><span class="p">[</span><span class="s1">&#39;pnl_change_decision&#39;</span><span
+            class="p">]</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+            <span class="n">df_result</span><span class="p">[</span><span
+            class="s1">&#39;equity_execution&#39;</span><span class="p">]</span> <span class="o">=</span> <span
+            class="n">df_result</span><span class="p">[</span><span
+            class="s1">&#39;pnl_change_execution&#39;</span><span class="p">]</span><span class="o">.</span><span
+            class="n">cumsum</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">df_result</span></div>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return text-formatted position at last date</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">last_date</span><span class="p">]</span>
+
+        <span class="k">with</span> <span class="n">io</span><span class="o">.</span><span
+            class="n">StringIO</span><span class="p">()</span> <span class="k">as</span> <span
+            class="n">txt_buf</span><span class="p">:</span>
+            <span class="n">txt_buf</span><span class="o">.</span><span class="n">write</span><span
+            class="p">(</span><span class="n">f</span><span class="s1">&#39;Position last date: </span><span class="si">{self.last_date}</span><span
+            class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">txt_buf</span><span class="o">.</span><span class="n">write</span><span
+            class="p">(</span><span class="s2">&quot;</span><span
+            class="si">{0:&lt;40}{1:&gt;10}{2:&gt;10}{3:&gt;10}</span><span class="se">\n</span><span
+            class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span
+            class="s1">&#39;Asset&#39;</span><span class="p">,</span> <span class="s1">&#39;DecisionPx&#39;</span><span
+            class="p">,</span> <span class="s1">&#39;ExecPx&#39;</span><span class="p">,</span> <span class="s1">&#39;Qty&#39;</span><span
+            class="p">))</span>
+
+            <span class="k">for</span> <span class="n">asset</span><span class="p">,</span> <span
+            class="n">pos_rec</span> <span class="ow">in</span> <span class="n">pos</span><span class="o">.</span><span
+            class="n">items</span><span class="p">():</span>
+                <span class="n">txt_buf</span><span class="o">.</span><span class="n">write</span><span
+            class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">{0:&lt;40}{1:&gt;10.3f}{2:&gt;10.3f}{3:&gt;10}</span><span
+            class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span
+            class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">asset</span><span
+            class="p">),</span> <span class="n">pos_rec</span><span class="p">[</span><span class="n">iDPX</span><span
+            class="p">],</span> <span class="n">pos_rec</span><span class="p">[</span><span class="n">iEPX</span><span
+            class="p">],</span>
+                                                                  <span class="n">pos_rec</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">]))</span>
+
+            <span class="k">return</span> <span class="n">txt_buf</span><span class="o">.</span><span
+            class="n">getvalue</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Override the default Equals behavior&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="vm">__class__</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span> <span class="o">==</span> <span class="n">other</span><span
+            class="o">.</span><span class="n">_position</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Define a non-equality test&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span
+            class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span
+            class="p">)</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="PositionReadOnlyView"><a class="viewcode-back"
+                                                         href="../../position-class.html#tmqrfeed.position.PositionReadOnlyView">[docs]</a><span
+        class="k">class</span> <span class="nc">PositionReadOnlyView</span><span class="p">(</span><span class="n">Position</span><span
+        class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Position read only view used to view precalculated Index position with decision_time_shift</span>
+<span class="sd">    this class used as proxy to get position using original decision time of the instrument.</span>
+
+<span class="sd">    Only get_net_position() method allowed, other methods will raise PositionReadOnlyError()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">,</span> <span
+            class="n">position_dict</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span
+            class="fm">__init__</span><span class="p">(</span><span class="n">datamanager</span><span class="p">,</span> <span
+            class="n">position_dict</span><span class="o">=</span><span class="n">position_dict</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decision_time_shift</span> <span
+            class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span
+            class="p">(</span><span class="s1">&#39;decision_time_shift&#39;</span><span class="p">,</span> <span
+            class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">decision_time_shift</span> <span
+            class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;&#39;decision_time_shift&#39; arg must be &gt;= 0&quot;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_net_position</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="n">shifted_date</span> <span class="o">=</span> <span class="n">date</span> <span
+            class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span
+            class="n">minutes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">decision_time_shift</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span
+            class="o">.</span><span class="n">get_net_position</span><span class="p">(</span><span class="n">shifted_date</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_asset_price</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span
+            class="n">asset</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionQuoteNotFoundError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_pnl_series</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_net_position</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span
+            class="n">net_position_dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_transaction</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span
+            class="n">asset</span><span class="p">,</span> <span class="n">qty</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_net_position</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span
+            class="n">net_position_dict</span><span class="p">,</span> <span class="n">qty</span><span
+            class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">keep_previous_position</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">PositionReadOnlyError</span><span class="p">(</span><span
+            class="n">f</span><span
+            class="s1">&#39;Operation is not allowed for PositionReadOnlyView instance&#39;</span><span
+            class="p">)</span></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+</div>
+
+
+</body>
+</html>

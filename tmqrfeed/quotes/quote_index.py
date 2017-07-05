@@ -9,15 +9,17 @@ class QuoteIndex(QuoteBase):
     """
 
     def __init__(self, index_name, **kwargs):
+        """
+        Init Quote Index quotes series
+        :param index_name: full qualified index name as it stored in the DB
+        :param kwargs:
+            * 'set_session' - Use pre-saved index session settings to set datamanager's session (default: False)
+            * 'check_session' - Compare actual datamanager's session with index session to prevent session errors (default: True)
+        """
         super().__init__(**kwargs)
         self.index_name = index_name
-        """Full qualified index name"""
-
         self.set_session = kwargs.get('set_session', False)
-        """Use index session settings to set datamanager session"""
-
         self.check_session = kwargs.get('check_session', True)
-        """Force session equality checks, make sure that datamanager's and index's sessions the same"""
 
     def __str__(self):
         return f"QuoteIndex-{self.index_name}"
@@ -25,7 +27,8 @@ class QuoteIndex(QuoteBase):
     def build(self):
         """
         Loads index data from the DB and define Read-only position with decision_time_shift view
-        :return: 
+
+        :return: pd.DataFrame[QuotesSeries], QuotesPosition
         """
         idx = IndexBase.deserialize(self.dm,
                                     self.dm.datafeed.data_engine.db_load_index(self.index_name),

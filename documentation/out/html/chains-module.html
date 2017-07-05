@@ -1,0 +1,617 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Chains module &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="chains-module">
+                    <span id="id1"></span>
+                    <h1>Chains module<a class="headerlink" href="#chains-module"
+                                        title="Permalink to this headline">¶</a></h1>
+                    <p>This page automatically generated from source code.</p>
+                    <p><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                    </p>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="id2">
+                        <h2><code class="docutils literal"><span class="pre">Chains</span></code> module<a
+                                class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+                        <span class="target" id="module-tmqrfeed.chains"></span>
+                        <dl class="class">
+                            <dt id="tmqrfeed.chains.FutureChain">
+                                <em class="property">class </em><code class="descclassname">tmqrfeed.chains.</code><code
+                                    class="descname">FutureChain</code><span
+                                    class="sig-paren">(</span><em>fut_tckr_list</em>, <em>datamanager</em>, <em>rollover_days_before</em>,
+                                <em>futures_months</em>, <em>**kwargs</em><span class="sig-paren">)</span><a
+                                    class="reference internal" href="_modules/tmqrfeed/chains.html#FutureChain"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.chains.FutureChain"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Futures chain class</p>
+                                <p>Initiate Futures chain</p>
+                                <table class="docutils field-list" frame="void" rules="none">
+                                    <col class="field-name"/>
+                                    <col class="field-body"/>
+                                    <tbody valign="top">
+                                    <tr class="field-odd field">
+                                        <th class="field-name">Parameters:</th>
+                                        <td class="field-body">
+                                            <ul class="first last simple">
+                                                <li><strong>fut_tckr_list</strong> &#8211; list of futures contracts
+                                                    full-qualified tickers
+                                                </li>
+                                                <li><strong>datamanager</strong> &#8211; DataManager instance</li>
+                                                <li><strong>rollover_days_before</strong> &#8211; rollover in days
+                                                    before future contract expiration
+                                                </li>
+                                                <li><strong>futures_months</strong> &#8211; list of tradable futures
+                                                    months
+                                                </li>
+                                                <li><strong>kwargs</strong> &#8211;</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.FutureChain.get_all">
+                                        <code class="descname">get_all</code><span class="sig-paren">(</span><span
+                                            class="sig-paren">)</span> &rarr;
+                                        typing.List[typing.Tuple[[tmqrfeed.contracts.FutureContract, datetime.datetime],
+                                        datetime.datetime]]<a class="reference internal"
+                                                              href="_modules/tmqrfeed/chains.html#FutureChain.get_all"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.FutureChain.get_all"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Get futures contracts list sorted by expiration date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">List[Tuple[FutureContract, datetime, datetime]]
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.FutureChain.get_contract">
+                                        <code class="descname">get_contract</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em>, <em>offset: int = 0</em><span class="sig-paren">)</span>
+                                        &rarr; tmqrfeed.contracts.FutureContract<a class="reference internal"
+                                                                                   href="_modules/tmqrfeed/chains.html#FutureChain.get_contract"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.FutureChain.get_contract"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns future contract for particular date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; actual date</li>
+                                                        <li><strong>offset</strong> &#8211; chain offset, 0 - front
+                                                            chain, +1 - front+1, etc.
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">FutureContract class
+                                                    instance</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.FutureChain.get_list">
+                                        <code class="descname">get_list</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em>, <em>offset: int = 0</em>, <em>limit: int = 0</em><span
+                                            class="sig-paren">)</span> &rarr;
+                                        typing.List[typing.Tuple[[tmqrfeed.contracts.FutureContract, datetime.datetime],
+                                        datetime.datetime]]<a class="reference internal"
+                                                              href="_modules/tmqrfeed/chains.html#FutureChain.get_list"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.FutureChain.get_list"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Returns list of actual futures contracts for particular date</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; actual date</li>
+                                                        <li><strong>offset</strong> &#8211; chain offset, 0 - front
+                                                            chain, +1 - front+1, etc.
+                                                        </li>
+                                                        <li><strong>limit</strong> &#8211; Number contracts to return (0
+                                                            - all)
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">List[Tuple[FutureContract,
+                                                    start_datetime, end_datetime]]</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                        <dl class="class">
+                            <dt id="tmqrfeed.chains.OptionChain">
+                                <em class="property">class </em><code class="descclassname">tmqrfeed.chains.</code><code
+                                    class="descname">OptionChain</code><span class="sig-paren">(</span><em>option_chain_record</em>,
+                                <em>expiration: datetime.datetime</em>, <em>underlying:
+                                tmqrfeed.contracts.ContractBase</em>, <em>datamanager</em><span
+                                    class="sig-paren">)</span><a class="reference internal"
+                                                                 href="_modules/tmqrfeed/chains.html#OptionChain"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.chains.OptionChain"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>Main class for option chains data management.</p>
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.chains.OptionChain.expiration">
+                                        <code class="descname">expiration</code><a class="headerlink"
+                                                                                   href="#tmqrfeed.chains.OptionChain.expiration"
+                                                                                   title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Expiration date for option chain
+                                        :return:</p>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.OptionChain.find">
+                                        <code class="descname">find</code><span class="sig-paren">(</span><em>dt:
+                                        datetime.datetime</em>, <em>item</em>, <em>opttype: str</em>,
+                                        <em>how='offset'</em>, <em>**kwargs</em><span class="sig-paren">)</span> &rarr;
+                                        tmqrfeed.contracts.OptionContract<a class="reference internal"
+                                                                            href="_modules/tmqrfeed/chains.html#OptionChain.find"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.OptionChain.find"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Find option contract in chain using &#8216;how&#8217; criteria</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>dt</strong> &#8211; analysis date</li>
+                                                        <li><strong>item</strong> &#8211; search value ( depending on
+                                                            &#8216;how&#8217; parameter value required ATM offset,
+                                                            absolute strike price or delta )
+                                                        </li>
+                                                        <li><strong>opttype</strong> &#8211; option type &#8216;C&#8217;
+                                                            or &#8216;P&#8217;
+                                                        </li>
+                                                        <li><strong>how</strong> &#8211; <p>search method</p>
+                                                            <ul>
+                                                                <li>&#8216;offset&#8217; - by strike offset from ATM
+                                                                </li>
+                                                                <li>
+                                                                    <dl class="first docutils">
+                                                                        <dt>&#8216;delta&#8217; - by delta</dt>
+                                                                        <dd>
+                                                                            <dl class="first last docutils">
+                                                                                <dt>Search option contract by delta
+                                                                                    value:
+                                                                                </dt>
+                                                                                <dd>
+                                                                                    <ul class="first last">
+                                                                                        <li>If delta == 0.5 - returns
+                                                                                            ATM call/put
+                                                                                        </li>
+                                                                                        <li>If delta &gt; 0.5 - returns
+                                                                                            ITM call/put near target
+                                                                                            delta
+                                                                                        </li>
+                                                                                        <li>If delta &lt; 0.5 - returns
+                                                                                            OTM call/put near target
+                                                                                            delta
+                                                                                        </li>
+                                                                                    </ul>
+                                                                                </dd>
+                                                                            </dl>
+                                                                        </dd>
+                                                                    </dl>
+                                                                </li>
+                                                            </ul>
+                                                        </li>
+                                                        <li><strong>kwargs</strong> &#8211;
+                                                            <ul>
+                                                                <li>
+                                                                    <dl class="first docutils">
+                                                                        <dt>how == &#8216;offset&#8217; kwargs:</dt>
+                                                                        <dd>
+                                                                            <ul class="first last">
+                                                                                <li>error_limit - how many QuoteNotFound
+                                                                                    errors occurred before raising
+                                                                                    exception (default: 5)
+                                                                                </li>
+                                                                            </ul>
+                                                                        </dd>
+                                                                    </dl>
+                                                                </li>
+                                                                <li>
+                                                                    <dl class="first docutils">
+                                                                        <dt>how == &#8216;delta&#8217; kwargs:</dt>
+                                                                        <dd>
+                                                                            <ul class="first last">
+                                                                                <li>error_limit - how many QuoteNotFound
+                                                                                    errors occurred before raising
+                                                                                    exception (default: 5)
+                                                                                </li>
+                                                                                <li>strike_limit - how many strikes to
+                                                                                    analyse from ATM (default: 30)
+                                                                                </li>
+                                                                            </ul>
+                                                                        </dd>
+                                                                    </dl>
+                                                                </li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last">OptionContract</p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                        <p>Examples:</p>
+                                        <div class="highlight-default">
+                                            <div class="highlight"><pre><span></span><span class="c1"># Getting actual options chain (to get more info refer to DataManager.chains_options_get() help)</span>
+<span class="n">fut</span><span class="p">,</span> <span class="n">opt_chain</span> <span class="o">=</span> <span
+                                                        class="bp">self</span><span class="o">.</span><span
+                                                        class="n">dm</span><span class="o">.</span><span class="n">chains_options_get</span><span
+                                                        class="p">(</span><span class="s1">&#39;US.ES&#39;</span><span
+                                                        class="p">,</span> <span class="n">dt</span><span
+                                                        class="p">)</span>
+
+
+<span class="n">dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span
+                                                        class="mi">2017</span><span class="p">,</span> <span class="mi">3</span><span
+                                                        class="p">,</span> <span class="mi">2</span><span
+                                                        class="p">)</span>
+<span class="c1">#</span>
+<span class="c1"># Getting option contracts from chain by ATM offset</span>
+
+<span class="c1"># ATM Put (all of these lines are equivalent)</span>
+<span class="n">atm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="n">item</span><span class="o">=</span><span
+                                                        class="mi">0</span><span class="p">,</span> <span class="n">opttype</span><span
+                                                        class="o">=</span><span class="s1">&#39;P&#39;</span><span
+                                                        class="p">,</span> <span class="n">how</span><span
+                                                        class="o">=</span><span class="s1">&#39;offset&#39;</span> <span
+                                                        class="p">)</span>
+<span class="n">atm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="n">item</span><span class="o">=</span><span
+                                                        class="mi">0</span><span class="p">,</span> <span class="n">opttype</span><span
+                                                        class="o">=</span><span class="s1">&#39;P&#39;</span><span
+                                                        class="p">)</span>
+<span class="n">atm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="mi">0</span><span class="p">,</span> <span class="s1">&#39;P&#39;</span><span
+                                                        class="p">)</span>
+
+<span class="c1"># ATM + 1 Strike above call</span>
+<span class="n">atm_call_up1</span> <span class="o">=</span> <span class="n">opt_chain</span><span
+                                                        class="o">.</span><span class="n">find</span><span
+                                                        class="p">(</span><span class="n">dt</span><span
+                                                        class="p">,</span> <span class="mi">1</span><span
+                                                        class="p">,</span> <span class="s1">&#39;C&#39;</span><span
+                                                        class="p">)</span>
+<span class="c1"># ATM - 1 Strike above call</span>
+<span class="n">atm_call_dn1</span> <span class="o">=</span> <span class="n">opt_chain</span><span
+                                                        class="o">.</span><span class="n">find</span><span
+                                                        class="p">(</span><span class="n">dt</span><span
+                                                        class="p">,</span> <span class="o">-</span><span
+                                                        class="mi">1</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span
+                                                        class="p">)</span>
+
+<span class="c1">#</span>
+<span class="c1"># Getting options by delta</span>
+<span class="c1">#</span>
+<span class="c1"># - If delta ==  0.5 - returns ATM call/put</span>
+<span class="c1"># - If delta &gt; 0.5 - returns ITM call/put near target delta</span>
+<span class="c1"># - If delta &lt; 0.5 - returns OTM call/put near target delta</span>
+<span class="c1">#</span>
+
+<span class="c1"># ATM Put option</span>
+<span class="n">atm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="n">item</span><span class="o">=</span><span class="mf">0.5</span><span
+                                                        class="p">,</span> <span class="n">opttype</span><span
+                                                        class="o">=</span><span class="s1">&#39;P&#39;</span><span
+                                                        class="p">,</span> <span class="n">how</span><span
+                                                        class="o">=</span><span class="s1">&#39;delta&#39;</span><span
+                                                        class="p">)</span>
+
+<span class="c1"># 0.25 Delta OTM option</span>
+<span class="n">otm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="n">item</span><span class="o">=</span><span class="mf">0.25</span><span
+                                                        class="p">,</span> <span class="n">opttype</span><span
+                                                        class="o">=</span><span class="s1">&#39;P&#39;</span><span
+                                                        class="p">,</span> <span class="n">how</span><span
+                                                        class="o">=</span><span class="s1">&#39;delta&#39;</span><span
+                                                        class="p">)</span>
+
+<span class="c1"># 0.75 Delta ITM option</span>
+<span class="n">itm_put</span> <span class="o">=</span> <span class="n">opt_chain</span><span class="o">.</span><span
+                                                        class="n">find</span><span class="p">(</span><span
+                                                        class="n">dt</span><span class="p">,</span> <span
+                                                        class="n">item</span><span class="o">=</span><span class="mf">0.75</span><span
+                                                        class="p">,</span> <span class="n">opttype</span><span
+                                                        class="o">=</span><span class="s1">&#39;P&#39;</span><span
+                                                        class="p">,</span> <span class="n">how</span><span
+                                                        class="o">=</span><span class="s1">&#39;delta&#39;</span><span
+                                                        class="p">)</span>
+</pre>
+                                            </div>
+                                        </div>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                        <dl class="class">
+                            <dt id="tmqrfeed.chains.OptionChainList">
+                                <em class="property">class </em><code class="descclassname">tmqrfeed.chains.</code><code
+                                    class="descname">OptionChainList</code><span class="sig-paren">(</span><em>chain_list</em>,
+                                <em>underlying: tmqrfeed.contracts.ContractBase</em>, <em>datamanager</em><span
+                                    class="sig-paren">)</span><a class="reference internal"
+                                                                 href="_modules/tmqrfeed/chains.html#OptionChainList"><span
+                                    class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                href="#tmqrfeed.chains.OptionChainList"
+                                                                                title="Permalink to this definition">¶</a>
+                            </dt>
+                            <dd><p>This class stores list of options chains with many expiration dates</p>
+                                <p>Init OptionChainList class
+                                    :param chain_list: chain list dictionary
+                                    :param underlying: underlying contract
+                                    :param datamanager: DataManager instance</p>
+                                <dl class="attribute">
+                                    <dt id="tmqrfeed.chains.OptionChainList.expirations">
+                                        <code class="descname">expirations</code><a class="headerlink"
+                                                                                    href="#tmqrfeed.chains.OptionChainList.expirations"
+                                                                                    title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>List of available expirations for options chains</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">List[datetime.datetime]</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.OptionChainList.find">
+                                        <code class="descname">find</code><span class="sig-paren">(</span><em>date:
+                                        datetime.datetime</em>, <em>by</em>, <em>**kwargs</em><span
+                                            class="sig-paren">)</span> &rarr; tmqrfeed.chains.OptionChain<a
+                                            class="reference internal"
+                                            href="_modules/tmqrfeed/chains.html#OptionChainList.find"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.OptionChainList.find"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Find option chain by datetime, date, or offset</p>
+                                        <p>If no <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs
+                                            are set, performs exact match by datetime, date, or offset</p>
+                                        <p>Otherwise if <a href="#id5"><span class="problematic" id="id6">**</span></a>kwargs
+                                            are set, performs SMART search where &#8216;by&#8217; must be current
+                                            datetime</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Parameters:</th>
+                                                <td class="field-body">
+                                                    <ul class="first simple">
+                                                        <li><strong>date</strong> &#8211; current date</li>
+                                                        <li><strong>by</strong> &#8211; lookup criteria</li>
+                                                        <li><strong>kwargs</strong> &#8211; Keywords for SMART chains
+                                                            search:
+                                                            - min_days - ignore chains with days to expiration &lt;=
+                                                            min_days
+                                                            - opt_codes - include only option chains in opt_codes list
+                                                        </li>
+                                                    </ul>
+                                                </td>
+                                            </tr>
+                                            <tr class="field-even field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body"><p class="first last"></p>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                                <dl class="method">
+                                    <dt id="tmqrfeed.chains.OptionChainList.items">
+                                        <code class="descname">items</code><span class="sig-paren">(</span><span
+                                            class="sig-paren">)</span><a class="reference internal"
+                                                                         href="_modules/tmqrfeed/chains.html#OptionChainList.items"><span
+                                            class="viewcode-link">[source]</span></a><a class="headerlink"
+                                                                                        href="#tmqrfeed.chains.OptionChainList.items"
+                                                                                        title="Permalink to this definition">¶</a>
+                                    </dt>
+                                    <dd><p>Key-value iterator where Key is expiration date of chain and Value is
+                                        OptionChain class instance</p>
+                                        <table class="docutils field-list" frame="void" rules="none">
+                                            <col class="field-name"/>
+                                            <col class="field-body"/>
+                                            <tbody valign="top">
+                                            <tr class="field-odd field">
+                                                <th class="field-name">Returns:</th>
+                                                <td class="field-body">yields expiration, OptionsChain</td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </dd>
+                                </dl>
+
+                            </dd>
+                        </dl>
+
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Chains module</a>
+                    <ul>
+                        <li><a class="reference internal" href="#id2"><code class="docutils literal"><span class="pre">Chains</span></code>
+                            module</a></li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/chains-module.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/chains-module.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

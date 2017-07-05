@@ -1,0 +1,561 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Custom alphas management &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="custom-alphas-management">
+                    <span id="trading-custom-alphas"></span>
+                    <h1>Custom alphas management<a class="headerlink" href="#custom-alphas-management"
+                                                   title="Permalink to this headline">¶</a></h1>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="custom-alphas-files-location-and-content">
+                        <h2>Custom alphas files location and content<a class="headerlink"
+                                                                       href="#custom-alphas-files-location-and-content"
+                                                                       title="Permalink to this headline">¶</a></h2>
+                        <ol class="arabic simple">
+                            <li>Custom alphas directory located at <code class="docutils literal"><span class="pre">/var/data/tmqrengine/scripts/alphas</span></code>
+                            </li>
+                            <li>Each subdirectory in this folder represents EXO name where custom alphas located. These
+                                subdirectories are python packages (i.e. each of them includes empty file <code
+                                        class="docutils literal"><span class="pre">__init__.py</span></code>)
+                            </li>
+                            <li>Custom alpha files which is located in subdirectories have name started from <code
+                                    class="docutils literal"><span class="pre">alpha_</span></code> prefix and have
+                                <code class="docutils literal"><span class="pre">.py</span></code> file extension
+                            </li>
+                            <li>Each custom alpha file contains 3 constants inside: <code class="docutils literal"><span
+                                    class="pre">STRATEGY_NAME</span></code>, <code class="docutils literal"><span
+                                    class="pre">STRATEGY_SUFFIX</span></code>, <code class="docutils literal"><span
+                                    class="pre">STRATEGY_CONTEXT</span></code></li>
+                        </ol>
+                    </div>
+                    <div class="section" id="how-custom-alphas-engine-works">
+                        <h2>How custom alphas engine works<a class="headerlink" href="#how-custom-alphas-engine-works"
+                                                             title="Permalink to this headline">¶</a></h2>
+                        <ol class="arabic simple">
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>There are 2 scripts responsible for custom alpha management (both are located in
+                                        <code class="docutils literal"><span class="pre">scripts</span></code>
+                                        directory):
+                                    </dt>
+                                    <dd>
+                                        <ul class="first last">
+                                            <li><code class="docutils literal"><span
+                                                    class="pre">alpha_online_custom.py</span></code> - this script is
+                                                responsible for online trading and signal generation
+                                            </li>
+                                            <li><code class="docutils literal"><span
+                                                    class="pre">alpha_rebalancer.py</span></code> - this script is
+                                                responsible for weekend rebalancing of the swarms
+                                            </li>
+                                        </ul>
+                                    </dd>
+                                </dl>
+                            </li>
+                            <li>The script reads <code class="docutils literal"><span class="pre">alphas</span></code>
+                                directory sub-folders and compare the name of that sub-directory with EXO name
+                            </li>
+                            <li>If the EXO name is matched, the script dynamically loads custom alpha Python code and
+                                run it. So literally these scripts are not configs, they are pure python modules.
+                            </li>
+                            <li>Depending of type of the script the main <em>runner</em> script generates online signal
+                                or dumps information about current alphas state to the MongoDB.
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="section" id="how-to-add-custom-alpha-using-gui">
+                        <h2>How to add custom alpha using GUI<a class="headerlink"
+                                                                href="#how-to-add-custom-alpha-using-gui"
+                                                                title="Permalink to this headline">¶</a></h2>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">This will be general way of custom alpha deployment, manual instructions
+                                below could be used for debugging or if something going wrong. GUI is based on <code
+                                        class="docutils literal"><span class="pre">flexx</span></code> project this is
+                                in early alpha state, it&#8217;s working but sill not ideal.</p>
+                        </div>
+                        <div class="section" id="launching-gui-in-notebook">
+                            <h3>Launching GUI in notebook<a class="headerlink" href="#launching-gui-in-notebook"
+                                                            title="Permalink to this headline">¶</a></h3>
+                            <ol class="arabic">
+                                <li><p class="first">Add 2 empty cells to the end of the notebook</p>
+                                </li>
+                                <li><p class="first">Initialize the notebook GUI engine (you should wait after cell
+                                    execution 3-5 secs for connection):</p>
+                                    <div class="highlight-default">
+                                        <div class="highlight"><pre><span></span><span class="kn">from</span> <span
+                                                class="nn">flexx</span> <span class="k">import</span> <span class="n">app</span><span
+                                                class="p">,</span> <span class="n">ui</span><span
+                                                class="p">,</span> <span class="n">event</span>
+<span class="n">app</span><span class="o">.</span><span class="n">init_notebook</span><span class="p">()</span>
+</pre>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li><p class="first">Launch deployment GUI:</p>
+                                    <div class="highlight-default">
+                                        <div class="highlight"><pre><span></span><span class="c1"># Set the strategy suffix</span>
+<span class="n">STRATEGY_SUFFIX</span> <span class="o">=</span> <span class="s1">&#39;-test&#39;</span>
+
+<span class="kn">from</span> <span class="nn">backtester.apps.alpha_deployment</span> <span
+                                                    class="k">import</span> <span class="n">AlphaDeployer</span>
+<span class="n">AlphaDeployer</span><span class="p">(</span><span class="n">strategy_context</span><span
+                                                    class="o">=</span><span class="n">STRATEGY_CONTEXT</span><span
+                                                    class="p">,</span> <span class="n">strategy_suffix</span><span
+                                                    class="o">=</span><span class="n">STRATEGY_SUFFIX</span><span
+                                                    class="p">,</span> <span class="n">flex</span><span
+                                                    class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="section" id="deployment-process">
+                            <h3>Deployment process<a class="headerlink" href="#deployment-process"
+                                                     title="Permalink to this headline">¶</a></h3>
+                            <ol class="arabic simple">
+                                <li>Set the <code class="docutils literal"><span
+                                        class="pre">STRATEGY_SUFFIX</span></code> variable to add unique suffix to
+                                    custom alpha
+                                </li>
+                                <li>Execute cell with AlphaDeployer() (you should re-execute it each time when you
+                                    change <code class="docutils literal"><span
+                                            class="pre">STRATEGY_SUFFIX</span></code>)
+                                </li>
+                                <li>Press the button</li>
+                                <li>Run on the server <code class="docutils literal"><span class="pre">cd</span> <span
+                                        class="pre">/var/data/tmqrengine/scripts/</span></code> and then <code
+                                        class="docutils literal"><span class="pre">python3.5</span> <span class="pre">./install.py</span></code>,
+                                    this script will clear the logs and deploy new settings for online trading. Also
+                                    <code class="docutils literal"><span class="pre">supervisor</span> <span
+                                            class="pre">service</span></code> will be restarted.
+                                </li>
+                                <li>Make sure that new custom alpha script is present in <code class="docutils literal"><span
+                                        class="pre">supervisorctl</span> <span class="pre">status</span></code> command
+                                    output, otherwise try to restart it manually one more time <code
+                                            class="docutils literal"><span class="pre">service</span> <span class="pre">supervisor</span>
+                                        <span class="pre">restart</span></code></li>
+                            </ol>
+                        </div>
+                        <div class="section" id="what-is-happening">
+                            <h3>What is happening<a class="headerlink" href="#what-is-happening"
+                                                    title="Permalink to this headline">¶</a></h3>
+                            <ol class="arabic simple">
+                                <li>Checks for file name duplicates</li>
+                                <li>Checks for alpha name duplicates</li>
+                                <li>Checks <code class="docutils literal"><span
+                                        class="pre">STRATEGY_CONTEXT</span></code> syntax
+                                </li>
+                                <li>Run <code class="docutils literal"><span
+                                        class="pre">alpha_rebalancer_single.py</span></code> to make new custom alpha
+                                    available in campaign notebook
+                                </li>
+                            </ol>
+                        </div>
+                        <div class="section" id="problems-with-flexx">
+                            <h3>Problems with flexx<a class="headerlink" href="#problems-with-flexx"
+                                                      title="Permalink to this headline">¶</a></h3>
+                            <p>Unfortunately flexx is in early alpha state, the main problem with notebook
+                                initialization after it been closed. If you
+                                faced with such kind of issues, you need to exec &#8216;Kernel&#8217; -&gt; &#8216;Restart&#8217;
+                                and to rerun the cells with <code class="docutils literal"><span class="pre">STRATEGY_CONTEXT</span></code>
+                                and flexx and Alpha deployment GUI. You don&#8217;t need to rerun entire notebook to
+                                deploy the alpha.</p>
+                        </div>
+                    </div>
+                    <div class="section" id="how-to-add-new-custom-alpha-for-existing-exo">
+                        <h2>How to add new custom alpha for <strong>existing</strong> EXO<a class="headerlink"
+                                                                                            href="#how-to-add-new-custom-alpha-for-existing-exo"
+                                                                                            title="Permalink to this headline">¶</a>
+                        </h2>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">Alphas scripts can be uploaded using common git procedure described in <a
+                                    class="reference internal"
+                                    href="server-code-deployment.html#server-code-deployment"><span class="std std-ref">New code or scripts deployment</span></a>,
+                                all changes could be made on local machine</p>
+                        </div>
+                        <ol class="arabic">
+                            <li><p class="first">Switch to required EXO subdirectory for example: <code
+                                    class="docutils literal"><span
+                                    class="pre">scripts/alphas/zw_callspread</span></code></p>
+                                <blockquote>
+                                    <div>
+                                        <div class="admonition note">
+                                            <p class="first admonition-title">Note</p>
+                                            <p class="last">Subdirectory must exactly reflect EXO or SmartEXO name, if
+                                                <code class="docutils literal"><span class="pre">EXO_NAME</span> <span
+                                                        class="pre">=</span> <span class="pre">'SmartEXO_Ichi_DeltaTargeting_Dec3_Bear_Bear_Spread'</span></code>
+                                                then the subdirectory name should be &#8216;&lt;AssetSymbol&gt;_smartEXO_ichi_deltatargeting_dec3_bear_bear_spread&#8217;
+                                            </p>
+                                        </div>
+                                    </div>
+                                </blockquote>
+                            </li>
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>Create new python file using next naming pattern: <code
+                                            class="docutils literal"><span class="pre">alpha_&lt;strategy_class&gt;_&lt;long-short&gt;_&lt;suffix&gt;.py</span></code>
+                                    </dt>
+                                    <dd><p class="first">For example: <code class="docutils literal"><span class="pre">alpha_ichimoku_short_bearish.py</span></code>,
+                                        if file exist you can add some suffix to it.</p>
+                                        <div class="last admonition warning">
+                                            <p class="first admonition-title">Warning</p>
+                                            <p class="last">File name must start from <code
+                                                    class="docutils literal"><span class="pre">alpha_</span></code> and
+                                                have <code class="docutils literal"><span class="pre">.py</span></code>
+                                                extension and be in <strong>lower</strong> case.</p>
+                                        </div>
+                                    </dd>
+                                </dl>
+                            </li>
+                            <li>
+                                <dl class="first docutils">
+                                    <dt>Add contents to file according alpha strategy settings in prototype notebook,
+                                        and set the module constants:
+                                    </dt>
+                                    <dd><p class="first"><code class="docutils literal"><span
+                                            class="pre">STRATEGY_NAME</span></code> - it&#8217;s good idea to use
+                                        pre-built strategy name from strategy class, for example <code
+                                                class="docutils literal"><span class="pre">STRATEGY_NAME</span> <span
+                                                class="pre">=</span> <span class="pre">StrategyIchimokuCloud.name</span></code>
+                                    </p>
+                                        <p><code class="docutils literal"><span
+                                                class="pre">STRATEGY_SUFFIX</span></code> - must be unique globally, if
+                                            you have alphas with same names, results of one of them will be lost
+                                            (overwritten)</p>
+                                        <p><code class="docutils literal"><span
+                                                class="pre">STRATEGY_CONTEXT</span></code> - this dictionary could be
+                                            copy/pasted from Jupyter notebook prototype</p>
+                                        <p>Example code:</p>
+                                        <div class="last highlight-default">
+                                            <div class="highlight"><pre><span></span><span class="kn">from</span> <span
+                                                    class="nn">backtester.costs</span> <span
+                                                    class="k">import</span> <span class="n">CostsManagerEXOFixed</span>
+<span class="kn">from</span> <span class="nn">backtester.strategy</span> <span class="k">import</span> <span class="n">OptParam</span><span
+                                                        class="p">,</span> <span class="n">OptParamArray</span>
+<span class="kn">from</span> <span class="nn">backtester.swarms.rankingclasses</span> <span
+                                                        class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">backtester.swarms.rebalancing</span> <span class="k">import</span> <span
+                                                        class="n">SwarmRebalance</span>
+<span class="kn">from</span> <span class="nn">strategies.strategy_ichimokucloud</span> <span
+                                                        class="k">import</span> <span
+                                                        class="n">StrategyIchimokuCloud</span>
+
+<span class="n">STRATEGY_NAME</span> <span class="o">=</span> <span class="n">StrategyIchimokuCloud</span><span
+                                                        class="o">.</span><span class="n">name</span>
+
+<span class="n">STRATEGY_SUFFIX</span> <span class="o">=</span> <span class="s1">&#39;bearish-&#39;</span>
+
+<span class="n">STRATEGY_CONTEXT</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;strategy&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;class&#39;</span><span class="p">:</span> <span
+                                                        class="n">StrategyIchimokuCloud</span><span class="p">,</span>
+        <span class="s1">&#39;exo_name&#39;</span><span class="p">:</span> <span
+                                                        class="s1">&#39;ZW_CallSpread&#39;</span><span
+                                                        class="p">,</span>        <span class="c1"># &lt;---- Select and paste EXO name from cell above</span>
+        <span class="s1">&#39;opt_params&#39;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="c1"># OptParam(name, default_value, min_value, max_value, step)</span>
+            <span class="n">OptParamArray</span><span class="p">(</span><span class="s1">&#39;Direction&#39;</span><span
+                                                        class="p">,</span> <span class="p">[</span><span
+                                                        class="o">-</span><span class="mi">1</span><span
+                                                        class="p">]),</span>
+            <span class="n">OptParam</span><span class="p">(</span><span
+                                                        class="s1">&#39;conversion_line_period&#39;</span><span
+                                                        class="p">,</span> <span class="mi">9</span><span
+                                                        class="p">,</span> <span class="mi">5</span><span
+                                                        class="p">,</span> <span class="mi">5</span><span
+                                                        class="p">,</span> <span class="mi">5</span><span
+                                                        class="p">),</span>
+            <span class="n">OptParam</span><span class="p">(</span><span
+                                                        class="s1">&#39;base_line_period&#39;</span><span
+                                                        class="p">,</span> <span class="mi">26</span><span
+                                                        class="p">,</span> <span class="mi">26</span><span
+                                                        class="p">,</span> <span class="mi">26</span><span
+                                                        class="p">,</span> <span class="mi">13</span><span
+                                                        class="p">),</span>
+            <span class="n">OptParam</span><span class="p">(</span><span class="s1">&#39;leading_spans_lookahead_period&#39;</span><span
+                                                        class="p">,</span> <span class="mi">26</span><span
+                                                        class="p">,</span> <span class="mi">13</span><span
+                                                        class="p">,</span> <span class="mi">13</span><span
+                                                        class="p">,</span> <span class="mi">1</span><span
+                                                        class="p">),</span>
+            <span class="n">OptParam</span><span class="p">(</span><span
+                                                        class="s1">&#39;leading_span_b_period&#39;</span><span
+                                                        class="p">,</span> <span class="mi">52</span><span
+                                                        class="p">,</span> <span class="mi">52</span><span
+                                                        class="p">,</span> <span class="mi">52</span><span
+                                                        class="p">,</span> <span class="mi">10</span><span
+                                                        class="p">),</span>
+            <span class="c1"># OptParamArray(&#39;RulesIndex&#39;, np.arange(17)),</span>
+            <span class="n">OptParamArray</span><span class="p">(</span><span
+                                                        class="s1">&#39;RulesIndex&#39;</span><span
+                                                        class="p">,</span> <span class="p">[</span><span
+                                                        class="mi">4</span><span class="p">,</span> <span
+                                                        class="mi">5</span><span class="p">,</span> <span
+                                                        class="mi">7</span><span class="p">]),</span>
+            <span class="c1"># OptParamArray(&#39;RulesIndex&#39;, [14,15,16]),</span>
+            <span class="n">OptParam</span><span class="p">(</span><span class="s1">&#39;MedianPeriod&#39;</span><span
+                                                        class="p">,</span> <span class="mi">5</span><span
+                                                        class="p">,</span> <span class="mi">5</span><span
+                                                        class="p">,</span> <span class="mi">40</span><span
+                                                        class="p">,</span> <span class="mi">10</span><span
+                                                        class="p">)</span>
+        <span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;swarm&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;members_count&#39;</span><span class="p">:</span> <span class="mi">2</span><span
+                                                        class="p">,</span>
+        <span class="s1">&#39;ranking_class&#39;</span><span class="p">:</span> <span
+                                                        class="n">RankerBestWithCorrel</span><span
+                                                        class="p">(</span><span class="n">window_size</span><span
+                                                        class="o">=-</span><span class="mi">1</span><span
+                                                        class="p">,</span> <span class="n">correl_threshold</span><span
+                                                        class="o">=</span><span class="mf">0.5</span><span
+                                                        class="p">),</span>
+        <span class="s1">&#39;rebalance_time_function&#39;</span><span class="p">:</span> <span
+                                                        class="n">SwarmRebalance</span><span class="o">.</span><span
+                                                        class="n">every_friday</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;costs&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;manager&#39;</span><span class="p">:</span> <span
+                                                        class="n">CostsManagerEXOFixed</span><span class="p">,</span>
+        <span class="s1">&#39;context&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;costs_options&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                                        class="p">,</span>
+            <span class="s1">&#39;costs_futures&#39;</span><span class="p">:</span> <span class="mf">3.0</span><span
+                                                        class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre>
+                                            </div>
+                                        </div>
+                                    </dd>
+                                </dl>
+                            </li>
+                        </ol>
+                        <p>File contents should reflect full <code class="docutils literal"><span class="pre">STRATEGY_CONTEXT</span></code>
+                            dictionary from prototype Jupyter notebook, also it must have all
+                            <code class="docutils literal"><span class="pre">import</span></code> statements to make the
+                            module functional.</p>
+                    </div>
+                    <div class="section" id="how-to-add-new-custom-alphas-for-new-exo">
+                        <h2>How to add new custom alphas for <strong>new</strong> EXO<a class="headerlink"
+                                                                                        href="#how-to-add-new-custom-alphas-for-new-exo"
+                                                                                        title="Permalink to this headline">¶</a>
+                        </h2>
+                        <ol class="arabic simple">
+                            <li><code class="docutils literal"><span class="pre">cd</span></code> to custom alphas
+                                directory and create new folder with new EXO name (in lower case!), for example: <code
+                                        class="docutils literal"><span class="pre">mkdir</span> <span class="pre">zw_smart_exo_ichi_new</span></code>
+                            </li>
+                        </ol>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">Subdirectory must exactly reflect EXO or SmartEXO name, if <code
+                                    class="docutils literal"><span class="pre">EXO_NAME</span> <span
+                                    class="pre">=</span> <span class="pre">'SmartEXO_Ichi_DeltaTargeting_Dec3_Bear_Bear_Spread'</span></code>
+                                then the subdirectory name should be &#8216;&lt;AssetSymbol&gt;_smartEXO_ichi_deltatargeting_dec3_bear_bear_spread&#8217;
+                            </p>
+                        </div>
+                        <ol class="arabic simple" start="2">
+                            <li>Change to new directory <code class="docutils literal"><span class="pre">cd</span> <span
+                                    class="pre">zw_smart_exo_ichi_new</span></code></li>
+                            <li>Create new empty __init__.py</li>
+                            <li>Add new alpha module as described in section above, do sanity checks.</li>
+                            <li><strong>DEPRECATED</strong> Edit <code class="docutils literal"><span class="pre">scripts/settings.py</span></code>
+                                locate <code class="docutils literal"><span class="pre">ALPHAS_CUSTOM</span></code>
+                                constant, and add new EXO name to the list. Install script is automatically processing
+                                all folders in <code class="docutils literal"><span
+                                        class="pre">scripts/alphas</span></code> directory without requirements of
+                                additional settings.
+                            </li>
+                            <li>Run the <code class="docutils literal"><span class="pre">python3.5</span> <span
+                                    class="pre">scripts/settings.py</span></code> for syntax errors checks (empty output
+                                means - <strong>no</strong> syntax errors)
+                            </li>
+                            <li>Commit and push changes to GitHub and log in to the server</li>
+                            <li>Run deployment process as described at <a class="reference internal"
+                                                                          href="server-code-deployment.html#server-code-deployment"><span
+                                    class="std std-ref">New code or scripts deployment</span></a> but without <strong>service
+                                supervisor restart</strong> step
+                            </li>
+                            <li>Run on the server <code class="docutils literal"><span class="pre">cd</span> <span
+                                    class="pre">/var/data/tmqrengine/scripts/</span></code> and then <code
+                                    class="docutils literal"><span class="pre">python3.5</span> <span class="pre">./install.py</span></code>,
+                                this script will clear the logs and deploy new settings for online trading. Also <code
+                                        class="docutils literal"><span class="pre">supervisor</span> <span class="pre">service</span></code>
+                                will be restarted.
+                            </li>
+                            <li>Make sure that new custom alpha script is present in <code
+                                    class="docutils literal"><span class="pre">supervisorctl</span> <span class="pre">status</span></code>
+                                command output, otherwise try to restart it manually one more time <code
+                                        class="docutils literal"><span class="pre">service</span> <span class="pre">supervisor</span>
+                                    <span class="pre">restart</span></code></li>
+                        </ol>
+                    </div>
+                    <div class="section" id="custom-alpha-files-sanity-checks">
+                        <h2>Custom alpha files sanity checks<a class="headerlink"
+                                                               href="#custom-alpha-files-sanity-checks"
+                                                               title="Permalink to this headline">¶</a></h2>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">Alphas scripts can be uploaded using common git procedure described in <a
+                                    class="reference internal"
+                                    href="server-code-deployment.html#server-code-deployment"><span class="std std-ref">New code or scripts deployment</span></a>,
+                                all changes could be made on local machine</p>
+                        </div>
+                        <ol class="arabic simple">
+                            <li>Check the python file syntax. <cite>cd</cite> to custom alphas directory for specified
+                                EXO, and run the command <code class="docutils literal"><span
+                                        class="pre">python3.5</span> <span
+                                        class="pre">./&lt;custom_alpha_script&gt;.py</span></code>. If the command ended
+                                without any messages then the syntax is correct.
+                            </li>
+                            <li>Check if the specified strategy class is correct, look for import statement like <code
+                                    class="docutils literal"><span class="pre">from</span> <span class="pre">strategies.strategy_ichimokucloud</span>
+                                <span class="pre">import</span> <span class="pre">StrategyIchimokuCloud</span></code>
+                            </li>
+                            <li>Check if the EXO name value in STRATEGY_CONTEXT -&gt; &#8216;strategy&#8217; -&gt;
+                                &#8216;exo_name&#8217; reflects requirements and is equal to subdirectory name.
+                            </li>
+                            <li>Check if alpha composite name EXO_Name+StrategyName+Long/short+STRATEGY_SUFFIX is
+                                unique, otherwise append alternative value to the suffix like <code
+                                        class="docutils literal"><span class="pre">STRATEGY_SUFFIX</span> <span
+                                        class="pre">=</span> <span class="pre">'alt2-bullish-'`</span></code></li>
+                        </ol>
+                    </div>
+                    <div class="section" id="indices-and-tables">
+                        <h2>Indices and tables<a class="headerlink" href="#indices-and-tables"
+                                                 title="Permalink to this headline">¶</a></h2>
+                        <ul class="simple">
+                            <li><a class="reference internal" href="index.html#index-page"><span class="std std-ref">TMQR Framework 2.0 Home Page</span></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Custom alphas management</a>
+                    <ul>
+                        <li><a class="reference internal" href="#custom-alphas-files-location-and-content">Custom alphas
+                            files location and content</a></li>
+                        <li><a class="reference internal" href="#how-custom-alphas-engine-works">How custom alphas
+                            engine works</a></li>
+                        <li><a class="reference internal" href="#how-to-add-custom-alpha-using-gui">How to add custom
+                            alpha using GUI</a>
+                            <ul>
+                                <li><a class="reference internal" href="#launching-gui-in-notebook">Launching GUI in
+                                    notebook</a></li>
+                                <li><a class="reference internal" href="#deployment-process">Deployment process</a></li>
+                                <li><a class="reference internal" href="#what-is-happening">What is happening</a></li>
+                                <li><a class="reference internal" href="#problems-with-flexx">Problems with flexx</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li><a class="reference internal" href="#how-to-add-new-custom-alpha-for-existing-exo">How to
+                            add new custom alpha for <strong>existing</strong> EXO</a></li>
+                        <li><a class="reference internal" href="#how-to-add-new-custom-alphas-for-new-exo">How to add
+                            new custom alphas for <strong>new</strong> EXO</a></li>
+                        <li><a class="reference internal" href="#custom-alpha-files-sanity-checks">Custom alpha files
+                            sanity checks</a></li>
+                        <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/trading-custom-alphas.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/trading-custom-alphas.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

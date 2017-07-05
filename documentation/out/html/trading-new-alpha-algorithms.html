@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>Deploying new alpha algorithms &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: './',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html"/>
+    <link rel="search" title="Search" href="search.html"/>
+
+    <link rel="stylesheet" href="_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <div class="section" id="deploying-new-alpha-algorithms">
+                    <span id="trading-new-alpha-algorithms"></span>
+                    <h1>Deploying new alpha algorithms<a class="headerlink" href="#deploying-new-alpha-algorithms"
+                                                         title="Permalink to this headline">¶</a></h1>
+                    <div class="toctree-wrapper compound">
+                    </div>
+                    <div class="section" id="how-to-deploy-new-alpha-strategy-algorithm">
+                        <h2>How to deploy new alpha strategy algorithm<a class="headerlink"
+                                                                         href="#how-to-deploy-new-alpha-strategy-algorithm"
+                                                                         title="Permalink to this headline">¶</a></h2>
+                        <ol class="arabic simple">
+                            <li>Create new file inside <code class="docutils literal"><span
+                                    class="pre">strategies</span></code> folder with name pattern <code
+                                    class="docutils literal"><span
+                                    class="pre">strategy_&lt;new_strategy_name&gt;.py</span></code> in lower case
+                            </li>
+                            <li>Copy/paste required <code class="docutils literal"><span
+                                    class="pre">import</span></code> statements for new strategy
+                            </li>
+                            <li>Copy paste new alpha strategy class source code from Jupyter notebook to new created
+                                file inside <code class="docutils literal"><span class="pre">strategies</span></code>
+                                folder of the framework
+                            </li>
+                            <li>Replace cell contents of new strategy file by import statement, for example: <code
+                                    class="docutils literal"><span class="pre">from</span> <span class="pre">strategies.strategy_macross_with_trail</span>
+                                <span class="pre">import</span> <span class="pre">StrategyMACrossTrail</span></code>
+                            </li>
+                        </ol>
+                        <div class="admonition note">
+                            <p class="first admonition-title">Note</p>
+                            <p class="last">Previous step is required to keep code base granularity after deployment,
+                                all changes after deployment should be made in file stored inside
+                                <cite>strategies</cite> folder to avoid code duplication and logic errors.</p>
+                        </div>
+                        <ol class="arabic simple" start="5">
+                            <li>Now you will be able to run custom alpha deployment process as usual.</li>
+                        </ol>
+                    </div>
+                    <div class="section" id="new-alpha-algorithm-sanity-checks">
+                        <h2>New alpha algorithm sanity checks<a class="headerlink"
+                                                                href="#new-alpha-algorithm-sanity-checks"
+                                                                title="Permalink to this headline">¶</a></h2>
+                        <p>Future reference errors are most common and disappointing in system development, they could
+                            be result of coding mistakes or be hidden inside 3rd party packages like Pandas or
+                            Numpy.</p>
+                        <p>To avoid these mistakes in the future, it&#8217;s recommended to run automatic sanity checks
+                            while development process and <strong>before new alpha deployment</strong>.</p>
+                        <div class="section" id="alphasanitychecker-automatic-test">
+                            <h3>AlphaSanityChecker automatic test<a class="headerlink"
+                                                                    href="#alphasanitychecker-automatic-test"
+                                                                    title="Permalink to this headline">¶</a></h3>
+                            <p>To run automatic sanity check, just copy/paste following code snippet to the new cell
+                                after initialized swarm:</p>
+                            <blockquote>
+                                <div><p>AlphaSanityChecker snippet:</p>
+                                    <div class="highlight-default">
+                                        <div class="highlight"><pre><span></span><span class="kn">from</span> <span
+                                                class="nn">backtester.reports.alpha_sanity_checks</span> <span
+                                                class="k">import</span> <span class="n">AlphaSanityChecker</span>
+<span class="n">asc</span> <span class="o">=</span> <span class="n">AlphaSanityChecker</span><span
+                                                    class="p">(</span><span class="n">smgr</span><span
+                                                    class="p">)</span>
+<span class="n">asc</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </blockquote>
+                            <div class="admonition note">
+                                <p class="first admonition-title">Note</p>
+                                <p class="last">AlphaSanityChecker should take place after swarm initialization and
+                                    picking cell, like <code class="docutils literal"><span class="pre">smgr</span>
+                                        <span class="pre">=</span> <span
+                                                class="pre">Swarm(STRATEGY_CONTEXT)</span></code>. <code
+                                            class="docutils literal"><span class="pre">smgr</span></code> variable name
+                                    in AlphaSanityChecker(<strong>smgr</strong>) must be the same as <code
+                                            class="docutils literal"><span class="pre">smgr</span> <span
+                                            class="pre">=</span> <span class="pre">Swarm(STRATEGY_CONTEXT)</span></code>
+                                    line.</p>
+                            </div>
+                        </div>
+                        <div class="section" id="how-alphasanitychecker-works">
+                            <h3>How AlphaSanityChecker works<a class="headerlink" href="#how-alphasanitychecker-works"
+                                                               title="Permalink to this headline">¶</a></h3>
+                            <p><strong>Brief concept</strong></p>
+                            <p>The main idea: all trading signals should take same place in history regardless of the
+                                window of calculation, and position of the signals shouldn&#8217;t be changed when the
+                                new data arrives.</p>
+                            <p><strong>Explanation of algorithm</strong></p>
+                            <p>Let we have MACross alpha, and to check it for future reference we need to compare alpha
+                                signals:</p>
+                            <ol class="arabic simple">
+                                <li>Calculate alpha&#8217;s signals on full history (this will be reference set of
+                                    data)
+                                </li>
+                                <li>Remove last year of the history and calculate alpha&#8217;s signals on this
+                                    sample.
+                                </li>
+                                <li>If all signals on particular dates are equal to full history signals set, this is
+                                    ok
+                                </li>
+                                <li>Grow historical subset adding few days of history, compare signals to full
+                                    historical data set
+                                </li>
+                                <li>Do step #4 until we pass all of the historical data.</li>
+                                <li>If we&#8217;ve faced with signals inequality this is the evidence of future
+                                    reference issues.
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+                <li><a class="reference internal" href="#">Deploying new alpha algorithms</a>
+                    <ul>
+                        <li><a class="reference internal" href="#how-to-deploy-new-alpha-strategy-algorithm">How to
+                            deploy new alpha strategy algorithm</a></li>
+                        <li><a class="reference internal" href="#new-alpha-algorithm-sanity-checks">New alpha algorithm
+                            sanity checks</a>
+                            <ul>
+                                <li><a class="reference internal" href="#alphasanitychecker-automatic-test">AlphaSanityChecker
+                                    automatic test</a></li>
+                                <li><a class="reference internal" href="#how-alphasanitychecker-works">How
+                                    AlphaSanityChecker works</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="index.html">Documentation overview</a>
+                        <ul>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div role="note" aria-label="source link">
+                <h3>This Page</h3>
+                <ul class="this-page-menu">
+                    <li><a href="_sources/trading-new-alpha-algorithms.rst.txt"
+                           rel="nofollow">Show Source</a></li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+    |
+    <a href="_sources/trading-new-alpha-algorithms.rst.txt"
+       rel="nofollow">Page source</a>
+</div>
+
+
+</body>
+</html>

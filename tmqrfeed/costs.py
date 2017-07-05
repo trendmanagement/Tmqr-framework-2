@@ -7,6 +7,12 @@ class Costs:
     """
 
     def __init__(self, per_contract: float = 0.0, per_option: float = 0.0):
+        """
+        Initialize Costs for index or alpha strategies
+        :param per_contract: dollar costs per future contract
+        :param per_option: dollar costs per option contract
+
+        """
         self.per_contract = per_contract
         self.per_option = per_option
 

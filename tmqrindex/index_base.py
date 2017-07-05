@@ -83,12 +83,11 @@ class IndexBase:
 
     def set_data_and_position(self):
         """
-        Implementation of this method mutually exclude process_data() and process_position() run
+        Calculate index's data (information or quotes series) and position (index holdings)
                 
         :return: 
         """
-        raise NotImplementedError("set_data_and_position() is not implemented by Index "
-                                  "probably it uses process_data() and process_position()")
+        raise NotImplementedError("set_data_and_position() is not implemented by Index")
 
     def run(self):
         """

@@ -25,6 +25,7 @@ class Position:
     def __init__(self, datamanager, position_dict: OrderedDict = None, **kwargs):
         """
         Init the Position instance
+
         :param datamanager: DataManager class instance
         :param position_dict: position dictionary
         :param kwargs: position init keyword args
@@ -44,6 +45,7 @@ class Position:
     def _prev_day_key(self, date=None):
         """
         Gets previous day key which is less than 'date'
+
         :param date: if date is None returns date of the last key
         :return: previous date key datetime
         """
@@ -63,6 +65,7 @@ class Position:
     def _check_position_validity(self, net_position_dict):
         """
         Checks the input data validity to prevent position data corruption
+
         :param net_position_dict: dict of {asset: (decision_px, exec_px, qty), ... }
         :return: nothing
         :raises: ArgumentError
@@ -88,6 +91,7 @@ class Position:
     def serialize(self):
         """
         Serialize position data to compatible for MongoDB format
+
         :return: 
         """
         result = OrderedDict()
@@ -109,6 +113,7 @@ class Position:
     def deserialize(cls, pos_data, datamanager=None, as_readonly=False):
         """
         Deserialize position data from MongoDB format
+
         :param pos_data: 
         :param datamanager: DataManager instance for position's assets
         :param as_readonly: return PositionReadOnlyView instead of the Position instance
@@ -143,6 +148,7 @@ class Position:
                              rollover_days_before_opt: int = None) -> float:
         """
         Return the fraction of contracts in the position 'rollover_days_before' near expiration
+
         :param date: current date
         :param rollover_days_before_fut: Days before futures rollover (default: uses InstrumentInfo values) 
         :param rollover_days_before_opt: Days before options rollover (default: uses InstrumentInfo values)
@@ -192,6 +198,7 @@ class Position:
     def delta(self, date: datetime) -> float:
         """
         Calculate position delta
+
         :param date: calculation date
         :return: delta value, if no position returns 0.0
         """
@@ -205,6 +212,7 @@ class Position:
     def last_transaction_date(self, date: datetime) -> datetime:
         """
         Returns the date when last transaction occurred
+
         :param date: current date
         :return: date of last position change (i.e. transaction occurrence)
         """
@@ -242,6 +250,7 @@ class Position:
               date: datetime) -> None:
         """
         Close all position at given date
+
         :param date: 
         :return: nothing, changes position in place
         """
@@ -258,6 +267,7 @@ class Position:
         by low-level Quote* algorithms to initiate positions, generic strategies should use add_net_position() method.
         
         This method allow to change position at the previous date, use with care this could ruin data validity.
+
         :param date: datetime
         :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
         :return: nothing, changes position in place
@@ -271,7 +281,8 @@ class Position:
     def keep_previous_position(self,
                                date: datetime) -> None:
         """
-        Keeps position at previous day 
+        Keeps position at previous day
+
         :param date: current date
         :return:  nothing, changes position in place
         """
@@ -308,6 +319,7 @@ class Position:
         """
         Add net position at given date. 
         This method adds to current position holdings, and calculates required transactions to maintain the new position.
+
         :param date: datetime
         :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
         :param qty: qty times of the net_position, negative values allowed
@@ -344,6 +356,7 @@ class Position:
                         qty: float) -> None:
         """
         Add new transaction for the position at given date
+
         :param date: transaction date
         :param asset: ContractBase derived class instance
         :param qty: transaction qty
@@ -375,6 +388,7 @@ class Position:
     def merge(datamanager, positions_list: list):
         """
         Merges list of Positions to single Position class instance. Useful for campaign position building, alpha members position, etc.
+
         :param datamanager: DataManager instance
         :param positions_list: list of Position class instances to merge
         :return: 
@@ -449,6 +463,7 @@ class Position:
         """
         Get asset prices from position holdings
         (used for quick price caching, not applicable for options)
+
         :param date: required date
         :param asset: ContractBase class instance        
         :return: tuple (decision_price, exec_price)
@@ -469,6 +484,7 @@ class Position:
                      date: datetime) -> bool:
         """
         Return True is position has recorded position values at 'date'
+
         :param date:
         :return: boolean
         """
@@ -478,6 +494,7 @@ class Position:
                          date: datetime) -> Dict[ContractBase, Tuple[float, float, float]]:
         """
         Get net position at given date
+
         :param date: date of position slice
         :return: 
         """
@@ -493,6 +510,7 @@ class Position:
         ContractBase, Tuple[float, float, float, float, float, float]]:
         """
         Calculate transactions based on current and previous positions records
+
         :param date:
         :param current_pos: current position record
         :param prev_pos: previous position record
@@ -567,6 +585,7 @@ class Position:
     def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float]]):
         """
         Calculate transactions stats
+
         :param trans_dict:
         :return:
         """
@@ -599,6 +618,7 @@ class Position:
     def get_pnl_series(self) -> pd.DataFrame:
         """
         Calculates position PnL series for all transactions, also additional execution info provided
+
         :return: pandas.DataFrame
         """
         pnl_result = []
@@ -634,6 +654,7 @@ class Position:
     def __repr__(self):
         """
         Return text-formatted position at last date
+
         :return:
         """
         pos = self._position[self.last_date]
@@ -667,6 +688,7 @@ class PositionReadOnlyView(Position):
     """
     Position read only view used to view precalculated Index position with decision_time_shift
     this class used as proxy to get position using original decision time of the instrument.
+
     Only get_net_position() method allowed, other methods will raise PositionReadOnlyError()
     """
 

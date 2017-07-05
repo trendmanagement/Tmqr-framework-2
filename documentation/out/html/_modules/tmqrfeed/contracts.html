@@ -1,0 +1,1094 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+    <title>tmqrfeed.contracts &#8212; TMQR framework 1.0 documentation</title>
+
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css"/>
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css"/>
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT: '../../',
+            VERSION: '1.0',
+            COLLAPSE_INDEX: false,
+            FILE_SUFFIX: '.html',
+            HAS_SOURCE: true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html"/>
+    <link rel="search" title="Search" href="../../search.html"/>
+
+    <link rel="stylesheet" href="../../_static/custom.css" type="text/css"/>
+
+
+    <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9"/>
+
+</head>
+<body role="document">
+
+
+<div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="body" role="main">
+
+                <h1>Source code for tmqrfeed.contracts</h1>
+                <div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">tmqr.errors</span> <span class="k">import</span> <span class="n">ArgumentError</span><span
+                        class="p">,</span> <span class="n">SettingsError</span>
+<span class="kn">from</span> <span class="nn">tmqr.settings</span> <span class="k">import</span> <span
+                        class="o">*</span>
+<span class="kn">import</span> <span class="nn">pyximport</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">isnan</span>
+
+<span class="n">pyximport</span><span class="o">.</span><span class="n">install</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">tmqrfeed.fast_option_pricing</span> <span class="k">import</span> <span
+                        class="n">blackscholes</span><span class="p">,</span> <span class="n">blackscholes_greeks</span><span
+                        class="p">,</span> <span class="n">GREEK_DELTA</span>
+
+<span class="n">FLOAT_NAN</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span
+                        class="s1">&#39;nan&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ContractBase"><a class="viewcode-back"
+                                                 href="../../contracts-module.html#tmqrfeed.contracts.ContractBase">[docs]</a><span
+        class="k">class</span> <span class="nc">ContractBase</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for generic asset</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">tckr</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init generic contract from special `tckr` code</span>
+
+<span class="sd">        :param tckr: Ticker code</span>
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1">#: Full-qualified ticker name</span>
+        <span class="c1">#: Examples:</span>
+        <span class="c1">#: US.S.AAPL - US Apple inc. stock</span>
+        <span class="c1">#: US.F.CL.M83.830520 - US Crude Oil future June 1983, expired at 1983-05-20</span>
+        <span class="c1">#: US.C.F-CL-H11-110322.110121@89.0 - Call option on CLH11 future, expired at 2011-01-21, Strike 89.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span class="o">=</span> <span
+            class="n">tckr</span>
+        <span class="sd">&quot;&quot;&quot;Full-qualified ticker name&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_toks</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_parse</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">ticker</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">)</span> <span class="o">&lt;</span> <span
+            class="mi">3</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Contract ticker must contain at least 3 parts &lt;Market&gt;.&lt;ContrType&gt;.&lt;Name&gt;&quot;</span><span
+            class="p">)</span>
+
+        <span class="c1">#: Contract type, most common:</span>
+        <span class="c1">#: &#39;F&#39; - Future contract</span>
+        <span class="c1">#: &#39;C&#39; - Call option</span>
+        <span class="c1">#: &#39;P&#39; - Put option</span>
+        <span class="c1">#: &#39;S&#39; - Stock</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctype</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span class="p">[</span><span
+            class="mi">1</span><span class="p">]</span>
+        <span class="sd">&quot;&quot;&quot;Contract type&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dm</span> <span class="o">=</span> <span
+            class="n">datamanager</span>
+        <span class="sd">&quot;&quot;&quot;Global DataManager class instance&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_point_value</span> <span class="o">=</span> <span
+            class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instrument</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract&#39;s instrument in &lt;Market&gt;.&lt;Name&gt;</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0}</span><span
+            class="s1">.</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span
+            class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">market</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">market</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract&#39;s market</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Contract&#39;s name without market info</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">contract_info</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return ContractInfo class values</span>
+
+<span class="sd">        :return: ContractInfo class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span
+            class="n">get_contract_info</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">ticker</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instrument_info</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return underlying instrument info</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">datafeed</span><span class="o">.</span><span
+            class="n">get_instrument_info</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">instrument</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">point_value</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        1-point USD value</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_point_value</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="n">iinfo</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">instrument_info</span>
+            <span class="k">if</span> <span class="n">iinfo</span><span class="o">.</span><span
+            class="n">ticksize</span> <span class="o">==</span> <span class="mf">0.0</span> <span
+            class="ow">or</span> <span class="n">iinfo</span><span class="o">.</span><span
+            class="n">tickvalue</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;&#39;ticksize&#39; or &#39;tickvalue&#39; is not set in instrument </span><span
+            class="si">{self.instrument}</span><span class="s2"> settings. &quot;</span>
+                    <span class="n">f</span><span
+            class="s2">&quot;Check the instrument settings in the DB&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_point_value</span> <span
+            class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">iinfo</span><span
+            class="o">.</span><span class="n">ticksize</span> <span class="o">*</span> <span class="n">iinfo</span><span
+            class="o">.</span><span class="n">tickvalue</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_point_value</span>
+
+<div class="viewcode-block" id="ContractBase.dollar_pnl"><a class="viewcode-back"
+                                                            href="../../contracts-module.html#tmqrfeed.contracts.ContractBase.dollar_pnl">[docs]</a>    <span
+        class="k">def</span> <span class="nf">dollar_pnl</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">prev_price</span><span class="p">,</span> <span
+        class="n">current_price</span><span class="p">,</span> <span class="n">qty</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate dollar PnL for asset</span>
+
+<span class="sd">        :param prev_price: previous price</span>
+<span class="sd">        :param current_price: current price</span>
+<span class="sd">        :param qty:  </span>
+<span class="sd">        :return: PnL in dollars</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">current_price</span> <span
+            class="o">-</span> <span class="n">prev_price</span><span class="p">)</span> <span class="o">*</span> <span
+            class="n">qty</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">point_value</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ContractBase.calc_to_expiration_days"><a class="viewcode-back"
+                                                                         href="../../contracts-module.html#tmqrfeed.contracts.ContractBase.calc_to_expiration_days">[docs]</a>    <span
+        class="k">def</span> <span class="nf">calc_to_expiration_days</span><span class="p">(</span><span class="n">expiration_date</span><span
+        class="p">,</span> <span class="n">current_date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculates calendar days to expiration</span>
+
+<span class="sd">        :param expiration_date: </span>
+<span class="sd">        :param current_date: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">expiration_date</span><span
+            class="o">.</span><span class="n">date</span><span class="p">()</span> <span class="o">-</span> <span
+            class="n">current_date</span><span class="o">.</span><span class="n">date</span><span
+            class="p">())</span><span class="o">.</span><span class="n">days</span></div>
+
+    <span class="k">def</span> <span class="nf">to_expiration_days</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1000000000</span>
+
+<div class="viewcode-block" id="ContractBase.delta"><a class="viewcode-back"
+                                                       href="../../contracts-module.html#tmqrfeed.contracts.ContractBase.delta">[docs]</a>    <span
+        class="k">def</span> <span class="nf">delta</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get contract delta</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: decision time greeks</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mf">1.0</span></div>
+
+<div class="viewcode-block" id="ContractBase.price"><a class="viewcode-back"
+                                                       href="../../contracts-module.html#tmqrfeed.contracts.ContractBase.price">[docs]</a>    <span
+        class="k">def</span> <span class="nf">price</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">ulprice</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iv_change</span><span
+        class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span
+        class="n">days_to_expiration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span
+        class="n">riskfreerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate generic assets&#39;s price (also could be used for WhatIF analysis)</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :param ulprice: </span>
+<span class="sd">        :param iv_change: </span>
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :param riskfreerate: </span>
+<span class="sd">        :return: tuple (decision_price, execution_price)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">price_get</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">risk_free_rate</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">riskfreerate_get</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span>
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_parse</span><span class="p">(</span><span class="n">ticker</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parses ticker and returns tokenized list of contract meta information</span>
+
+<span class="sd">        :param ticker: special `tckr` code</span>
+<span class="sd">        :return: list of tokens</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;@&#39;</span> <span class="ow">in</span> <span
+            class="n">ticker</span><span class="p">:</span>
+            <span class="n">t</span><span class="p">,</span> <span class="n">strike</span> <span
+            class="o">=</span> <span class="n">ticker</span><span class="o">.</span><span class="n">split</span><span
+            class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span
+            class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span
+            class="n">strike</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">res</span>
+        <span class="k">return</span> <span class="n">ticker</span><span class="o">.</span><span
+            class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_parse_expiration</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">exp_string</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Expiration token parsing YYMMDD, if YY &lt; 50 returns 2000s, otherwise 1900s</span>
+
+<span class="sd">        :param exp_string: expiration strning YYMMDD</span>
+<span class="sd">        :return: expiration datetime</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span
+            class="n">exp_string</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">6</span><span
+            class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Expiration string must be 6 chars length: YYMMDD&quot;</span><span
+            class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span
+            class="n">exp_string</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">50</span><span
+            class="p">:</span>
+            <span class="n">y</span> <span class="o">+=</span> <span class="mi">2000</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">+=</span> <span class="mi">1900</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span
+            class="n">exp_string</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span
+            class="mi">4</span><span class="p">])</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span
+            class="n">exp_string</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span
+            class="p">:])</span>
+            <span class="k">return</span> <span class="n">datetime</span><span class="p">(</span><span
+            class="n">y</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">d</span><span
+            class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Bad expiration sting for </span><span
+            class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span
+            class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">ticker</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">data_source</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span
+            class="o">&lt;</span> <span class="n">other</span><span class="o">.</span><span class="n">ticker</span>
+
+    <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span
+            class="o">&gt;</span> <span class="n">other</span><span class="o">.</span><span class="n">ticker</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span
+            class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticker</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">ticker</span><span class="o">.</span><span class="fm">__hash__</span><span class="p">()</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">deserialize</span><span class="p">(</span><span
+            class="bp">cls</span><span class="p">,</span> <span class="n">ticker</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">idx_begin</span> <span class="o">=</span> <span class="n">ticker</span><span
+            class="o">.</span><span class="n">find</span><span class="p">(</span><span
+            class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">idx_end</span> <span class="o">=</span> <span class="n">ticker</span><span
+            class="o">.</span><span class="n">find</span><span class="p">(</span><span
+            class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">idx_begin</span> <span
+            class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">ctype</span> <span class="o">=</span> <span class="n">ticker</span><span class="p">[</span><span
+            class="n">idx_begin</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span><span
+            class="n">idx_end</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">idx_begin</span> <span class="o">==</span> <span
+            class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">idx_end</span> <span
+            class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span
+            class="n">ctype</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span
+            class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span
+            class="n">f</span><span class="s2">&quot;Couldn&#39;t parse contract type from </span><span class="si">{ticker}</span><span
+            class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ctype</span> <span class="o">==</span> <span
+            class="s1">&#39;F&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FutureContract</span><span class="p">(</span><span class="n">ticker</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ctype</span> <span class="o">==</span> <span
+            class="s1">&#39;P&#39;</span> <span class="ow">or</span> <span class="n">ctype</span> <span
+            class="o">==</span> <span class="s1">&#39;C&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">OptionContract</span><span class="p">(</span><span class="n">ticker</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ContractBase</span><span class="p">(</span><span class="n">ticker</span><span
+            class="p">,</span> <span class="n">datamanager</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FutureContract"><a class="viewcode-back"
+                                                   href="../../contracts-module.html#tmqrfeed.contracts.FutureContract">[docs]</a><span
+        class="k">class</span> <span class="nc">FutureContract</span><span class="p">(</span><span class="n">ContractBase</span><span
+        class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Future contract asset class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">tckr</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init future contract from special `tckr` code</span>
+
+<span class="sd">        :param tckr: Ticker code</span>
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        :param kwargs:            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span
+            class="fm">__init__</span><span class="p">(</span><span class="n">tckr</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctype</span> <span
+            class="o">!=</span> <span class="s1">&#39;F&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Contract type &#39;F&#39; expected, but &#39;</span><span
+            class="si">{0}</span><span class="s2">&#39; given&quot;</span><span class="o">.</span><span
+            class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">ctype</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">)</span> <span class="o">!=</span> <span
+            class="mi">5</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Future contract must have 5 tokens in ticker, like: US.F.CL.M83.830520&quot;</span><span
+            class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_parse_expiration</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">4</span><span
+            class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiration_month</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_get_month_by_code</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">3</span><span
+            class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Future contract name without market information, US.F.CL.M83.830520 -&gt; CLM83</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span
+            class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span
+            class="p">[</span><span class="mi">3</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instrument</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Future contract instrument information: US.F.CL.M83.830520 -&gt; US.CL</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0}</span><span
+            class="s1">.</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span
+            class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">market</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">underlying</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Future contract underlying (equals to contract.instrument): US.F.CL.M83.830520 -&gt; US.CL</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">instrument</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_get_month_by_code</span><span class="p">(</span><span class="n">month_letter</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        http://www.cmegroup.com/month-codes.html</span>
+<span class="sd">        January	F</span>
+<span class="sd">        February	G</span>
+<span class="sd">        March	H</span>
+<span class="sd">        April	J</span>
+<span class="sd">        May	K</span>
+<span class="sd">        June	M</span>
+<span class="sd">        July	N</span>
+<span class="sd">        August	Q</span>
+<span class="sd">        September	U</span>
+<span class="sd">        October	V</span>
+<span class="sd">        November	X</span>
+<span class="sd">        December	Z</span>
+
+<span class="sd">        :param month_letter:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">month_letters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;F&#39;</span><span class="p">:</span> <span class="mi">1</span><span
+            class="p">,</span> <span class="s1">&#39;G&#39;</span><span class="p">:</span> <span
+            class="mi">2</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span
+            class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span
+            class="s1">&#39;J&#39;</span><span class="p">:</span> <span class="mi">4</span><span
+            class="p">,</span> <span class="s1">&#39;K&#39;</span><span class="p">:</span> <span
+            class="mi">5</span><span class="p">,</span> <span class="s1">&#39;M&#39;</span><span
+            class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span
+            class="s1">&#39;N&#39;</span><span class="p">:</span> <span class="mi">7</span><span
+            class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span
+            class="mi">8</span><span class="p">,</span> <span class="s1">&#39;U&#39;</span><span
+            class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span
+            class="s1">&#39;V&#39;</span><span class="p">:</span> <span class="mi">10</span><span
+            class="p">,</span> <span class="s1">&#39;X&#39;</span><span class="p">:</span> <span
+            class="mi">11</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span
+            class="p">:</span> <span class="mi">12</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">month_letters</span><span class="p">[</span><span class="n">month_letter</span><span
+            class="o">.</span><span class="n">upper</span><span class="p">()]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">data_source</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">instrument_info</span><span
+            class="o">.</span><span class="n">data_futures_src</span>
+
+    <span class="k">def</span> <span class="nf">to_expiration_days</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span
+            class="o">.</span><span class="n">calc_to_expiration_days</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">expiration</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OptionContract"><a class="viewcode-back"
+                                                   href="../../contracts-module.html#tmqrfeed.contracts.OptionContract">[docs]</a><span
+        class="k">class</span> <span class="nc">OptionContract</span><span class="p">(</span><span class="n">ContractBase</span><span
+        class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Option contract asset class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">tckr</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="o">=</span><span class="kc">None</span><span
+            class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init option contract from special `tckr` code</span>
+
+<span class="sd">        :param tckr: Ticker code</span>
+<span class="sd">        :param datamanager: DataManager instance</span>
+<span class="sd">        :param kwargs: contract init kwargs</span>
+<span class="sd">            * &#39;underlying&#39; - underlying contract instance (by default: get from tckr name)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span
+            class="fm">__init__</span><span class="p">(</span><span class="n">tckr</span><span class="p">,</span> <span
+            class="n">datamanager</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctype</span> <span
+            class="o">!=</span> <span class="s1">&#39;P&#39;</span> <span class="ow">and</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">ctype</span> <span class="o">!=</span> <span
+            class="s1">&#39;C&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span><span class="s2">&quot;Contract type &#39;C&#39; or &#39;P&#39; expected, but &#39;</span><span
+            class="si">{0}</span><span class="s2">&#39; given&quot;</span><span class="o">.</span><span
+            class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">ctype</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">)</span> <span class="o">&lt;</span> <span
+            class="mi">5</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span class="p">)</span> <span
+            class="o">&gt;</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ArgumentError</span><span class="p">(</span>
+                <span class="s2">&quot;Option contract must have 5-6 tokens in ticker, like: US.C.F-ZB-H11-110322.110121[.OPTCODE]@89.0&quot;</span><span
+            class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">expiration</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_parse_expiration</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">3</span><span
+            class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">)</span> <span class="o">&gt;</span> <span
+            class="mi">5</span><span class="p">:</span>
+            <span class="c1"># Handling case when contract ticker contains OPT_CODE</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">strike</span> <span
+            class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">5</span><span
+            class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">opt_code</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span class="p">[</span><span
+            class="mi">4</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">strike</span> <span
+            class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">4</span><span
+            class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">opt_code</span> <span class="o">=</span> <span
+            class="s1">&#39;&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_underlying</span> <span class="o">=</span> <span
+            class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span
+            class="s1">&#39;underlying&#39;</span><span class="p">,</span> <span class="kc">None</span><span
+            class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pricing_context</span> <span
+            class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Option contract name without market information, US.C.F-ZB-H11-110322.110121@89.0 -&gt; ZBH11.110121@89.0</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{0}</span><span
+            class="s1">.</span><span class="si">{1}</span><span class="s1">@</span><span class="si">{2}</span><span
+            class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span
+            class="bp">self</span><span class="o">.</span><span class="n">underlying</span><span class="o">.</span><span
+            class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span class="p">[</span><span
+            class="mi">4</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instrument</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Option contract instrument information: US.C.F-ZB-H11-110322.110121@89.0 -&gt; US.ZB</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">underlying</span><span class="o">.</span><span class="n">instrument</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">underlying</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Option contract&#39;s underlying FutureContract class instance or ContractBase class instance.</span>
+
+<span class="sd">        Example: US.C.F-ZB-H11-110322.110121@89.0 -&gt; US.F.ZB.H11.110322 future instance</span>
+<span class="sd">        US.C.S-AAPL.110121@89.0 -&gt; US.S.AAPL for stock options</span>
+
+<span class="sd">        :return: FutureContract class instance or ContractBase class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_underlying</span> <span
+            class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">underlying_name</span> <span class="o">=</span> <span class="s1">&#39;</span><span
+            class="si">{0}</span><span class="s1">.</span><span class="si">{1}</span><span class="s1">&#39;</span><span
+            class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">_toks</span><span class="p">[</span><span class="mi">0</span><span
+            class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_toks</span><span
+            class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span
+            class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span
+            class="s1">&#39;.&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_toks</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span
+            class="o">.</span><span class="n">startswith</span><span class="p">(</span><span
+            class="s1">&#39;F-&#39;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_underlying</span> <span
+            class="o">=</span> <span class="n">FutureContract</span><span class="p">(</span><span class="n">underlying_name</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_underlying</span> <span
+            class="o">=</span> <span class="n">ContractBase</span><span class="p">(</span><span class="n">underlying_name</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_underlying</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">point_value</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Point value of option contract</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_point_value</span> <span class="ow">is</span> <span class="kc">None</span><span
+            class="p">:</span>
+            <span class="n">iinfo</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">instrument_info</span>
+            <span class="k">if</span> <span class="n">iinfo</span><span class="o">.</span><span class="n">ticksize_options</span> <span
+            class="o">==</span> <span class="mf">0.0</span> <span class="ow">or</span> <span class="n">iinfo</span><span
+            class="o">.</span><span class="n">tickvalue_options</span> <span class="o">==</span> <span
+            class="mf">0.0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SettingsError</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;&#39;ticksize_options&#39; or &#39;tickvalue_options&#39; is not set in instrument </span><span
+            class="si">{self.instrument}</span><span class="s2"> settings. &quot;</span>
+                    <span class="n">f</span><span
+            class="s2">&quot;Check the instrument settings in the DB&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_point_value</span> <span
+            class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">iinfo</span><span
+            class="o">.</span><span class="n">ticksize_options</span> <span class="o">*</span> <span
+            class="n">iinfo</span><span class="o">.</span><span class="n">tickvalue_options</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_point_value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">data_source</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        DataSource name of OptionContract</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">instrument_info</span><span
+            class="o">.</span><span class="n">data_options_src</span>
+
+<div class="viewcode-block" id="OptionContract.set_pricing_context"><a class="viewcode-back"
+                                                                       href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.set_pricing_context">[docs]</a>    <span
+        class="k">def</span> <span class="nf">set_pricing_context</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span
+        class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span><span
+        class="p">,</span> <span class="n">option_decision_iv</span><span class="p">,</span> <span class="n">option_exec_iv</span><span
+        class="p">,</span>
+                            <span class="n">risk_free_rate</span><span class="o">=</span><span
+            class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set recent date pricing context for option contract</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :param ul_decision_px: </span>
+<span class="sd">        :param ul_exec_px: </span>
+<span class="sd">        :param option_decision_iv: </span>
+<span class="sd">        :param option_exec_iv: </span>
+<span class="sd">        :param risk_free_rate: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pricing_context</span> <span
+            class="o">=</span> <span class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span><span
+            class="p">,</span> <span class="n">option_decision_iv</span><span class="p">,</span> <span class="n">option_exec_iv</span><span
+            class="p">,</span> <span class="n">risk_free_rate</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="OptionContract.get_pricing_context"><a class="viewcode-back"
+                                                                       href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.get_pricing_context">[docs]</a>    <span
+        class="k">def</span> <span class="nf">get_pricing_context</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetch pricing context for option contract from cache, otherwise from DataManager</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_pricing_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span
+            class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_pricing_context</span><span class="p">[</span><span class="mi">0</span><span
+            class="p">]</span> <span class="o">==</span> <span class="n">date</span><span class="p">:</span>
+            <span class="c1"># Trying to use cached pricing context</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pricing_context</span>
+
+        <span class="c1"># Fetching prices from data manager</span>
+        <span class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span> <span class="o">=</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">price_get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span
+            class="n">underlying</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span>
+        <span class="n">option_decision_iv</span><span class="p">,</span> <span class="n">option_exec_iv</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dm</span><span
+            class="o">.</span><span class="n">price_get</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">)</span>
+        <span class="n">risk_free_rate</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">dm</span><span class="o">.</span><span
+            class="n">riskfreerate_get</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">,</span> <span class="n">date</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_pricing_context</span><span
+            class="p">(</span><span class="n">date</span><span class="p">,</span> <span
+            class="n">ul_decision_px</span><span class="p">,</span> <span class="n">ul_exec_px</span><span
+            class="p">,</span> <span class="n">option_decision_iv</span><span class="p">,</span> <span class="n">option_exec_iv</span><span
+            class="p">,</span> <span class="n">risk_free_rate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pricing_context</span></div>
+
+<div class="viewcode-block" id="OptionContract.to_expiration_days"><a class="viewcode-back"
+                                                                      href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.to_expiration_days">[docs]</a>    <span
+        class="k">def</span> <span class="nf">to_expiration_days</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calendar days to option expiration</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span
+            class="o">.</span><span class="n">calc_to_expiration_days</span><span class="p">(</span><span class="bp">self</span><span
+            class="o">.</span><span class="n">expiration</span><span class="p">,</span> <span class="n">date</span><span
+            class="p">)</span></div>
+
+<div class="viewcode-block" id="OptionContract.to_expiration_years_from_days"><a class="viewcode-back"
+                                                                                 href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.to_expiration_years_from_days">[docs]</a>    <span
+        class="k">def</span> <span class="nf">to_expiration_years_from_days</span><span class="p">(</span><span
+        class="bp">self</span><span class="p">,</span> <span class="n">days_to_expiration</span><span
+        class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate years to expriration from days</span>
+
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">days_to_expiration</span> <span class="o">*</span> <span
+            class="mf">24.0</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span
+            class="mi">60</span><span class="p">)</span> <span class="o">/</span> <span
+            class="mf">31536000.0</span></div>
+
+    <span class="k">def</span> <span class="nf">_calc_price</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">ulprice</span><span class="p">,</span> <span
+            class="n">days_to_expiration</span><span class="p">,</span> <span class="n">rfr</span><span
+            class="p">,</span> <span class="n">iv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Price option contract using fast Black-Scholes algorithm</span>
+
+<span class="sd">        :param ulprice: </span>
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :param rfr: </span>
+<span class="sd">        :param iv: </span>
+<span class="sd">        :return: option price (float)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">blackscholes</span><span class="p">(</span><span
+            class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">ctype</span> <span class="o">==</span> <span class="s1">&#39;C&#39;</span> <span
+            class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ulprice</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">strike</span><span
+            class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">to_expiration_years_from_days</span><span
+            class="p">(</span><span class="n">days_to_expiration</span><span class="p">),</span>
+                            <span class="n">rfr</span><span class="p">,</span> <span class="n">iv</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_calc_greeks</span><span class="p">(</span><span
+            class="bp">self</span><span class="p">,</span> <span class="n">ulprice</span><span class="p">,</span> <span
+            class="n">days_to_expiration</span><span class="p">,</span> <span class="n">rfr</span><span
+            class="p">,</span> <span class="n">iv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate greeks using fast Black-Scholes algorithm</span>
+
+<span class="sd">        :param ulprice: </span>
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :param rfr: </span>
+<span class="sd">        :param iv: </span>
+<span class="sd">        :return: </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">blackscholes_greeks</span><span class="p">(</span><span
+            class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">ctype</span> <span class="o">==</span> <span class="s1">&#39;C&#39;</span> <span
+            class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ulprice</span><span
+            class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">strike</span><span
+            class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">to_expiration_years_from_days</span><span
+            class="p">(</span><span class="n">days_to_expiration</span><span class="p">),</span>
+                                   <span class="n">rfr</span><span class="p">,</span> <span class="n">iv</span><span
+            class="p">)</span>
+
+<div class="viewcode-block" id="OptionContract.iv"><a class="viewcode-back"
+                                                      href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.iv">[docs]</a>    <span
+        class="k">def</span> <span class="nf">iv</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get option IV for date</span>
+
+<span class="sd">        :param date: required date</span>
+<span class="sd">        :return: decision time IV</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">get_pricing_context</span><span class="p">(</span><span
+            class="n">date</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">context</span><span class="p">[</span><span
+            class="mi">3</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="OptionContract.delta"><a class="viewcode-back"
+                                                         href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.delta">[docs]</a>    <span
+        class="k">def</span> <span class="nf">delta</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get option delta greek at the decision time</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :return: decision time greeks</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">greeks</span><span class="p">(</span><span class="n">date</span><span class="p">)[</span><span
+            class="n">GREEK_DELTA</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="OptionContract.greeks"><a class="viewcode-back"
+                                                          href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.greeks">[docs]</a>    <span
+        class="k">def</span> <span class="nf">greeks</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">ulprice</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iv_change</span><span
+        class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span
+        class="n">days_to_expiration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span
+        class="n">riskfreerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate option&#39;s greeks at the decision time  (only delta supported so far)</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :param ulprice: </span>
+<span class="sd">        :param iv_change: </span>
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :param riskfreerate: </span>
+<span class="sd">        :return: tuple (decision_price, execution_price)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">ul_decision_px</span><span
+            class="p">,</span> <span class="n">ul_exec_px</span><span class="p">,</span> <span class="n">option_decision_iv</span><span
+            class="p">,</span> <span class="n">option_exec_iv</span><span class="p">,</span> <span class="n">option_risk_free_rate</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">get_pricing_context</span><span class="p">(</span>
+            <span class="n">date</span><span class="p">)</span>
+
+        <span class="n">days_to_expiration</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">to_expiration_days</span><span class="p">(</span><span
+            class="n">date</span><span class="p">)</span> <span class="k">if</span> <span
+            class="n">days_to_expiration</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span
+            class="n">days_to_expiration</span>
+        <span class="k">if</span> <span class="n">days_to_expiration</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">days_to_expiration</span> <span class="o">&gt;</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">to_expiration_days</span><span
+            class="p">(</span><span class="n">date</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span
+            class="si">{self.ticker}</span><span
+            class="s2">: WhatIF days to expiration greater than current!&quot;</span><span class="p">,</span> <span
+            class="n">stacklevel</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">rfr</span> <span class="o">=</span> <span class="n">option_risk_free_rate</span> <span
+            class="k">if</span> <span class="n">riskfreerate</span> <span class="ow">is</span> <span
+            class="kc">None</span> <span class="k">else</span> <span class="n">riskfreerate</span>
+
+        <span class="n">option_greeks</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_calc_greeks</span><span class="p">(</span><span
+            class="n">ul_decision_px</span> <span class="k">if</span> <span class="n">ulprice</span> <span
+            class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ulprice</span><span
+            class="p">,</span>
+                                          <span class="n">days_to_expiration</span><span class="p">,</span>
+                                          <span class="n">rfr</span><span class="p">,</span>
+                                          <span class="n">option_decision_iv</span> <span class="o">+</span> <span
+            class="n">iv_change</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">option_greeks</span></div>
+
+<div class="viewcode-block" id="OptionContract.price"><a class="viewcode-back"
+                                                         href="../../contracts-module.html#tmqrfeed.contracts.OptionContract.price">[docs]</a>    <span
+        class="k">def</span> <span class="nf">price</span><span class="p">(</span><span class="bp">self</span><span
+        class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">ulprice</span><span
+        class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">iv_change</span><span
+        class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span
+        class="n">days_to_expiration</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span
+        class="n">riskfreerate</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate option&#39;s price (also could be used for WhatIF analysis)</span>
+
+<span class="sd">        :param date: </span>
+<span class="sd">        :param ulprice: </span>
+<span class="sd">        :param iv_change: </span>
+<span class="sd">        :param days_to_expiration: </span>
+<span class="sd">        :param riskfreerate: </span>
+<span class="sd">        :return: tuple (decision_price, execution_price)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">date</span><span class="p">,</span> <span class="n">ul_decision_px</span><span
+            class="p">,</span> <span class="n">ul_exec_px</span><span class="p">,</span> <span class="n">option_decision_iv</span><span
+            class="p">,</span> <span class="n">option_exec_iv</span><span class="p">,</span> <span class="n">option_risk_free_rate</span> <span
+            class="o">=</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">get_pricing_context</span><span class="p">(</span>
+            <span class="n">date</span><span class="p">)</span>
+
+        <span class="n">days_to_expiration</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">to_expiration_days</span><span class="p">(</span><span
+            class="n">date</span><span class="p">)</span> <span class="k">if</span> <span
+            class="n">days_to_expiration</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span
+            class="n">days_to_expiration</span>
+        <span class="k">if</span> <span class="n">days_to_expiration</span> <span class="ow">is</span> <span class="ow">not</span> <span
+            class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">days_to_expiration</span> <span class="o">&gt;</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">to_expiration_days</span><span
+            class="p">(</span><span class="n">date</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span
+            class="si">{self.ticker}</span><span
+            class="s2">: WhatIF days to expiration greater than current!&quot;</span><span class="p">,</span> <span
+            class="n">stacklevel</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">rfr</span> <span class="o">=</span> <span class="n">option_risk_free_rate</span> <span
+            class="k">if</span> <span class="n">riskfreerate</span> <span class="ow">is</span> <span
+            class="kc">None</span> <span class="k">else</span> <span class="n">riskfreerate</span>
+
+        <span class="n">option_price_decision</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_calc_price</span><span class="p">(</span><span
+            class="n">ul_decision_px</span> <span class="k">if</span> <span class="n">ulprice</span> <span
+            class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ulprice</span><span
+            class="p">,</span>
+                                                 <span class="n">days_to_expiration</span><span class="p">,</span>
+                                                 <span class="n">rfr</span><span class="p">,</span>
+                                                 <span class="n">option_decision_iv</span> <span
+            class="o">+</span> <span class="n">iv_change</span><span class="p">)</span>
+
+        <span class="n">option_price_exec</span> <span class="o">=</span> <span class="bp">self</span><span
+            class="o">.</span><span class="n">_calc_price</span><span class="p">(</span><span
+            class="n">ul_exec_px</span> <span class="k">if</span> <span class="n">ulprice</span> <span
+            class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ulprice</span><span
+            class="p">,</span>
+                                             <span class="n">days_to_expiration</span><span class="p">,</span>
+                                             <span class="n">rfr</span><span class="p">,</span>
+                                             <span class="n">option_exec_iv</span> <span class="o">+</span> <span
+            class="n">iv_change</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">isnan</span><span
+            class="p">(</span><span class="n">option_price_decision</span><span class="p">),</span> <span
+            class="n">f</span><span class="s2">&quot;Option decision price is NaN: </span><span
+            class="si">{self.ticker}</span><span class="s2"> at </span><span class="si">{date}</span><span class="s2"> &quot;</span> \
+                                                 <span class="n">f</span><span class="s2">&quot;UnderlyingPrice: {ul_decision_px if ulprice is None else ulprice} &quot;</span> \
+                                                 <span class="n">f</span><span class="s2">&quot;DaysToExp: </span><span
+            class="si">{days_to_expiration}</span><span class="s2"> RFR: </span><span class="si">{rfr}</span><span
+            class="s2"> IV: {option_decision_iv + iv_change}&quot;</span>
+
+        <span class="k">assert</span> <span class="ow">not</span> <span class="n">isnan</span><span
+            class="p">(</span><span class="n">option_price_decision</span><span class="p">),</span> <span
+            class="n">f</span><span class="s2">&quot;Option execution price is NaN: </span><span class="si">{self.ticker}</span><span
+            class="s2"> at </span><span class="si">{date}</span><span class="s2"> &quot;</span> \
+                                                 <span class="n">f</span><span class="s2">&quot;UnderlyingPrice: {ul_exec_px if ulprice is None else ulprice} &quot;</span> \
+                                                 <span class="n">f</span><span class="s2">&quot;DaysToExp: </span><span
+            class="si">{days_to_expiration}</span><span class="s2"> RFR: </span><span class="si">{rfr}</span><span
+            class="s2"> IV: {option_exec_iv + iv_change}&quot;</span>
+
+        <span class="k">return</span> <span class="n">option_price_decision</span><span class="p">,</span> <span
+            class="n">option_price_exec</span></div></div>
+</pre>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <div class="relations">
+                <h3>Related Topics</h3>
+                <ul>
+                    <li><a href="../../index.html">Documentation overview</a>
+                        <ul>
+                            <li><a href="../index.html">Module code</a>
+                                <ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div id="searchbox" style="display: none" role="search">
+                <h3>Quick search</h3>
+                <form class="search" action="../../search.html" method="get">
+                    <div><input type="text" name="q"/></div>
+                    <div><input type="submit" value="Go"/></div>
+                    <input type="hidden" name="check_keywords" value="yes"/>
+                    <input type="hidden" name="area" value="default"/>
+                </form>
+            </div>
+            <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+    </div>
+    <div class="clearer"></div>
+</div>
+<div class="footer">
+    &copy;2016, TMQR.
+
+    |
+    Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+    &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,405 @@
+.. _index-cookbook:
+
+==============================
+EXO Index development cookbook
+==============================
+
+:ref:`index-page`
+
+.. toctree::
+    :maxdepth: 2
+
+Introduction
+++++++++++++
+
+This chapter is focusing on EXO/SmartEXO index development process, refer to :ref:`index-development` to get more information.
+
+Setting up data
++++++++++++++++
+
+
+Typically EXO/SmartEXO uses continuous futures series to make decisions or align position to times series. But is some
+complex cases like multi-instrument spread EXO index we have to set up instruments manually.
+
+Generic EXO set up
+~~~~~~~~~~~~~~~~~~
+
+Example code::
+
+    INDEX_CONTEXT = {
+        'instrument': "US.ES",
+        'costs_futures': 3.0,
+        'costs_options': 3.0,
+    }
+    index = EXODeltaTargetGeneric(dm, **INDEX_CONTEXT)
+
+Passing 'US.ES. as 'instrument' in index context implicitly calling index.setup() method which do 3 typical actions:
+ 1. Set up DataManager's trading session (gets these settings from the DB) for the 'US.ES' instrument
+
+ 2. Set up DataManager's primary quotes using Quotes* Continuous Futures with Daily timeframe and **important** decition_time_shift.
+    **decition_time_shift** is crucial for indexes and it this setting helps to maintain calculation order, i.e. the rule of thumb
+    indexes must be calculated before alphas.
+
+ 3. Set up of DataManager's costs values, by default it uses fixed dollar costs per contract.
+
+.. note:: you can refer to :meth:`tmqrindex.index_exo_base.IndexEXOBase.setup` source code to get more information
+
+
+Custom EXO set up
+~~~~~~~~~~~~~~~~~
+
+In complex cases like multi-instrument SpreadEXOs you have to override setup() method in child EXO class.
+
+Spread EXO index example::
+
+    class EXOSpreadIndex(IndexEXOBase):
+        _description_short = "EXO Vanilla Long/Short spread index"
+        _description_long = ""
+
+        _index_name = "EXOSpreadFixed"
+
+        def __init__(self, datamanager, **kwargs):
+            super().__init__(datamanager, **kwargs)
+
+            self.PRIMARY_INSTRUMENT = 'US.CL'
+            self.SECONDARY_INSTRUMENT = 'US.CL'
+
+            self.costs_futures = 3.0
+            self.costs_options = 3.0
+
+        def setup(self):
+
+            #
+            # IMPORTANT! Use trading session of self.PRIMARY_INSTRUMENT
+            #   All US.CL quotes and positions will use 'US.ES' decision and execution time
+            #
+            self.dm.session_set(self.PRIMARY_INSTRUMENT, session_instance=self.session)
+
+            #
+            # Set primary quotes for 'US.ES' to align all data to its index
+            #
+            self.dm.series_primary_set(QuoteContFut, self.PRIMARY_INSTRUMENT,
+                                       timeframe='D', decision_time_shift=self.decision_time_shift)
+
+            self.dm.series_extra_set(self.SECONDARY_INSTRUMENT, QuoteContFut, self.SECONDARY_INSTRUMENT,
+                                       timeframe='D', decision_time_shift=self.decision_time_shift)
+            #
+            # Set index costs (costs are calculated at the final stage, of index equity calculation)
+            #
+            self.dm.costs_set(self.PRIMARY_INSTRUMENT.split('.')[0], Costs(per_contract=self.costs_futures,
+                                                                   per_option=self.costs_options))
+
+As in case of generic EXO you still have to set up DataManager's session, costs and quotes in the ``setup()`` method.
+As you can see we have added ``self.dm.series_extra_set(self.SECONDARY_INSTRUMENT ...)``
+call in the ``setup()`` method. This line allow us to use SECONDARY_INSTRUMENT's continuous futures quotes in EXO calculations.
+
+
+Calculating EXO logic
++++++++++++++++++++++
+Special method ``calc_exo_logic(self)`` intended to be used as main EXO logic method, all SmartEXO regimes, Spread index
+legs weights calculation must take place in this method.
+
+Here is an example how you can calculate spread index with SmartEXO like regime::
+
+    def calc_exo_logic(self):
+        """
+        Calculates SmartEXO logic.
+        NOTE: this method must use self.dm.quotes() or self.dm.quotes(series_key='for_secondary_series') to
+              calculate SmartEXO logic
+        :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)
+        """
+        # Getting quotes
+        primary_quotes = self.dm.quotes()
+        secondary_quotes = self.dm.quotes(self.SECONDARY_INSTRUMENT)
+
+        # Getting instrument information
+        primary_instrument_info = self.dm.instrument_info_get(self.PRIMARY_INSTRUMENT)
+        secondary_instrument_info = self.dm.instrument_info_get(self.SECONDARY_INSTRUMENT)
+
+        # Calculating point value
+        primary_instrument_point_value = 1.0 / primary_instrument_info.ticksize * primary_instrument_info.tickvalue
+        secondary_instrument_point_value = 1.0 / secondary_instrument_info.ticksize * secondary_instrument_info.tickvalue
+
+        # Calculating USD value price series
+        primary_usd_value = primary_quotes['c'] * primary_instrument_point_value
+        secondary_usd_value = secondary_quotes['c'] * secondary_instrument_point_value
+
+        # Calculating USD value ratio per 10 contracts
+        usd_ratio = primary_usd_value / secondary_usd_value
+
+        # Add extra logic to illustrate how SmartEXO can be implemeted
+        # Define bull trend regime as close of primary > moving_average(primary, 20-periods)
+        primary_in_bull_trend = primary_quotes['c'] > primary_quotes['c'].rolling(20).mean()
+
+        # We have to return pandas.DataFrame class
+        return pd.DataFrame({
+            'usd_ratio': usd_ratio,
+
+            # Optionally include spread prices
+            'primary_usd_value': primary_usd_value,
+            'secondary_usd_value': secondary_usd_value,
+
+            # Include SMART EXO regime
+            'primary_in_bull_trend': primary_in_bull_trend,
+        })
+
+.. figure:: img/index_exo_calc_usd_spread.jpg
+   :scale: 100 %
+   :alt:
+
+   Result of calculation of the code above
+
+
+Constructing EXO position
++++++++++++++++++++++++++
+After we prepared EXO information for position construction we are ready to construct dollar value spread position.
+
+``construct_position()`` method used to initial position construction, you get access to the **Position** class instance
+of the index via ``pos`` parameter, current datetime of position construction via ``dt`` parameter and  ``calc_exo_logic``
+results slice at date ``dt``
+
+construct_position method definition::
+
+    def construct_position(self, dt, pos, logic_df):
+            """
+            EXO position construction method
+
+            NOTE!: this method only called when there is no active position for 'dt'
+            :param dt: current datetime
+            :param pos: Position instance
+            :param logic_df: result of calc_exo_logic()[dt]  if applicable
+            :return: nothing, manages 'pos' in place
+            """
+
+
+.. note:: This method called only when there is no active position for actual date (i.e. ``dt`` parameter)
+
+
+Now we are ready to create spread position on futures, using USD weighted size of legs, with elements of dynamic SmartEXO
+hedging.
+
+Follow the comments in the code::
+
+    def construct_position(self, dt, pos, logic_df):
+        """
+        EXO position construction method
+
+        NOTE!: this method only called when there is no active position for 'dt'
+        :param dt: current datetime
+        :param pos: Position instance
+        :param logic_df: result of calc_exo_logic()[dt]  if applicable
+        :return: nothing, manages 'pos' in place
+        """
+        # Getting active futures and options chains
+        fut_primary, opt_chain_primary = self.dm.chains_options_get(self.PRIMARY_INSTRUMENT, dt)
+        fut_secondary, opt_chain_secondary = self.dm.chains_options_get(self.SECONDARY_INSTRUMENT, dt)
+
+        # Getting logic_df slice information
+        # Example of slice data:
+        """
+        > print(logic_df)
+        primary_in_bull_trend      False
+        primary_usd_value         103788
+        secondary_usd_value        44880
+        usd_ratio                2.31256
+        Name: 2016-05-02 12:40:00-07:00, dtype: object
+
+        > print(logic_df['usd_ratio'])
+        2.31256
+
+        > print(logic_df['primary_usd_value'])
+        103788
+        """
+        # You can easily access data calculated in calc_exo_logic() metod by
+        # logic_df['primary_usd_value']
+        # logic_df['some_column_name']
+        usd_ratio = logic_df['usd_ratio']
+        primary_in_bull_trend = logic_df['primary_in_bull_trend']
+
+        # PRIMARY long
+        primary_qty = 10.0
+        pos.add_transaction(dt, fut_primary, primary_qty)
+        # SECONDARY short
+        secondary_qty = round(primary_qty * usd_ratio)
+        pos.add_transaction(dt, fut_secondary, -secondary_qty)
+
+
+        # Usign SmartEXO hedge style
+        if primary_in_bull_trend:
+            # Add primary long call if primary_in_bull_trend
+            target_delta = 0.15
+            hedge_qty = round(primary_qty * target_delta)
+
+            pos.add_transaction(dt, opt_chain_primary.find(dt, target_delta, 'C', how='delta'), hedge_qty)
+
+
+
+Managing EXO position
++++++++++++++++++++++
+The final part of valid EXO index is a position management, every position management should contain at least expiring
+contracts rollover checks and execution.
+
+To handle position management you should implement ``manage_position()`` method::
+
+ def manage_position(self, dt, pos, logic_df):
+        """
+        Manages opened position (rollover checks/closing, delta hedging, etc)
+        :param dt: current datetime
+        :param pos: Position instance
+        :param logic_df: result of calc_exo_logic()[dt]  if applicable
+        :return: nothing, manages 'pos' in place
+        """
+
+
+.. note:: Arguments meaning is exactly the same as for ``construct_position()``, so you can use same techniques to manage
+          position or to get ``logic_df`` values.
+
+You can manage position in different ways, the most common ways are:
+    * Check if some assets in the position are about to be expired
+    * X days passed after last transaction occurrence
+    * Check position delta threshold
+    * Check values of metric calcilated in  ``calc_exo_logic()``
+    * Combination of approaches above
+
+Here is a sample code::
+
+    def manage_position(self, dt, pos, logic_df):
+        """
+        Manages opened position (rollover checks/closing, delta hedging, etc)
+        :param dt: current datetime
+        :param pos: Position instance
+        :param logic_df: result of calc_exo_logic()[dt]  if applicable
+        :return: nothing, manages 'pos' in place
+        """
+        #
+        # Check expiration moment
+        # Or you can check custom days to expiration values
+        #  pos.almost_expired_ratio(dt, rollover_days_before_fut=5, rollover_days_before_opt=7)
+        if pos.almost_expired_ratio(dt) > 0:
+            pos.close(dt)
+
+        #
+        # Check business days after last transaction
+        #
+        pos_last_transaction_date = pos.last_transaction_date(dt)
+        log.debug("Last transaction date: {0}".format(pos_last_transaction_date))
+        days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
+
+        if days_after_last_trans > 7:
+            log.debug("Business days > 7, closing position")
+            # Close the position
+            pos.close(dt)
+            # Avoid following checks
+            return
+
+        #
+        # Delta based rebalance
+        #
+        delta = pos.delta(dt)
+        if delta > 0.7:
+            log.debug("Delta > 0.7")
+            # Close the position
+            pos.close(dt)
+            # Avoid following checks
+            return
+
+        #
+        # logic_df based rebalance
+        #
+        primary_in_bull_trend = logic_df['primary_in_bull_trend']
+
+        if not primary_in_bull_trend:
+            log.debug("not primary_in_bull_trend")
+            # Close the position
+            pos.close(dt)
+            # Avoid following checks
+            return
+
+.. note:: For this particular sample EXO it's normal to close full position, for more sophisticated EXO indexes it could
+          be possible to implement partial position management, for example open/close only hedge option leg.
+
+          **IMPORTANT** The position management in the framework is pretty smart, it calculates only transactions as a
+          difference of the position between previous date. For example if you had a opened ES future at previous date,
+          then due some reason you have decided to close the position at current date, and then opened same ES future,
+          you **will have not** to pay any costs, because the position remained the same compared to previous date.
+
+
+Building index
+++++++++++++++
+To build EXO index inside Jupyter notebook you need to run the following lines of code::
+
+    dm = DataManager( #date_start=datetime(2016, 5, 1),  # Optional
+                      #date_end=datetime(2017, 5, 1)     # Optional
+    )
+    INDEX_CONTEXT = {
+        'instrument': "US.ES",
+        'costs_futures': 3.0,
+        'costs_options': 3.0,
+    }
+    # Assuming that you have defined EXOSpreadIndex() class in some cell above
+    index = EXOSpreadIndex(dm, **INDEX_CONTEXT)
+
+    # Running index
+    index.run()
+
+    # You can run index.save() to make index data and position available for the EXO based alphas
+    # index.save()
+
+
+Getting index information
++++++++++++++++++++++++++
+Every index must have ``data`` and ``position`` attributes.
+
+``data`` - represents pandas.DataFrame of index's position PnL, for EXO index this is a result of call
+``index.data = index.position.get_pnl_series()``
+
+.. figure:: img/index_exo_data_columns.jpg
+   :scale: 100 %
+   :alt:
+
+   index.data DataFrame example and column names
+
+
+``position`` - represents build and manager position of the EXO it also can be used in alphas, alpha code can replicate
+EXO index position, refer to the ``Position`` class documentation to get more information.
+
+
+Using saved index information in alphas
++++++++++++++++++++++++++++++++++++++++
+Alphas can use any index as a primary source of quotes or position. For example StrategyAlpha base class uses EXO index
+as a primary source of quotes and the index's position as the primary alpha's position, i.e. replicates the EXO position.
+
+Refer to :meth:`tmqrstrategy.strategy_alpha.StrategyAlpha.setup()` and :meth:`tmqrstrategy.strategy_alpha.StrategyAlpha.calculate_position()`
+source code to get more information.
+
+
+Index naming and description
+++++++++++++++++++++++++++++
+
+Each index uses pre-defined constants for naming::
+
+    class EXOSpreadIndex(IndexEXOBase):
+        _description_short = "EXO Vanilla Long/Short spread index"
+        _description_long = ""
+        _index_name = "EXOSpreadFixed"
+
+    .....
+
+    # Init index
+    index = EXOSpreadIndex(dm, instrument="US.ES", costs_futures=3.0, costs_options=3.0)
+
+    # or equivalent
+    INDEX_CONTEXT = {
+        'instrument': "US.ES",
+        'costs_futures': 3.0,
+        'costs_options': 3.0,
+    }
+    index = EXOSpreadIndex(dm, **INDEX_CONTEXT)
+
+    > print(index.index_name)
+    'US.ES_EXOSpreadFixed'
+
+Usually you have to set up ``instrument`` keyword for index to get index name like 'US.ES_EXOSpreadFixed'.
+
+Call ``index.index_name`` to get full-qualified index name, also used as key name of the index in the DB.
+

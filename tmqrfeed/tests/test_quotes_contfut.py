@@ -126,7 +126,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         dm = DataManager()
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
 
-        new_series_with_offset = qcont_fut.calculate_fut_offset_series(prev_df, new_df.copy())
+        new_series_with_offset = qcont_fut._calculate_fut_offset_series(prev_df, new_df.copy())
         offset_df = new_df - new_series_with_offset
         self.assertEqual(0.1700000000000017, offset_df['o'].mean())
         self.assertEqual(0.1700000000000017, offset_df['l'].mean())
@@ -149,7 +149,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         qcont_fut = QuoteContFut('US.CL', datamanager=feed, timeframe='D')
 
         new_exclude = new_df[new_df.index > prev_df.index[-1]].copy()
-        new_series_with_offset = qcont_fut.calculate_fut_offset_series(prev_df, new_exclude)
+        new_series_with_offset = qcont_fut._calculate_fut_offset_series(prev_df, new_exclude)
         offset_df = new_df - new_series_with_offset
         self.assertEqual(0, offset_df['o'].mean())
         self.assertEqual(0, offset_df['l'].mean())
@@ -203,7 +203,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
 
         # Handle not expired future
-        res_pos = qcont_fut.apply_future_rollover(p, datetime(2011, 1, 3).date())
+        res_pos = qcont_fut._apply_future_rollover(p, datetime(2011, 1, 3).date())
         prec = res_pos.get_net_position(datetime(2011, 1, 2))
         self.assertEqual(prec, {asset: (1.0, 2.0, 3.0)})
 
@@ -221,7 +221,7 @@ class QuoteContFutTestCase(unittest.TestCase):
         qcont_fut = QuoteContFut('US.CL', datamanager=dm, timeframe='D')
 
         # Handle expired future
-        res_pos = qcont_fut.apply_future_rollover(p, datetime(2011, 1, 1).date())
+        res_pos = qcont_fut._apply_future_rollover(p, datetime(2011, 1, 1).date())
         prec = res_pos.get_net_position(datetime(2011, 1, 2))
         self.assertEqual(prec, {asset: (1.0, 2.0, 0.0)})
 
