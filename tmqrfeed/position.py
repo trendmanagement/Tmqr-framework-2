@@ -651,6 +651,9 @@ class Position:
 
         return df_result
 
+    def __str__(self):
+        return self.__repr__()
+
     def __repr__(self):
         """
         Return text-formatted position at last date

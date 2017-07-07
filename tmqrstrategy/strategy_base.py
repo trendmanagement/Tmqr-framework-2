@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta
 from dateutil.rrule import rrule, MONTHLY, WEEKLY
 
 from tmqr.errors import ArgumentError, WalkForwardOptimizationError, QuoteNotFoundError, StrategyError, \
-    PositionNotFoundError
+    PositionNotFoundError, ChainNotFoundError
 from tmqr.logs import log
 from tmqr.settings import QDATE_MIN
 from tmqrfeed import DataManager
@@ -365,10 +365,9 @@ class StrategyBase:
         #
         # Save exposure values
         #
-        assert len(equity_df) == len(
-            self.exposure_series), "Position equity length doesn't match to exposure_series length"
-        assert np.all(
-            equity_df.index == self.exposure_series.index), "Position equity index doesn't match to exposure_series index"
+        if len(equity_df) != len(self.exposure_series) or not np.all(equity_df.index == self.exposure_series.index):
+            log.warning(
+                "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
 
         if 'exposure' not in self.exposure_series.columns:
             log.warn(
@@ -571,8 +570,14 @@ class StrategyBase:
                     exposure_series.append(exp_df.loc[dt])
 
                 exposure_df = pd.DataFrame(exposure_series)
-                # Run strategy position management
-                self.calculate_position(dt, exposure_df)
+                try:
+                    # Run strategy position management
+                    self.calculate_position(dt, exposure_df)
+
+                except ChainNotFoundError as exc:
+                    log.error(f"ChainNotFoundError: {dt}: {exc}")
+                except QuoteNotFoundError as exc2:
+                    log.error(f"QuoteNotFoundError: {dt}: {exc2}")
 
                 # Update exposure stats
                 self._exposure_update(dt, exposure_df)
