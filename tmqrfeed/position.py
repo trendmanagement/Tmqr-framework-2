@@ -302,10 +302,17 @@ class Position:
                     # Skipping closed position
                     continue
 
-                # Get actual prices for position
-                decision_price, exec_price = asset.price(date)
+                try:
+                    # Get actual prices for position
+                    decision_price, exec_price = asset.price(date)
+                    pos_rec_qty = pos_rec[iQTY]
+                except AssetExpiredError as exc:
+                    decision_price, exec_price = pos_rec[iDPX], pos_rec[iEPX]
+                    pos_rec_qty = 0.0
+                    log.warn(f"{exc}. Possible data hole detected, asset is not closed before expiration."
+                             f" Or you are skipping zero exposures in strategy/index")
 
-                updated_position[asset] = (decision_price, exec_price, pos_rec[iQTY])
+                updated_position[asset] = (decision_price, exec_price, pos_rec_qty)
 
             # Add updated position record at specified date
             self.add_net_position(date, updated_position, qty=1.0)
