@@ -154,8 +154,7 @@ class DataEngineTestCase(unittest.TestCase):
 
             df, qtype = deng.db_get_raw_series('US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
 
-            self.assertEqual(dict, type(df))
-            self.assertEqual(pd.DataFrame, type(df['data']))
+            self.assertEqual(pd.DataFrame, type(df))
             self.assertEqual(QTYPE_OPTIONS_EOD, qtype)
 
     def test_db_load_index(self):

@@ -63,6 +63,7 @@ if __name__ == '__main__':
     dm = DataManager()
 
     ALPHA_CONTEXT = {
+        'name': 'DEBUG_ALPHA_PROTOTYPE',
         'context': {  # Strategy specific settings
             # These settings only applycable for alphas derived from StrategyAlpha strategy
             # StrategyAlpha - is a classic EXO/SmartEXO based alpha

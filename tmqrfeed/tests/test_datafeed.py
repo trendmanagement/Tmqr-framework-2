@@ -279,7 +279,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
             ]
             source_df = pd.DataFrame(data).set_index('dt')
-            mock_db_get_raw_series.return_value = {'data': source_df}, QTYPE_OPTIONS_EOD
+            mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
                                           SRC_OPTIONS_EOD,
@@ -325,7 +325,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
             ]
             source_df = pd.DataFrame(data).set_index('dt')
-            mock_db_get_raw_series.return_value = {'data': source_df}, QTYPE_OPTIONS_EOD
+            mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
             self.assertEqual(0, len(dfeed._cache_price_data))
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
@@ -337,11 +337,10 @@ class DataFeedTestCase(unittest.TestCase):
             self.assertEqual(1, len(dfeed._cache_price_data))
             self.assertTrue('US.F.CL.Q83.830720' in dfeed._cache_price_data)
             self.assertEqual(tuple, type(dfeed._cache_price_data['US.F.CL.Q83.830720']))
-            self.assertEqual(dict, type(dfeed._cache_price_data['US.F.CL.Q83.830720'][0]))
-            self.assertEqual(pd.DataFrame, type(dfeed._cache_price_data['US.F.CL.Q83.830720'][0]['data']))
+            self.assertEqual(pd.DataFrame, type(dfeed._cache_price_data['US.F.CL.Q83.830720'][0]))
             self.assertEqual(QTYPE_OPTIONS_EOD, dfeed._cache_price_data['US.F.CL.Q83.830720'][1])
             # Make sure that initial data is not changed after caching
-            df = dfeed._cache_price_data['US.F.CL.Q83.830720'][0]['data']
+            df = dfeed._cache_price_data['US.F.CL.Q83.830720'][0]
             self.assertEqual(True, np.all(df.index == source_df.index))
             self.assertEqual(True, np.all(df['iv'] == source_df['iv']))
 

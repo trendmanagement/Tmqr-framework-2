@@ -168,6 +168,8 @@ class DataFeed:
                 # Convert timezone of the dataframe (in place)
                 dfseries.tz_convert(tz, copy=False)
             return dfseries
+        elif qtype == QTYPE_OPTIONS_EOD:
+            return dfseries
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
 
@@ -206,7 +208,7 @@ class DataFeed:
             self._cache_price_data[tckr] = (dfseries, qtype)
 
             data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
-            df = dfseries['data']
+            df = dfseries
             if data_options_use_prev_date:
                 df = df.shift(1)
 

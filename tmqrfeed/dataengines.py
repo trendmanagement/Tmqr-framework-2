@@ -136,7 +136,7 @@ class DataEngineMongo(DataEngineBase):
             raise DBDataCorruptionError(
                 f"{tckr} data is corrupted in {SRC_OPTIONS_EOD} collection, expected pd.DataFrame, got {type(data['data'])}")
 
-        return data, QTYPE_OPTIONS_EOD
+        return data['data'], QTYPE_OPTIONS_EOD
 
     def db_save_index(self, index_data):
         """
