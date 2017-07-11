@@ -55,7 +55,7 @@ class StrategyAlpha(StrategyBase):
         This method used for position construction based on exposure information returned from calculate(),
         here you can initiate (replicate) EXO index position or setup any custom position you want.
         """
-        # Get the position of Quote algo (in this case current cont futures)
+        # Get the position of Quote algorithm (in this case current cont futures)
         primary_quotes_position = self.dm.position()
 
         # ALSO you can get secondary positions
