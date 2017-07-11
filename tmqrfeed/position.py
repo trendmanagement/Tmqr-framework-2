@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from tmqr.errors import ArgumentError, PositionNotFoundError, PositionQuoteNotFoundError, PositionReadOnlyError, \
-    AssetExpiredError
+    AssetExpiredError, QuoteNotFoundError
 from tmqrfeed.contracts import ContractBase
 from tmqr.logs import log
 from tmqr.settings import QDATE_MIN
@@ -487,14 +487,21 @@ class Position:
         raise PositionQuoteNotFoundError(f'Quote is not found in the position for {asset} at {date}')
 
     def has_position(self,
-                     date: datetime) -> bool:
+                     date: datetime,
+                     check_pos_qty: bool = True) -> bool:
         """
         Return True is position has recorded position values at 'date'
 
         :param date:
         :return: boolean
         """
-        return date in self._position and sum((abs(x[iQTY]) for x in self._position[date].values())) > 0
+        if date in self._position:
+            if check_pos_qty:
+                return sum((abs(x[iQTY]) for x in self._position[date].values())) > 0
+            else:
+                return True
+        else:
+            return False
 
     def get_net_position(self,
                          date: datetime) -> Dict[ContractBase, Tuple[float, float, float]]:
@@ -548,10 +555,11 @@ class Position:
                 if prev_values[iQTY] != 0:
                     try:
                         decision_price, exec_price = asset.price(date)
-                    except AssetExpiredError as exc:
-                        decision_price, exec_price = prev_values[iDPX], prev_values[iEPX]
-                        log.warn(f"{exc}. Possible data hole detected, asset is not closed before expiration."
-                                 f" Or you are skipping zero exposures in strategy/index")
+                    except (AssetExpiredError, QuoteNotFoundError) as exc:
+                        log.warn(f"Possible data hole detected, asset is not closed before expiration."
+                                 f" Or you are skipping zero exposures in strategy/index. Error: {exc}")
+                        # Warn but do not add already expired asset to the position (prevent future errors)
+                        continue
 
                     costs_value = self.dm.costs_get(asset, -prev_values[iQTY])
 

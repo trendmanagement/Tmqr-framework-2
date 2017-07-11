@@ -776,8 +776,11 @@ class PositionTestCase(unittest.TestCase):
                 # Use previous position price to close transaction (trade off)
                 trans = p._calc_transactions(datetime(2011, 1, 2), positions[datetime(2011, 1, 2)],
                                              positions[datetime(2011, 1, 1)])
-                self.assertEqual(1, len(trans))
-                self.assertEqual({fut: (100, 101, -2, 0.0, 0.0, 0.0)}, trans)
+                #
+                # 2017-07-11 New behavior added
+                #   Already expired positions doesn't take place in processed equity
+                #   They are skipped, to prevent code failure in other parts of the framework
+                self.assertEqual(0, len(trans))
 
 
     def test__transactions_stats(self):

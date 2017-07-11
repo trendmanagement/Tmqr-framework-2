@@ -365,9 +365,10 @@ class StrategyBase:
         #
         # Save exposure values
         #
-        if len(equity_df) != len(self.exposure_series) or not np.all(equity_df.index == self.exposure_series.index):
-            log.warning(
-                "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
+        assert len(equity_df) == len(
+            self.exposure_series), "Position equity index doesn't match to exposure_series index. Possible position calculation issues!"
+        assert np.all(
+            equity_df.index == self.exposure_series.index), "Position equity index doesn't match to exposure_series index. Possible position calculation issues!"
 
         if 'exposure' not in self.exposure_series.columns:
             log.warn(
@@ -580,7 +581,10 @@ class StrategyBase:
                     log.error(f"QuoteNotFoundError: {dt}: {exc2}")
 
                 # Update exposure stats
-                self._exposure_update(dt, exposure_df)
+                if self.position.has_position(dt, check_pos_qty=False):
+                    # Update exposure series only if position has record at date 'dt'
+                    # This check will prevent position / exposure and equity index mismatch
+                    self._exposure_update(dt, exposure_df)
 
 
 

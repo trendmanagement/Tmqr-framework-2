@@ -111,7 +111,7 @@ class PositionNotFoundError(NotFoundError):
     pass
 
 
-class PositionQuoteNotFoundError(QuoteNotFoundError):
+class PositionQuoteNotFoundError(NotFoundError):
     """
     Raised when cached quote is not found in position records
     """
