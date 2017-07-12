@@ -3171,6 +3171,7 @@
     var rnotwhite = ( /\S+/g );
 
 
+
 // Convert String-formatted options into Object-formatted ones
     function createOptions(options) {
         var object = {};
@@ -4110,6 +4111,7 @@
     var dataUser = new Data();
 
 
+
 //	Implementation Summary
 //
 //	1. Enforce API surface and semantic compatibility with 1.9.x branch
@@ -4604,6 +4606,7 @@
     var rtagName = ( /<([a-z][^\/\0>\x20\t\r\n\f]+)/i );
 
     var rscriptType = ( /^$|\/(?:java|ecma)script/i );
+
 
 
 // We have to close these tags to support XHTML (#13200)
@@ -8165,6 +8168,7 @@
     var nonce = jQuery.now();
 
     var rquery = ( /\?/ );
+
 
 
 // Cross-browser xml parsing

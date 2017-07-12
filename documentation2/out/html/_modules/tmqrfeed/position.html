@@ -51,7 +51,7 @@
                         class="p">,</span> <span class="n">PositionNotFoundError</span><span class="p">,</span> <span
                         class="n">PositionQuoteNotFoundError</span><span class="p">,</span> <span class="n">PositionReadOnlyError</span><span
                         class="p">,</span> \
-    <span class="n">AssetExpiredError</span>
+    <span class="n">AssetExpiredError</span><span class="p">,</span> <span class="n">QuoteNotFoundError</span>
 <span class="kn">from</span> <span class="nn">tmqrfeed.contracts</span> <span class="k">import</span> <span class="n">ContractBase</span>
 <span class="kn">from</span> <span class="nn">tmqr.logs</span> <span class="k">import</span> <span class="n">log</span>
 <span class="kn">from</span> <span class="nn">tmqr.settings</span> <span class="k">import</span> <span class="n">QDATE_MIN</span>
@@ -556,16 +556,27 @@
                     <span class="c1"># Skipping closed position</span>
                     <span class="k">continue</span>
 
-                <span class="c1"># Get actual prices for position</span>
-                <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
-            class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">price</span><span
-            class="p">(</span><span class="n">date</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Get actual prices for position</span>
+                    <span class="n">decision_price</span><span class="p">,</span> <span
+            class="n">exec_price</span> <span class="o">=</span> <span class="n">asset</span><span
+            class="o">.</span><span class="n">price</span><span class="p">(</span><span class="n">date</span><span
+            class="p">)</span>
+                    <span class="n">pos_rec_qty</span> <span class="o">=</span> <span class="n">pos_rec</span><span
+            class="p">[</span><span class="n">iQTY</span><span class="p">]</span>
+                <span class="k">except</span> <span class="n">AssetExpiredError</span> <span class="k">as</span> <span
+            class="n">exc</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{exc}</span><span
+            class="s2">. Possible data hole detected, asset is not closed before expiration.&quot;</span>
+                             <span class="n">f</span><span class="s2">&quot; Or you are skipping zero exposures in strategy/index&quot;</span><span
+            class="p">)</span>
+                    <span class="k">continue</span>
 
                 <span class="n">updated_position</span><span class="p">[</span><span class="n">asset</span><span
             class="p">]</span> <span class="o">=</span> <span class="p">(</span><span
             class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span><span
-            class="p">,</span> <span class="n">pos_rec</span><span class="p">[</span><span class="n">iQTY</span><span
-            class="p">])</span>
+            class="p">,</span> <span class="n">pos_rec_qty</span><span class="p">)</span>
 
             <span class="c1"># Add updated position record at specified date</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_net_position</span><span
@@ -898,22 +909,30 @@
                                                           href="../../position-class.html#tmqrfeed.position.Position.has_position">[docs]</a>    <span
         class="k">def</span> <span class="nf">has_position</span><span class="p">(</span><span
         class="bp">self</span><span class="p">,</span>
-                     <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">)</span> <span
-            class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+                     <span class="n">date</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span>
+                     <span class="n">check_pos_qty</span><span class="p">:</span> <span class="nb">bool</span> <span
+            class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span
+            class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return True is position has recorded position values at &#39;date&#39;</span>
 
 <span class="sd">        :param date:</span>
 <span class="sd">        :return: boolean</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">date</span> <span class="ow">in</span> <span
-            class="bp">self</span><span class="o">.</span><span class="n">_position</span> <span
-            class="ow">and</span> <span class="nb">sum</span><span class="p">((</span><span class="nb">abs</span><span
-            class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">iQTY</span><span
-            class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span
-            class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">[</span><span
-            class="n">date</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span
-            class="p">()))</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
+        <span class="k">if</span> <span class="n">date</span> <span class="ow">in</span> <span
+            class="bp">self</span><span class="o">.</span><span class="n">_position</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">check_pos_qty</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">sum</span><span class="p">((</span><span
+            class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span
+            class="n">iQTY</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span
+            class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span
+            class="n">_position</span><span class="p">[</span><span class="n">date</span><span class="p">]</span><span
+            class="o">.</span><span class="n">values</span><span class="p">()))</span> <span class="o">&gt;</span> <span
+            class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
 
 <div class="viewcode-block" id="Position.get_net_position"><a class="viewcode-back"
                                                               href="../../position-class.html#tmqrfeed.position.Position.get_net_position">[docs]</a>    <span
@@ -1018,17 +1037,15 @@
                         <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
             class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">price</span><span
             class="p">(</span><span class="n">date</span><span class="p">)</span>
-                    <span class="k">except</span> <span class="n">AssetExpiredError</span> <span
+                    <span class="k">except</span> <span class="p">(</span><span class="n">AssetExpiredError</span><span
+            class="p">,</span> <span class="n">QuoteNotFoundError</span><span class="p">)</span> <span
             class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                        <span class="n">decision_price</span><span class="p">,</span> <span class="n">exec_price</span> <span
-            class="o">=</span> <span class="n">prev_values</span><span class="p">[</span><span
-            class="n">iDPX</span><span class="p">],</span> <span class="n">prev_values</span><span
-            class="p">[</span><span class="n">iEPX</span><span class="p">]</span>
                         <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span
-            class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{exc}</span><span
-            class="s2">. Possible data hole detected, asset is not closed before expiration.&quot;</span>
-                                 <span class="n">f</span><span class="s2">&quot; Or you are skipping zero exposures in strategy/index&quot;</span><span
-            class="p">)</span>
+            class="p">(</span><span class="n">f</span><span class="s2">&quot;Possible data hole detected, asset is not closed before expiration.&quot;</span>
+                                 <span class="n">f</span><span class="s2">&quot; Or you are skipping zero exposures in strategy/index. Error: </span><span
+            class="si">{exc}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="c1"># Warn but do not add already expired asset to the position (prevent future errors)</span>
+                        <span class="k">continue</span>
 
                     <span class="n">costs_value</span> <span class="o">=</span> <span class="bp">self</span><span
             class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">costs_get</span><span
@@ -1228,6 +1245,11 @@
             class="n">cumsum</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">df_result</span></div>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span
+            class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span
+            class="fm">__repr__</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span
             class="p">):</span>

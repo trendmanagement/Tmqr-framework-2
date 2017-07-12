@@ -725,22 +725,75 @@ class StrategyBaseTestCase(unittest.TestCase):
         strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(), name='unittest_strat')
 
         with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
-            strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+            with patch('tmqrstrategy.strategy_base.Position.has_position') as mock_position_has_position:
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+                mock_position_has_position.return_value = True
 
-            self.assertEqual(1, mock_calculate_position.call_count)
+                self.assertEqual(1, mock_calculate_position.call_count)
 
-            self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
-            self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][1]))
+                self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
+                self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][1]))
 
-            pos_df = mock_calculate_position.call_args[0][1]
+                pos_df = mock_calculate_position.call_args[0][1]
 
-            self.assertEqual(2, len(pos_df))
-            self.assertEqual(3, pos_df['exposure'].sum())
-            self.assertEqual(2, pos_df['some_value'].sum())
+                self.assertEqual(2, len(pos_df))
+                self.assertEqual(3, pos_df['exposure'].sum())
+                self.assertEqual(2, pos_df['some_value'].sum())
 
-            self.assertEqual(1, len(strategy.exposure_series))
-            self.assertEqual(3, strategy.exposure_series['exposure'][datetime(2011, 1, 6)])
-            self.assertEqual(2, strategy.exposure_series['some_value'][datetime(2011, 1, 6)])
+                self.assertEqual(1, len(strategy.exposure_series))
+                self.assertEqual(3, strategy.exposure_series['exposure'][datetime(2011, 1, 6)])
+                self.assertEqual(2, strategy.exposure_series['some_value'][datetime(2011, 1, 6)])
+
+    def test_process_position_exception_handling(self):
+        dm = MagicMock(DataManager)()
+        wfo_params = {
+            'window_type': 'rolling',  # Rolling window for IIS values: rolling or expanding
+            'period': 'M',  # Period of rolling window 'M' - monthly or 'W' - weekly
+            'oos_periods': 2,  # Number of months is OOS period
+            'iis_periods': 2,  # Number of months in IIS rolling window (only applicable for 'window_type' == 'rolling')
+        }
+
+        date_idx = pd.date_range(datetime(2011, 1, 1), datetime(2011, 1, 6))
+
+        exp_df = pd.DataFrame({'exposure': np.ones(len(date_idx)), 'some_value': np.ones(len(date_idx))},
+                              index=date_idx)
+
+        exp_df2 = pd.DataFrame({'exposure': np.ones(len(date_idx)) * 2, 'some_value': np.ones(len(date_idx))},
+                               index=date_idx)
+
+        exp_df_list_valid = [exp_df, exp_df2]
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
+            with patch('tmqrstrategy.strategy_base.log.error') as mock_log_error:
+                strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                        name='unittest_strat')
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+                self.assertEqual(False, mock_log_error.called)
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
+            with patch('tmqrstrategy.strategy_base.log.error') as mock_log_error:
+                def side_exception(*args, **kwargs):
+                    raise QuoteNotFoundError()
+
+                strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                        name='unittest_strat')
+
+                mock_calculate_position.side_effect = side_exception
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+                self.assertEqual(True, mock_log_error.called)
+
+        with patch('tmqrstrategy.strategy_base.StrategyBase.calculate_position') as mock_calculate_position:
+            with patch('tmqrstrategy.strategy_base.log.error') as mock_log_error:
+                def side_exception(*args, **kwargs):
+                    raise ChainNotFoundError()
+
+                strategy = StrategyBase(dm, wfo_params=wfo_params, wfo_optimizer_class=MagicMock(),
+                                        name='unittest_strat')
+
+                mock_calculate_position.side_effect = side_exception
+                strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
+                self.assertEqual(True, mock_log_error.called)
+
 
     def test_process_position_valid_existing_position(self):
         dm = MagicMock(DataManager)()

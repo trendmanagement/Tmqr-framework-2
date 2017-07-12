@@ -117,7 +117,7 @@ if (!jQuery.browser) {
 }
 
 /**
- * Small JavaScript module for the documentation2.
+ * Small JavaScript module for the documentation.
  */
 var Documentation = {
 

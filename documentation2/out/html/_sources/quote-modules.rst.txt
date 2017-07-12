@@ -8,7 +8,7 @@ This page automatically generated from source code.
 :ref:`index-page`
 
 .. toctree::
-    :maxdepth: 3
+:maxdepth: 3
 
 Quote* modules usage
 ++++++++++++++++++++

@@ -52,6 +52,16 @@
                     </p>
                     <div class="toctree-wrapper compound">
                     </div>
+                    <table class="docutils field-list" frame="void" rules="none">
+                        <col class="field-name"/>
+                        <col class="field-body"/>
+                        <tbody valign="top">
+                        <tr class="field-odd field">
+                            <th class="field-name">maxdepth:</th>
+                            <td class="field-body">2</td>
+                        </tr>
+                        </tbody>
+                    </table>
                     <div class="section" id="introduction">
                         <h2>Introduction<a class="headerlink" href="#introduction"
                                            title="Permalink to this headline">¶</a></h2>
@@ -177,20 +187,31 @@
                                 <ul class="last simple">
                                     <li>You must always define <code class="docutils literal"><span class="pre">datamanager.series_primary_set(...)</span></code>
                                     </li>
-                                    <li>You must always call <code class="docutils literal"><span class="pre">datamanager.session_set()</span></code>
-                                        before quotes initiation
-                                    </li>
-                                    <li>Extra (a.k.a. secondary) series already aligned to the primary series by date
-                                    </li>
-                                    <li>You must define <code class="docutils literal"><span class="pre">decision_time_shift</span></code>
-                                        argument when you are working on index, and mustn&#8217;t in case of alpha
-                                        development
-                                    </li>
-                                    <li>Typically you can access DataManager class for index or alpha by calling
-                                        self.dm.&lt;some_method(..)&gt;
-                                    </li>
                                 </ul>
                             </div>
+                            <ul class="simple">
+                                <li>
+                                    <dl class="first docutils">
+                                        <dt>You must always call <code class="docutils literal"><span class="pre">datamanager.session_set()</span></code>
+                                            before quotes initiation
+                                        </dt>
+                                        <dd>
+                                            <ul class="first last">
+                                                <li>Extra (a.k.a. secondary) series already aligned to the primary
+                                                    series by date
+                                                </li>
+                                                <li>You must define <code class="docutils literal"><span class="pre">decision_time_shift</span></code>
+                                                    argument when you are working on index, and mustn&#8217;t in case of
+                                                    alpha development
+                                                </li>
+                                                <li>Typically you can access DataManager class for index or alpha by
+                                                    calling self.dm.&lt;some_method(..)&gt;
+                                                </li>
+                                            </ul>
+                                        </dd>
+                                    </dl>
+                                </li>
+                            </ul>
                         </div>
                         <div class="section" id="getting-quotes-series">
                             <h3>Getting quotes series<a class="headerlink" href="#getting-quotes-series"
@@ -416,9 +437,11 @@
                                 <p class="first admonition-title">Note</p>
                                 <ul class="last simple">
                                     <li>Costs are set on per-market basis</li>
-                                    <li>Setting costs it required any time when you are developing index or alpha</li>
                                 </ul>
                             </div>
+                            <ul class="simple">
+                                <li>Setting costs it required any time when you are developing index or alpha</li>
+                            </ul>
                         </div>
                         <div class="section" id="chains-getting">
                             <h3>Chains getting<a class="headerlink" href="#chains-getting"
@@ -511,15 +534,6 @@
                                                                         class="xref py py-class docutils literal"><span
                                                                         class="pre">tmqrfeed.contracts.FutureContract</span></code></a>
                                                             </li>
-                                                            <li>Refer to documentation of &#8216;opt_chain&#8217; part
-                                                                of return value <a class="reference internal"
-                                                                                   href="chains-module.html#tmqrfeed.chains.OptionChain"
-                                                                                   title="tmqrfeed.chains.OptionChain"><code
-                                                                        class="xref py py-class docutils literal"><span
-                                                                        class="pre">tmqrfeed.chains.OptionChain</span></code></a>
-                                                                (<strong>pay more attention</strong> to
-                                                                <strong>find</strong> method!)
-                                                            </li>
                                                         </ul>
                                                     </div>
                                                 </div>
@@ -528,6 +542,14 @@
                                     </ol>
                                 </dd>
                             </dl>
+                            <ul class="simple">
+                                <li>Refer to documentation of &#8216;opt_chain&#8217; part of return value <a
+                                        class="reference internal" href="chains-module.html#tmqrfeed.chains.OptionChain"
+                                        title="tmqrfeed.chains.OptionChain"><code
+                                        class="xref py py-class docutils literal"><span class="pre">tmqrfeed.chains.OptionChain</span></code></a>
+                                    (<strong>pay more attention</strong> to <strong>find</strong> method!)
+                                </li>
+                            </ul>
                         </div>
                     </div>
                     <div class="section" id="position">

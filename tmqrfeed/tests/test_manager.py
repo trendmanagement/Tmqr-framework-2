@@ -10,6 +10,7 @@ from tmqrfeed.position import Position
 from tmqrfeed.costs import Costs
 import pytz
 from tmqrfeed.assetsession import AssetSession
+from tmqrfeed.instrumentinfo import InstrumentInfo
 
 
 class DataManagerTestCase(unittest.TestCase):
@@ -932,3 +933,11 @@ class DataManagerTestCase(unittest.TestCase):
                        tz='US/Pacific'
                        )
         self.assertRaises(SettingsError, dm.session_set, instrument='ES')
+
+    def test_instrument_info_get(self):
+        with patch('tmqrfeed.datafeed.DataFeed.get_instrument_info') as mock_dfeed_get_instrument_info:
+            dm = DataManager()
+            dm.instrument_info_get('US.ES')
+
+            self.assertEqual(True, mock_dfeed_get_instrument_info.called)
+            self.assertEqual('US.ES', mock_dfeed_get_instrument_info.call_args[0][0])

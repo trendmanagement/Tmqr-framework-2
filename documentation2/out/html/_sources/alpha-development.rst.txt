@@ -7,7 +7,7 @@ Alpha development description
 :ref:`index-page`
 
 .. toctree::
-    :maxdepth: 2
+:maxdepth: 2
 
 Alpha development guidelines
 ++++++++++++++++++++++++++++

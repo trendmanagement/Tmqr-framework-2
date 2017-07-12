@@ -7,7 +7,7 @@ Framework introduction (start here)
 :ref:`index-page`
 
 .. toctree::
-    :maxdepth: 2
+:maxdepth: 2
 
 Introduction
 ++++++++++++
@@ -72,7 +72,7 @@ to define key-name for secondary quotes series that will be used for quotes acce
 
 
 .. note:: * You must always define ``datamanager.series_primary_set(...)``
-          * You must always call ``datamanager.session_set()`` before quotes initiation
+* You must always call ``datamanager.session_set()`` before quotes initiation
           * Extra (a.k.a. secondary) series already aligned to the primary series by date
           * You must define ``decision_time_shift`` argument when you are working on index, and mustn't in case of alpha development
           * Typically you can access DataManager class for index or alpha by calling self.dm.<some_method(..)>
@@ -197,7 +197,7 @@ Example::
     self.dm.costs_set('US', Costs())
 
 .. note:: * Costs are set on per-market basis
-          * Setting costs it required any time when you are developing index or alpha
+* Setting costs it required any time when you are developing index or alpha
 
 
 Chains getting
@@ -226,7 +226,7 @@ You can fetch 2 types of chains from DataManager:
             fut_next, opt_chain_next = self.dm.chains_options_get('US.ES', dt, opt_offset=2)
 
         .. note:: * Refer to documentation of 'fut' part of return value :class:`tmqrfeed.contracts.FutureContract`
-                  * Refer to documentation of 'opt_chain' part of return value :class:`tmqrfeed.chains.OptionChain` (**pay more attention** to **find** method!)
+* Refer to documentation of 'opt_chain' part of return value :class:`tmqrfeed.chains.OptionChain` (**pay more attention** to **find** method!)
 
 
 Position

@@ -7,7 +7,7 @@ EXO Index development cookbook
 :ref:`index-page`
 
 .. toctree::
-    :maxdepth: 2
+:maxdepth: 2
 
 Introduction
 ++++++++++++
@@ -144,10 +144,10 @@ Here is an example how you can calculate spread index with SmartEXO like regime:
         })
 
 .. figure:: img/index_exo_calc_usd_spread.jpg
-   :scale: 100 %
+:scale: 100 %
    :alt:
 
-   Result of calculation of the code above
+       Result of calculation of the code above
 
 
 Constructing EXO position
@@ -252,7 +252,7 @@ To handle position management you should implement ``manage_position()`` method:
 
 
 .. note:: Arguments meaning is exactly the same as for ``construct_position()``, so you can use same techniques to manage
-          position or to get ``logic_df`` values.
+position or to get ``logic_df`` values.
 
 You can manage position in different ways, the most common ways are:
     * Check if some assets in the position are about to be expired
@@ -316,7 +316,7 @@ Here is a sample code::
             return
 
 .. note:: For this particular sample EXO it's normal to close full position, for more sophisticated EXO indexes it could
-          be possible to implement partial position management, for example open/close only hedge option leg.
+be possible to implement partial position management, for example open/close only hedge option leg.
 
           **IMPORTANT** The position management in the framework is pretty smart, it calculates only transactions as a
           difference of the position between previous date. For example if you had a opened ES future at previous date,
@@ -354,10 +354,10 @@ Every index must have ``data`` and ``position`` attributes.
 ``index.data = index.position.get_pnl_series()``
 
 .. figure:: img/index_exo_data_columns.jpg
-   :scale: 100 %
+:scale: 100 %
    :alt:
 
-   index.data DataFrame example and column names
+       index.data DataFrame example and column names
 
 
 ``position`` - represents build and manager position of the EXO it also can be used in alphas, alpha code can replicate

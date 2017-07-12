@@ -7,7 +7,7 @@ Index development description
 :ref:`index-page`
 
 .. toctree::
-    :maxdepth: 2
+:maxdepth: 2
 
 Index algorithms taxonomy
 +++++++++++++++++++++++++
@@ -54,7 +54,7 @@ EXO/SmartEXO indexes are derived from IndexBase class and providing other API fo
 There are 4 main methods:
 
 .. autoclass:: tmqrindex.index_exo_base.IndexEXOBase
-    :members: calc_exo_logic, manage_position, construct_position
+:members: calc_exo_logic, manage_position, construct_position
 
 Index deployment
 ++++++++++++++++
@@ -84,7 +84,7 @@ Example code how to run Index::
     index.save()
 
 .. note::
-    There is no special script implemented for Index online use, the code above is a good starting point
+There is no special script implemented for Index online use, the code above is a good starting point
 
 Index design features
 +++++++++++++++++++++

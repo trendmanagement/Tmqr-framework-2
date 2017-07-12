@@ -235,9 +235,11 @@ class PositionTestCase(unittest.TestCase):
                 self.assertEqual(v, p._position[dt][asset][i])
 
             new_position = {asset: (1.0, 2.0, 0.0)}
-
             p.set_net_position(dt, new_position)
             self.assertFalse(p.has_position(dt))
+
+            p.set_net_position(dt, {})
+            self.assertTrue(p.has_position(dt, check_pos_qty=False))
 
 
     def test_set_net_position_existing(self):
@@ -278,6 +280,27 @@ class PositionTestCase(unittest.TestCase):
         p.set_net_position(dt, new_position)
 
         dm.price_get.return_value = (5.0, 6.0)
+
+        dt2 = datetime(2011, 1, 2)
+        p.keep_previous_position(dt2)
+
+        self.assertEqual(2, len(p._position))
+        self.assertEqual(0, len(p._position[dt2]))
+
+    def test_keep_previous_position_skip_already_expired_asset_exception(self):
+        dm = MagicMock(DataManager())
+
+        def price_get_side(*args, **kwargs):
+            raise AssetExpiredError()
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+
+        new_position = {asset: (1.0, 2.0, 1.0)}
+        p.set_net_position(dt, new_position)
+
+        asset.price.side_effect = price_get_side
 
         dt2 = datetime(2011, 1, 2)
         p.keep_previous_position(dt2)
@@ -994,10 +1017,33 @@ class PositionTestCase(unittest.TestCase):
             p.add_transaction(dt, fut, 1)
 
             repr_text = p.__repr__()
-
             for txt in ['Asset', 'DecisionPx', 'ExecPx', 'Qty', 'US.C.F-ZB-H11-110322.110121@89.0',
                         'US.F.CL.M83.110121']:
                 self.assertTrue(txt in repr_text)
+
+    def test_str(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+
+        with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            mock_instrument_info.rollover_days_before_options = 0
+            mock_instrument_info.rollover_days_before = 0
+
+            stk = ContractBase("US.S.AAPL", dm)
+            opt = OptionContract('US.C.F-ZB-H11-110322.110121@89.0', datamanager=dm)
+            fut = FutureContract('US.F.CL.M83.110121', dm)
+
+            p.add_transaction(dt, opt, 1)
+            p.add_transaction(dt, fut, 1)
+
+            repr_text = p.__repr__()
+
+            self.assertEqual(repr_text, str(p))
+
+
 
     def test_eq(self):
         dm = MagicMock(DataManager())

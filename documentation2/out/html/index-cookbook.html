@@ -51,6 +51,16 @@
                     </p>
                     <div class="toctree-wrapper compound">
                     </div>
+                    <table class="docutils field-list" frame="void" rules="none">
+                        <col class="field-name"/>
+                        <col class="field-body"/>
+                        <tbody valign="top">
+                        <tr class="field-odd field">
+                            <th class="field-name">maxdepth:</th>
+                            <td class="field-body">2</td>
+                        </tr>
+                        </tbody>
+                    </table>
                     <div class="section" id="introduction">
                         <h2>Introduction<a class="headerlink" href="#introduction"
                                            title="Permalink to this headline">¶</a></h2>
@@ -304,14 +314,26 @@
 </pre>
                             </div>
                         </div>
-                        <div class="figure" id="id1">
-                            <a class="reference internal image-reference"
-                               href="_images/index_exo_calc_usd_spread.jpg"><img alt=""
-                                                                                 src="_images/index_exo_calc_usd_spread.jpg"
-                                                                                 style="width: 770.0px; height: 248.0px;"/></a>
-                            <p class="caption"><span class="caption-text">Result of calculation of the code above</span>
-                            </p>
+                        <div class="figure">
+                            <img alt="_images/index_exo_calc_usd_spread.jpg"
+                                 src="_images/index_exo_calc_usd_spread.jpg"/>
                         </div>
+                        <table class="docutils field-list" frame="void" rules="none">
+                            <col class="field-name"/>
+                            <col class="field-body"/>
+                            <tbody valign="top">
+                            <tr class="field-odd field">
+                                <th class="field-name">scale:</th>
+                                <td class="field-body"><p class="first">100 %
+                                    :alt:</p>
+                                    <blockquote class="last">
+                                        <div><p>Result of calculation of the code above</p>
+                                        </div>
+                                    </blockquote>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                     </div>
                     <div class="section" id="constructing-exo-position">
                         <h2>Constructing EXO position<a class="headerlink" href="#constructing-exo-position"
@@ -471,10 +493,10 @@
                             <p class="first admonition-title">Note</p>
                             <p class="last">Arguments meaning is exactly the same as for <code class="docutils literal"><span
                                     class="pre">construct_position()</span></code>, so you can use same techniques to
-                                manage
-                                position or to get <code class="docutils literal"><span
-                                        class="pre">logic_df</span></code> values.</p>
+                                manage</p>
                         </div>
+                        <p>position or to get <code class="docutils literal"><span class="pre">logic_df</span></code>
+                            values.</p>
                         <dl class="docutils">
                             <dt>You can manage position in different ways, the most common ways are:</dt>
                             <dd>
@@ -576,19 +598,22 @@
                         </div>
                         <div class="admonition note">
                             <p class="first admonition-title">Note</p>
-                            <p>For this particular sample EXO it&#8217;s normal to close full position, for more
-                                sophisticated EXO indexes it could
-                                be possible to implement partial position management, for example open/close only hedge
-                                option leg.</p>
-                            <p class="last"><strong>IMPORTANT</strong> The position management in the framework is
-                                pretty smart, it calculates only transactions as a
+                            <p class="last">For this particular sample EXO it&#8217;s normal to close full position, for
+                                more sophisticated EXO indexes it could</p>
+                        </div>
+                        <p>be possible to implement partial position management, for example open/close only hedge
+                            option leg.</p>
+                        <blockquote>
+                            <div><strong>IMPORTANT</strong> The position management in the framework is pretty smart, it
+                                calculates only transactions as a
                                 difference of the position between previous date. For example if you had a opened ES
                                 future at previous date,
                                 then due some reason you have decided to close the position at current date, and then
                                 opened same ES future,
                                 you <strong>will have not</strong> to pay any costs, because the position remained the
-                                same compared to previous date.</p>
-                        </div>
+                                same compared to previous date.
+                            </div>
+                        </blockquote>
                     </div>
                     <div class="section" id="building-index">
                         <h2>Building index<a class="headerlink" href="#building-index"
@@ -631,13 +656,25 @@
                             <code class="docutils literal"><span class="pre">index.data</span> <span
                                     class="pre">=</span> <span class="pre">index.position.get_pnl_series()</span></code>
                         </p>
-                        <div class="figure" id="id2">
-                            <a class="reference internal image-reference" href="_images/index_exo_data_columns.jpg"><img
-                                    alt="" src="_images/index_exo_data_columns.jpg"
-                                    style="width: 1065.0px; height: 249.0px;"/></a>
-                            <p class="caption"><span
-                                    class="caption-text">index.data DataFrame example and column names</span></p>
+                        <div class="figure">
+                            <img alt="_images/index_exo_data_columns.jpg" src="_images/index_exo_data_columns.jpg"/>
                         </div>
+                        <table class="docutils field-list" frame="void" rules="none">
+                            <col class="field-name"/>
+                            <col class="field-body"/>
+                            <tbody valign="top">
+                            <tr class="field-odd field">
+                                <th class="field-name">scale:</th>
+                                <td class="field-body"><p class="first">100 %
+                                    :alt:</p>
+                                    <blockquote class="last">
+                                        <div><p>index.data DataFrame example and column names</p>
+                                        </div>
+                                    </blockquote>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
                         <p><code class="docutils literal"><span class="pre">position</span></code> - represents build
                             and manager position of the EXO it also can be used in alphas, alpha code can replicate
                             EXO index position, refer to the <code class="docutils literal"><span

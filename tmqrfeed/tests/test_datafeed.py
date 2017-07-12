@@ -199,6 +199,55 @@ class DataFeedTestCase(unittest.TestCase):
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_series, 'US.F.CL.Q83.830720', SRC_INTRADAY)
 
+    def test_get_raw_series_eod(self):
+        info_dic = {
+            'futures_months': [3, 6, 9, 12],
+            'instrument': 'US.ES',
+            'market': 'US',
+            'rollover_days_before': 2,
+            'ticksize': 0.25,
+            'tickvalue': 12.5,
+            'timezone': 'US/Pacific',
+            'trading_session': [{
+                'decision': '10:40',
+                'dt': datetime(1900, 1, 1),
+                'execution': '10:45',
+                'start': '00:30'},
+
+                {
+                    'decision': '11:40',
+                    'dt': datetime(2009, 12, 31),
+                    'execution': '11:45',
+                    'start': '01:30'},
+
+                {
+                    'decision': '12:40',
+                    'dt': datetime(2011, 1, 1),
+                    'execution': '12:45',
+                    'start': '02:30'},
+            ]
+        }
+        tz = pytz.timezone(info_dic['timezone'])
+        sess = AssetSession(info_dic['trading_session'], tz)
+
+        with mock.patch('tmqrfeed.dataengines.DataEngineMongo.db_get_raw_series') as mock_db_get_raw_series:
+            base_date = datetime(2008, 10, 10)
+            data = [
+                {'dt': datetime.combine(base_date, time(0, 29)), 'v': 0},
+                {'dt': datetime.combine(base_date, time(0, 30)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(0, 31)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 39)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 40)), 'v': 1},
+                {'dt': datetime.combine(base_date, time(10, 41)), 'v': 0},
+            ]
+            source_df = pd.DataFrame(data).set_index('dt').tz_localize('US/Pacific').tz_convert("UTC")
+            mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
+            dfeed = DataFeed()
+            self.assertEqual(0, len(dfeed._cache_price_data))
+            result = dfeed.get_raw_series('US.F.CL.Q83.830720', QTYPE_OPTIONS_EOD)
+            self.assertEqual(pd.DataFrame, type(result))
+            self.assertEqual(True, np.all(source_df == result))
+
     def test_get_raw_price_intraday(self):
         info_dic = {
             'futures_months': [3, 6, 9, 12],
