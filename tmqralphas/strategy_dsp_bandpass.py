@@ -4,7 +4,11 @@ from scipy import signal
 
 class Strategy_DSP_BandPass(StrategyAlpha):
     def calc_entryexit_rules(self, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index):
-        px_ser = self.dm.quotes()['c']
+        try:
+            px_ser = self.dm.quotes()['c']
+        except:
+            # In case of index based quotes
+            px_ser = self.dm.quotes()['equity_decision']
 
         b, a = signal.butter(filt_order, [filt_start_f, filt_stop_f], btype='bandpass')
 

@@ -5,7 +5,11 @@ from scipy import signal
 
 class Strategy_DSP_LPBP_Combination(StrategyAlpha):
     def calc_entryexit_rules(self, lp_order, lp_freq, bp_order, bp_startfreq, bp_stopfreq, bp_multiplier, rule_index):
-        px_ser = self.dm.quotes()['c']
+        try:
+            px_ser = self.dm.quotes()['c']
+        except:
+            # In case of index based quotes
+            px_ser = self.dm.quotes()['equity_decision']
 
         b, a = signal.butter(lp_order, lp_freq, btype='lowpass')
 
