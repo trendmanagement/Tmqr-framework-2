@@ -6,7 +6,7 @@ class Strategy_DSP_BandPass(StrategyAlpha):
     def calc_entryexit_rules(self, filt_order, filt_start_f, filt_stop_f, filt_sigma, rule_index):
         try:
             px_ser = self.dm.quotes()['c']
-        except:
+        except KeyError:
             # In case of index based quotes
             px_ser = self.dm.quotes()['equity_decision']
 

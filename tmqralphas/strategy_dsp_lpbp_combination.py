@@ -7,7 +7,7 @@ class Strategy_DSP_LPBP_Combination(StrategyAlpha):
     def calc_entryexit_rules(self, lp_order, lp_freq, bp_order, bp_startfreq, bp_stopfreq, bp_multiplier, rule_index):
         try:
             px_ser = self.dm.quotes()['c']
-        except:
+        except KeyError:
             # In case of index based quotes
             px_ser = self.dm.quotes()['equity_decision']
 

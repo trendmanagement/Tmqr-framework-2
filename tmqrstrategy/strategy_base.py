@@ -213,7 +213,11 @@ class StrategyBase:
         :return: pandas DataFrame with 'exposure' column
         """
         # Use fast Cythonized method to calculate exposure
-        price_series = self.dm.quotes()['c']
+        try:
+            price_series = self.dm.quotes()['c']
+        except KeyError:
+            # In case of index based quotes
+            price_series = self.dm.quotes()['equity_decision']
 
         if len(price_series) != len(entry_rule) or not np.all(price_series.index == entry_rule.index):
             raise StrategyError("Entry rule index doesn't match primary price series index")
@@ -271,13 +275,19 @@ class StrategyBase:
         :param exposure_df: 'calculate' method exposure Pandas.DataFrame
         :return: float number
         """
+        try:
+            price_series = self.dm.quotes()['c']
+        except KeyError:
+            # In case of index based quotes
+            price_series = self.dm.quotes()['equity_decision']
+
         if self.wfo_scoring_type == 'netprofit':
-            return score_netprofit(self.dm.quotes()['c'].values,
+            return score_netprofit(price_series.values,
                                    exposure_df['exposure'].values,
                                    costs=self.wfo_costs_per_contract
                                    )
         elif self.wfo_scoring_type == 'modsharpe':
-            return score_modsharpe(self.dm.quotes()['c'].values,
+            return score_modsharpe(price_series.values,
                                    exposure_df['exposure'].values,
                                    costs=self.wfo_costs_per_contract
                                    )
