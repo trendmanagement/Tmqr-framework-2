@@ -16,15 +16,16 @@ class IndexEXOBase(IndexBase):
     def __init__(self, datamanager, **kwargs):
         super().__init__(datamanager, **kwargs)
 
-        if self.instrument == INSTRUMENT_NA:
-            raise ArgumentError("You must define 'instrument' in **kwargs")
-
         self.costs_futures = self.context.get('costs_futures', 0.0)
         self.costs_options = self.context.get('costs_options', 0.0)
 
     def setup(self):
         # Load instrument session from the DB
         # And store session settings
+
+        if self.instrument == INSTRUMENT_NA:
+            raise ArgumentError("You must define 'instrument' in **kwargs")
+
         if self.session is None:
             self.session = self.dm.session_set(self.instrument)
         else:

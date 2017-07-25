@@ -11,6 +11,7 @@ import io
 import lz4
 from typing import Dict, Tuple, List
 from tmqr.serialization import object_save_compress, object_load_decompress
+import math
 
 # Position tuple constants
 iDPX = 0  # Decision price
@@ -368,8 +369,8 @@ class Position:
         :param qty: transaction qty
         :return: nothing, changes position in place
         """
-        if qty == 0:
-            raise ArgumentError("Transaction Qty must be non zero")
+        if qty == 0 or math.isnan(qty):
+            raise ArgumentError("Transaction Qty must be non zero or not-NaN")
 
         if self._position and date < self._prev_day_key(date=None):
             # check if 'date' >= last date of the position
@@ -674,18 +675,20 @@ class Position:
 
         :return:
         """
-        pos = self._position[self.last_date]
+        try:
+            pos = self._position[self.last_date]
+            with io.StringIO() as txt_buf:
+                txt_buf.write(f'Position last date: {self.last_date}\n')
+                txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
 
-        with io.StringIO() as txt_buf:
-            txt_buf.write(f'Position last date: {self.last_date}\n')
-            txt_buf.write("{0:<40}{1:>10}{2:>10}{3:>10}\n".format('Asset', 'DecisionPx', 'ExecPx', 'Qty'))
+                for asset, pos_rec in pos.items():
+                    txt_buf.write(
+                        "{0:<40}{1:>10.3f}{2:>10.3f}{3:>10}\n".format(str(asset), pos_rec[iDPX], pos_rec[iEPX],
+                                                                      pos_rec[iQTY]))
 
-            for asset, pos_rec in pos.items():
-                txt_buf.write(
-                    "{0:<40}{1:>10.3f}{2:>10.3f}{3:>10}\n".format(str(asset), pos_rec[iDPX], pos_rec[iEPX],
-                                                                  pos_rec[iQTY]))
-
-            return txt_buf.getvalue()
+                return txt_buf.getvalue()
+        except PositionNotFoundError:
+            return '<Empty position>'
 
     def __eq__(self, other):
         """Override the default Equals behavior"""
