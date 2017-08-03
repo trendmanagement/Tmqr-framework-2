@@ -222,6 +222,62 @@ def score_netprofit(np.ndarray[DTYPE_t_float, ndim=1] price_series,
 
 @cython.cdivision(True)
 @cython.boundscheck(False)
+def score_equity(np.ndarray[DTYPE_t_float, ndim=1] price_series,
+                 np.ndarray[DTYPE_t_float, ndim=1] exposure,
+                 costs=None):
+    """
+    Fast score equity calculation function
+    :param price_series: price series
+    :param exposure: exposure values
+    :param costs: costs per 1 contract of exposure (if None - no costs)
+    :return:
+    """
+    # Calculate trade-by-trade payoffs
+    cdef float profit = 0.0
+    cdef int entry_i = -1
+
+    cdef int barcount = price_series.shape[0]
+
+    cdef int i = 0
+    cdef int v = 0
+    cdef float _costs_value = 0.0
+    cdef float current_exp = 0.0
+    cdef float prev_exp = 0.0
+
+    cdef int has_costs = costs is not None
+
+    if len(exposure) != barcount:
+        raise ArgumentError("'exposure' length is not equal to 'price_series' length")
+
+    cdef np.ndarray[DTYPE_t_float, ndim=1] transaction_costs
+    cdef np.ndarray[DTYPE_t_float, ndim=1] equity = np.zeros(barcount, dtype=np.float)
+
+    if has_costs:
+        if isinstance(costs, (float, int, np.float, np.int)):
+            transaction_costs = np.ones(barcount, dtype=np.float) * float(costs)
+        else:
+            if len(costs) != barcount:
+                raise ArgumentError("'costs' length != price length")
+            transaction_costs = costs
+
+    for i in range(1, barcount):
+        # Calculate cumulative profit inside particular trade
+        current_exp = exposure[i]
+        prev_exp = exposure[i - 1]
+
+        profit += (price_series[i] - price_series[i - 1]) * prev_exp
+
+        # Apply transaction costs
+        if has_costs:
+            _costs_value = calc_costs(transaction_costs[i], 0, prev_exp, current_exp)
+            profit += _costs_value
+
+        equity[i] = profit
+
+    return equity
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
 def score_modsharpe(np.ndarray[DTYPE_t_float, ndim=1] price_series,
                     np.ndarray[DTYPE_t_float, ndim=1] exposure,
                     costs=None):

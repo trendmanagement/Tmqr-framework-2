@@ -1,7 +1,7 @@
 import time
 from datetime import datetime, date
 from datetime import time as dttime
-from typing import List, Callable
+from typing import List, Callable, Tuple
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ from tmqrfeed import DataManager
 from tmqrfeed.position import Position
 
 pyximport.install()
-from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe
+from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe, score_equity
 from tmqr.serialization import object_from_path, object_to_full_path, object_load_decompress, object_save_compress
 
 WFO_ACTION_SKIP = 0
@@ -293,6 +293,35 @@ class StrategyBase:
                                    )
         else:
             raise StrategyError(f"Unsupported 'wfo_scoring_type' = {self.wfo_scoring_type}")
+
+    def score_stats(self, exposure_df: pd.DataFrame) -> Tuple[dict, pd.Series]:
+        """
+        Calculates statistics for fast tier scoring (i.e. price based backtesting)
+        :param exposure_df: 'calculate' method exposure Pandas.DataFrame
+        :return: tuple of (dictionary of stats metrics, equity)
+        """
+        try:
+            price_series = self.dm.quotes()['c']
+        except KeyError:
+            # In case of index based quotes
+            price_series = self.dm.quotes()['equity_decision']
+
+        score_stats = {
+            'netprofit': score_netprofit(price_series.values,
+                                         exposure_df['exposure'].values,
+                                         costs=self.wfo_costs_per_contract
+                                         ),
+            'modsharpe': score_modsharpe(price_series.values,
+                                         exposure_df['exposure'].values,
+                                         costs=self.wfo_costs_per_contract
+                                         ),
+        }
+
+        return score_stats, pd.Series(score_equity(price_series.values,
+                                                   exposure_df['exposure'].values,
+                                                   costs=self.wfo_costs_per_contract),
+                                      index=price_series.index)
+
 
     def pick(self, calculate_args_list: list) -> list:
         """
