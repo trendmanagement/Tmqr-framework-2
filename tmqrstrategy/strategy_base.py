@@ -408,7 +408,7 @@ class StrategyBase:
         if not (len(equity_df) == len(self.exposure_series)):
             warnings.warn(
                 "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
-        if not np.all(equity_df.index == self.exposure_series.index):
+        elif not np.all(equity_df.index == self.exposure_series.index):
             warnings.warn(
                 "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
 
