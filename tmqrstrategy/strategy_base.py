@@ -541,9 +541,7 @@ class StrategyBase:
             # Check lengths equality
             if len(exp_df) != len(prev_exp_df):
                 raise ArgumentError("'exposure_df_list' DataFrames' lengths are not equal")
-
-            # Check datetime index equality
-            if not np.all(exp_df.index == prev_exp_df.index):
+            elif not np.all(exp_df.index == prev_exp_df.index):
                 raise ArgumentError("'exposure_df_list' DataFrames' indexes values are not equal")
 
             # Check column names equality
