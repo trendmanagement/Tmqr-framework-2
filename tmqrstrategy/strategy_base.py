@@ -15,6 +15,7 @@ from tmqr.logs import log
 from tmqr.settings import QDATE_MIN
 from tmqrfeed import DataManager
 from tmqrfeed.position import Position
+import warnings
 
 pyximport.install()
 from tmqrstrategy.fast_backtesting import score_netprofit, exposure, score_modsharpe, score_equity
@@ -404,10 +405,12 @@ class StrategyBase:
         #
         # Save exposure values
         #
-        assert len(equity_df) == len(
-            self.exposure_series), "Position equity index doesn't match to exposure_series index. Possible position calculation issues!"
-        assert np.all(
-            equity_df.index == self.exposure_series.index), "Position equity index doesn't match to exposure_series index. Possible position calculation issues!"
+        if not (len(equity_df) == len(self.exposure_series)):
+            warnings.warn(
+                "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
+        if not np.all(equity_df.index == self.exposure_series.index):
+            warnings.warn(
+                "Position equity index doesn't match to exposure_series index. Possible position calculation issues!")
 
         if 'exposure' not in self.exposure_series.columns:
             log.warn(

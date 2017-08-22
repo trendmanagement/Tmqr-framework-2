@@ -299,6 +299,13 @@ class DataManager:
         self._quotes_range_start = range_start
         self._quotes_range_end = range_end
 
+    def quotes_range_get(self):
+        """
+        Get quotes date range returned by DataManager.quotes() method
+        :return: nothing
+        """
+        return self._quotes_range_start, self._quotes_range_end
+
     def position(self, position_key: str = None) -> Position:
         """
         Get aligned primary or extra position instance
