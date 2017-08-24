@@ -100,6 +100,12 @@ class StrategyBase:
         self.stats = kwargs.get('stats', {})
         """Alpha strategy backtest stats"""
 
+        self.wfo_stats = {}
+        """Walk-forward optimization stats"""
+
+        self.wfo_store_stats = kwargs.get('wfo_store_stats', False)
+        """Store or not walk-forward optimization stats"""
+
     @property
     def strategy_name(self):
         """
@@ -307,19 +313,24 @@ class StrategyBase:
             # In case of index based quotes
             price_series = self.dm.quotes()['equity_decision']
 
+        df_exposure_ = exposure_df['exposure']
+
+        if len(df_exposure_) != len(price_series):
+            df_exposure_ = df_exposure_.reindex(price_series.index, fill_value=0.0)
+
         score_stats = {
             'netprofit': score_netprofit(price_series.values,
-                                         exposure_df['exposure'].values,
+                                         df_exposure_.values,
                                          costs=self.wfo_costs_per_contract
                                          ),
             'modsharpe': score_modsharpe(price_series.values,
-                                         exposure_df['exposure'].values,
+                                         df_exposure_.values,
                                          costs=self.wfo_costs_per_contract
                                          ),
         }
 
         return score_stats, pd.Series(score_equity(price_series.values,
-                                                   exposure_df['exposure'].values,
+                                                   df_exposure_.values,
                                                    costs=self.wfo_costs_per_contract),
                                       index=price_series.index)
 
@@ -331,7 +342,7 @@ class StrategyBase:
         :return: List of the best performing 'calculate' args (i.e. swarm members)
         """
         # TODO: make more sophisticated best members picks
-        return calculate_args_list[:self.wfo_members_count]
+        return calculate_args_list[-self.wfo_members_count:]
 
 
     #
@@ -467,13 +478,20 @@ class StrategyBase:
                 self.dm.quotes_range_set(wfo_period['iis_start'], wfo_period['iis_end'])
 
                 # Do optimization and picking
-                optimizer = self.wfo_optimizer_class(self, self.wfo_opt_params, **self.wfo_optimizer_class_kwargs)
+                optimizer = self.wfo_optimizer_class(self, self.wfo_opt_params, **self.wfo_optimizer_class_kwargs,
+                                                     store_stats=self.wfo_store_stats)
                 self.wfo_selected_alphas = optimizer.optimize()
 
                 # Set WFO last period
                 self.wfo_last_period = wfo_period
 
                 timings_opimize.append(time.time() - time_optimize_begin)
+
+                if self.wfo_store_stats:
+                    self.wfo_stats[wfo_period['iis_end'].date()] = {
+                        'wfo_period': wfo_period,
+                        'iis_stats': optimizer.stats,
+                    }
 
             log.debug(f"Processing OOS: {wfo_period['oos_start'].date()} - {wfo_period['oos_end'].date()}")
             time_process_position_begin = time.time()
@@ -483,9 +501,23 @@ class StrategyBase:
             # Run predefined alphas params
             oos_exposure_df_list = []
             tz = None
+            oos_stats = {}
+
             for alpha_params in self.wfo_selected_alphas:
                 alpha_exposure_df = self.calculate(*alpha_params)
                 oos_exposure_df_list.append(alpha_exposure_df)
+
+                if self.wfo_store_stats:
+                    score, equity = self.score_stats(alpha_exposure_df)
+                    oos_stats[tuple(alpha_params)] = {
+                        'score': score,
+                        'equity': equity,
+                        'is_picked': True,
+                        'params': tuple(alpha_params),
+                    }
+            if self.wfo_store_stats:
+                self.wfo_stats[wfo_period['iis_end'].date()]['oos_stats'] = oos_stats
+
 
             # Processing strategy position
             self.process_position(oos_exposure_df_list, wfo_period['oos_start'], wfo_period['oos_end'])

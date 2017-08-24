@@ -126,7 +126,8 @@ def exposure_trades(np.ndarray[DTYPE_t_float, ndim=1] price_series,
         prev_exp = exposure[i - 1]
 
         if _trade_start_i == -1 and current_exp != 0:
-            assert prev_exp == 0
+            if i > 1:
+                assert prev_exp == 0, f'Previous exposure expected to be zero at {i-1} got {prev_exp}'
             _trade_start_i = i
             profit = 0.0
 

@@ -20,6 +20,7 @@ class OptimizerBase:
         :param kwargs:
             * nbest_count - number of best swarm members to store (None - store all)
             * nbest_fitness_method - how to select best members (default: 'max')
+            * store_stats - store statistics for WFO analysis for debug purposes (default: False)
         """
         self.strategy = strategy
         self.opt_params = opt_params
@@ -29,6 +30,9 @@ class OptimizerBase:
 
         self.nbest_count = kwargs.get('nbest_count', None)
         self.nbest_fitness_method = kwargs.get('nbest_fitness_method', 'max')
+
+        self.store_stats = kwargs.get('store_stats', False)
+        self.stats = {}
 
     def _check_params_integrity(self):
         if self.opt_params is None:
@@ -124,7 +128,34 @@ class OptimizerBase:
                                      score, param, n_max=self.nbest_count,
                                      fitness_direction=1 if self.nbest_fitness_method == 'max' else -1)
 
-        return self.strategy.pick(scoreboard_params)
+        picked_alphas = self.strategy.pick(scoreboard_params)
+
+        if self.store_stats:
+            # Get last available population and process equity and stats
+            for individual in scoreboard_params:
+                strategy_exposure = self.strategy.calculate(*individual)
+                score, equity = self.strategy.score_stats(strategy_exposure)
+
+                self.stats[tuple(individual)] = {
+                    'score': score,
+                    'equity': equity,
+                    'is_picked': False,
+                    'params': tuple(individual),
+                }
+
+            # Process picked swarm members
+            for individual in picked_alphas:
+                strategy_exposure = self.strategy.calculate(*individual)
+                score, equity = self.strategy.score_stats(strategy_exposure)
+
+                self.stats[tuple(individual)] = {
+                    'score': score,
+                    'equity': equity,
+                    'is_picked': True,
+                    'params': tuple(individual),
+                }
+
+        return picked_alphas
 
 
 class OptimizerGenetic(OptimizerBase):
@@ -238,4 +269,32 @@ class OptimizerGenetic(OptimizerBase):
                                                      cxpb=self.cross_prob, mutpb=self.mut_prob,
                                                      ngen=self.number_generations, verbose=False,
                                                      stats=stats, halloffame=self.hof)
-        return list(self.hof)
+
+        picked_alphas = self.strategy.pick(list(self.hof))
+
+        if self.store_stats:
+            # Get last available population and process equity and stats
+            for individual in self.pop:
+                strategy_exposure = self.strategy.calculate(*individual)
+                score, equity = self.strategy.score_stats(strategy_exposure)
+
+                self.stats[tuple(individual)] = {
+                    'score': score,
+                    'equity': equity,
+                    'is_picked': False,
+                    'params': tuple(individual),
+                }
+
+            # Process picked swarm members
+            for individual in picked_alphas:
+                strategy_exposure = self.strategy.calculate(*individual)
+                score, equity = self.strategy.score_stats(strategy_exposure)
+
+                self.stats[tuple(individual)] = {
+                    'score': score,
+                    'equity': equity,
+                    'is_picked': True,
+                    'params': tuple(individual),
+                }
+
+        return picked_alphas
