@@ -28,7 +28,11 @@ except:
 
 from tmqrfeed.manager import DataManager
 
+MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
+MONGO_DB = 'tmqr2'
 
+local_client = MongoClient(MONGO_CONNSTR)
+local_db = local_client[MONGO_DB]
 
 def import_futures_from_v1(instrument, all_contracts = True):
 
@@ -37,14 +41,6 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
     remomote_client = MongoClient(RMT_MONGO_CONNSTR)
     remote_db = remomote_client[RMT_MONGO_DB]
-
-
-    MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
-    #MONGO_CONNSTR = 'mongodb://localhost'
-    MONGO_DB = 'tmqr2'
-
-    local_client = MongoClient(MONGO_CONNSTR)
-    local_db = local_client[MONGO_DB]
 
 
     dm = DataManager()
@@ -56,6 +52,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
     # Storing futures
     mongo_collection = remote_db['contracts_bars']
+
 
     quotes_collection = local_db['quotes_intraday']
     quotes_collection.create_index([('tckr', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)], unique=True)
@@ -86,4 +83,23 @@ def import_futures_from_v1(instrument, all_contracts = True):
                 quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
 
-import_futures_from_v1('US.SB', all_contracts = False)
+def run_all_futures():
+
+    asset_info_collection = local_db['asset_info']
+
+    for instrument in asset_info_collection.find({}):
+
+        if not 'DEFAULT' in instrument['instrument']:
+
+            import_futures_from_v1(instrument['instrument'], all_contracts = True)
+
+
+def run_current_futures():
+
+    asset_info_collection = local_db['asset_info']
+
+    for instrument in asset_info_collection.find({}):
+
+        if not 'DEFAULT' in instrument['instrument']:
+
+            import_futures_from_v1(instrument['instrument'], all_contracts=False)
