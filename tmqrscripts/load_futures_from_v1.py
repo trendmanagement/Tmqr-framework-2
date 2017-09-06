@@ -11,17 +11,17 @@ Where ‘ohlc’ is a compressed and pickled Pandas.DataFrame of minutes bars. T
 Probably it’s better to build online updater script for old DB[‘tmldb_test’][‘futurebarcol’] which will cache daily data and write it when new bar is arrived.
 '''
 
-import sys, argparse, logging
-from datetime import datetime, time, timedelta, timezone
-import pytz
-from decimal import Decimal
-import pymongo
-from pymongo import MongoClient
-from tqdm import tqdm, tnrange, tqdm_notebook
+from datetime import time, timedelta
+
 import pandas as pd
+import pymongo
+import pytz
+from pymongo import MongoClient
+from tqdm import tqdm
+
+from tmqr import serialization
 from tmqr.settings import *
-import pickle
-import lz4
+
 try:
     from tmqr.settings_local import *
 except:
@@ -107,7 +107,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
                 rec = {
                     'dt': dt,
                     'tckr': fut.ticker,
-                    'ohlc': lz4.block.compress(pickle.dumps(df_value))
+                    'ohlc': serialization.object_save_compress(df_value)  #lz4.block.compress(pickle.dumps(df_value))
                 }
                 quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
@@ -137,4 +137,4 @@ def run_current_futures():
             import_futures_from_v1(instrument['instrument'], all_contracts=False)
 
 
-import_futures_from_v1("US.CL", all_contracts=False)
+#import_futures_from_v1("US.CL", all_contracts=False)
