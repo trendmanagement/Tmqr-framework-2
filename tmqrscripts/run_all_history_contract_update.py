@@ -5,6 +5,6 @@ import sys
 sys.path.append('..')
 #sys.path.append('/tmqr_framework_2/')
 
-from tmqrscripts.load_futures_from_v1 import run_all_futures
+from load_futures_from_v1 import run_all_futures
 
 run_all_futures()

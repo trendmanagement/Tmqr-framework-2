@@ -26,7 +26,7 @@ except:
     pass
 
 from tmqrfeed.manager import DataManager
-from tmqr import serialization
+from tmqr.serialization import *
 
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
@@ -92,7 +92,7 @@ def import_futures_from_realtime():
 
             stored_data = quotes_collection.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
 
-            ohlc = serialization.object_load_decompress(stored_data['ohlc'])
+            ohlc = object_load_decompress(stored_data['ohlc'])
 
             #print(ohlc)
 
@@ -121,7 +121,7 @@ def import_futures_from_realtime():
                 rec = {
                     'dt': dt,
                     'tckr': future_id['tckr'],
-                    'ohlc': serialization.object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
+                    'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
                 }
                 quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
 

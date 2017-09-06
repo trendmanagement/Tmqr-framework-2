@@ -19,7 +19,7 @@ import pytz
 from pymongo import MongoClient
 from tqdm import tqdm
 
-from tmqr import serialization
+from tmqr.serialization import *
 from tmqr.settings import *
 
 try:
@@ -107,7 +107,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
                 rec = {
                     'dt': dt,
                     'tckr': fut.ticker,
-                    'ohlc': serialization.object_save_compress(df_value)  #lz4.block.compress(pickle.dumps(df_value))
+                    'ohlc': object_save_compress(df_value)  #lz4.block.compress(pickle.dumps(df_value))
                 }
                 quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
