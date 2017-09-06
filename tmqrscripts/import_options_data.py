@@ -26,8 +26,8 @@ local_db = local_client[MONGO_DB]
 RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
 RMT_MONGO_DB = 'tmldb_v2'
 
-remomote_client = MongoClient(RMT_MONGO_CONNSTR)
-remote_db = remomote_client[RMT_MONGO_DB]
+remote_client = MongoClient(RMT_MONGO_CONNSTR)
+remote_db = remote_client[RMT_MONGO_DB]
 
 
 def import_ticker(tckr, sqlid):

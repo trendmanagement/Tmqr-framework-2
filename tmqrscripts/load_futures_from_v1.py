@@ -22,11 +22,6 @@ from tqdm import tqdm
 from tmqr.serialization import *
 from tmqr.settings import *
 
-try:
-    from tmqr.settings_local import *
-except:
-    pass
-
 from tmqrfeed.manager import DataManager
 
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'

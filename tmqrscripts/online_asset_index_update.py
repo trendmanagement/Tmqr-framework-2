@@ -14,10 +14,6 @@ from pymongo import MongoClient
 
 from tmqr.settings import *
 
-try:
-    from tmqr.settings_local import *
-except:
-    pass
 
 # set up database connection
 local_client = MongoClient(MONGO_CONNSTR)
