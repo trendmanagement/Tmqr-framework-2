@@ -10,9 +10,11 @@ Futures data is a most important and most complex in terms of storage.  The data
 Where ‘ohlc’ is a compressed and pickled Pandas.DataFrame of minutes bars. The dataframe’s index is in datatime format of UTC timezone this is very important. You can add all bars of trading session, the trading session filtering is applied later by framework’s code. Also keep in mind  that all data should be clean, you have to apply data filtering before you add quotes to the dataframe.
 Probably it’s better to build online updater script for old DB[‘tmldb_test’][‘futurebarcol’] which will cache daily data and write it when new bar is arrived.
 '''
-import sys
+import sys, os
 sys.path.append('..')
 sys.path.append('../tmqr_framwork2/')
+sys.path.append('./tmqr_framwork2/')
+sys.path.append(os.path.join(os.path.dirname(__file__),'../../'))
 
 from datetime import time, timedelta
 
