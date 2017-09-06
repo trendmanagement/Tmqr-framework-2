@@ -12,7 +12,7 @@ Probably it’s better to build online updater script for old DB[‘tmldb_test�
 '''
 import sys
 sys.path.append('..')
-sys.path.append('/tmqr_framwork2/')
+sys.path.append('../tmqr_framwork2/')
 
 from datetime import time, timedelta
 
