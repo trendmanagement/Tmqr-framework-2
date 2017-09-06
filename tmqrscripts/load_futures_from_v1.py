@@ -12,7 +12,8 @@ Probably it’s better to build online updater script for old DB[‘tmldb_test�
 '''
 
 import sys, argparse, logging
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
+import pytz
 from decimal import Decimal
 import pymongo
 from pymongo import MongoClient
@@ -34,6 +35,16 @@ MONGO_DB = 'tmqr2'
 local_client = MongoClient(MONGO_CONNSTR)
 local_db = local_client[MONGO_DB]
 
+def time_to_utc(naive, timezone):
+    local = pytz.timezone(timezone)
+    local_dt = local.localize(naive, is_dst=None)
+    utc_dt = local_dt.astimezone(pytz.utc)
+    return utc_dt
+
+def utc_to_time(naive, timezone):
+    return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
+
+
 def import_futures_from_v1(instrument, all_contracts = True):
 
     RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
@@ -53,6 +64,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
     # Storing futures
     mongo_collection = remote_db['contracts_bars']
 
+    asset_index_collection = local_db['asset_index']
 
     quotes_collection = local_db['quotes_intraday']
     quotes_collection.create_index([('tckr', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)], unique=True)
@@ -60,9 +72,26 @@ def import_futures_from_v1(instrument, all_contracts = True):
     for fut_tuple in tqdm(futures):
         fut = fut_tuple[0]
 
-        if all_contracts or fut_tuple[2] >= datetime.now().date() - timedelta(days=5):
+        test_time = datetime.now().date() - timedelta(days=5)
 
-            data = list(mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
+        if all_contracts or fut_tuple[2] >= test_time:
+
+            if all_contracts:
+                data = list(mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
+            else:
+
+                if fut.contract_info.extra('eod_update_time') != None:
+                    data = list(
+                        mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
+                            'datetime': {'$gte': datetime.combine(
+                                time_to_utc(fut.contract_info.extra('eod_update_time'),fut.instrument_info.timezone.zone).date(), time(0, 0, 0))}}).sort(
+                            [('datetime', 1)]))
+                else:
+                    data = list(
+                        mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
+                                               'datetime': {'$gte': datetime.combine(test_time, time(0, 0, 0))}}).sort(
+                            [('datetime', 1)]))
+
             if len(data) == 0:
                 print("Empty contract series for {0} ... skipping".format(fut))
                 continue
@@ -82,6 +111,9 @@ def import_futures_from_v1(instrument, all_contracts = True):
                 }
                 quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
+            datetime(data[-1]['datetime']).date()
+
+            asset_index_collection.update_one({'tckr': fut.ticker}, {'$set':{'extra_data.eod_update_time':df.iloc[-1].name}})
 
 def run_all_futures():
 
@@ -103,3 +135,6 @@ def run_current_futures():
         if not 'DEFAULT' in instrument['instrument']:
 
             import_futures_from_v1(instrument['instrument'], all_contracts=False)
+
+
+import_futures_from_v1("US.CL", all_contracts=False)
