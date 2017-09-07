@@ -23,6 +23,10 @@ cmd_subfolder = os.path.realpath(
 if cmd_subfolder not in sys.path:
     sys.path.insert(0, cmd_subfolder)
 
+tmqr2_loc = '/home/tmqr_framework2/tmqr_framework2/'
+if cmd_subfolder not in sys.path:
+    sys.path.append(tmqr2_loc)
+
 from datetime import time, timedelta
 
 import pandas as pd
@@ -31,10 +35,11 @@ import pytz
 from pymongo import MongoClient
 from tqdm import tqdm
 
-from tmqr.serialization import *
-from tmqr.settings import *
+
 
 from tmqrfeed.manager import DataManager
+from tmqr.serialization import *
+from tmqr.settings import *
 
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
