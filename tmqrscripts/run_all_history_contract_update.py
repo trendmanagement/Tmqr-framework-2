@@ -14,6 +14,6 @@ cmd_subfolder = os.path.realpath(
 if cmd_subfolder not in sys.path:
     sys.path.insert(0, cmd_subfolder)
 
-from load_futures_from_v1 import run_all_futures
+from tmqrscripts.load_futures_from_v1 import *
 
 run_all_futures()
