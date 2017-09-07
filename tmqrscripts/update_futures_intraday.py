@@ -100,32 +100,35 @@ def import_futures_from_realtime():
             realtime_data = list(mongo_collection.find({'idcontract':fut['_id'], 'bartime':{'$gt':previous_date_time_for_realtime_query}}).sort(
                             [('datetime', 1)]))
 
+
             df = pd.DataFrame(realtime_data)
-            df = df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
 
-            #print(realtime_data)
+            if not df.empty:
+                df = df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
 
-            df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
-                      inplace=True)
-            df.set_index('dt', inplace=True)
-            df.index = df.index.tz_localize(instrument.timezone).tz_convert('UTC')
+                #print(realtime_data)
 
-            if ohlc.empty:
-                df_for_update = df
-            else:
-                df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
+                df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
+                          inplace=True)
+                df.set_index('dt', inplace=True)
+                df.index = df.index.tz_localize(instrument.timezone).tz_convert('UTC')
 
-            #print(df_for_update)
+                if ohlc.empty:
+                    df_for_update = df
+                else:
+                    df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
 
-            for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
-                dt = datetime.combine(idx_dt, time(0, 0, 0))
-                rec = {
-                    'dt': dt,
-                    'tckr': future_id['tckr'],
-                    'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
-                }
-                quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+                #print(df_for_update)
 
-                #print('test')
+                for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
+                    dt = datetime.combine(idx_dt, time(0, 0, 0))
+                    rec = {
+                        'dt': dt,
+                        'tckr': future_id['tckr'],
+                        'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
+                    }
+                    quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+
+                    #print('test')
 
 import_futures_from_realtime()
