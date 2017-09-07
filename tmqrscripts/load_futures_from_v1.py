@@ -62,8 +62,8 @@ def import_futures_from_v1(instrument, all_contracts = True):
     RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
     RMT_MONGO_DB = 'tmldb_v2'
 
-    remomote_client = MongoClient(RMT_MONGO_CONNSTR)
-    remote_db = remomote_client[RMT_MONGO_DB]
+    remote_client = MongoClient(RMT_MONGO_CONNSTR)
+    remote_db = remote_client[RMT_MONGO_DB]
 
 
     dm = DataManager()
@@ -86,9 +86,11 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
         test_time = datetime.now().date() - timedelta(days=5)
 
-        if all_contracts or fut.contract_info.extra('eod_update_time') == None or fut_tuple[2] >= test_time:
+        #check_for_eod_update_time = asset_index_collection.find({'tckr':fut.ticker})
 
-            if all_contracts or fut.contract_info.extra('eod_update_time') == None:
+        if all_contracts or fut.contract_info.extra('eod_update_time',None) == None or fut_tuple[2] >= test_time:
+
+            if all_contracts or fut.contract_info.extra('eod_update_time',None) == None:
                 data = list(mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
             else:
 

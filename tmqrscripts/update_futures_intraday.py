@@ -23,6 +23,8 @@ from tmqr.serialization import *
 
 from tmqrfeed.manager import DataManager
 
+from tqdm import tqdm
+
 
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
@@ -67,12 +69,12 @@ def import_futures_from_realtime():
     quotes_collection = local_db['quotes_intraday']
     quotes_collection.create_index([('tckr', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)], unique=True)
 
-    for fut in contract_col_collection.find({'_id':4718,'expirationdate':{'$gte':datetime.now()}}):  #'_id':4718,
+    for fut in tqdm(contract_col_collection.find({'expirationdate':{'$gte':datetime.now()}})):  #'_id':4718,
 
         future_id = asset_index_collection.find_one({'extra_data.sqlid': fut['_id'], 'type': 'F'})  #fut['_id']
 
         if future_id != None:
-            print(future_id['tckr'])
+            #print(future_id['tckr'])
 
             #get latest
             #extra_data.eod_update_time
@@ -88,7 +90,10 @@ def import_futures_from_realtime():
 
             stored_data = quotes_collection.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
 
-            ohlc = object_load_decompress(stored_data['ohlc'])
+            if stored_data == None:
+                ohlc = pd.DataFrame()
+            else:
+                ohlc = object_load_decompress(stored_data['ohlc'])
 
             #print(ohlc)
 
@@ -105,10 +110,10 @@ def import_futures_from_realtime():
             df.set_index('dt', inplace=True)
             df.index = df.index.tz_localize(instrument.timezone).tz_convert('UTC')
 
-            # if ohlc.empty:
-            #     df_for_update = df
-            # else:
-            df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
+            if ohlc.empty:
+                df_for_update = df
+            else:
+                df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
 
             #print(df_for_update)
 
@@ -122,53 +127,5 @@ def import_futures_from_realtime():
                 quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
 
                 #print('test')
-
-
-
-    # for fut_tuple in tqdm(futures):
-    #     fut = fut_tuple[0]
-    #
-    #     test_time = datetime.now().date() - timedelta(days=5)
-    #
-    #     if all_contracts or fut_tuple[2] >= test_time:
-    #
-    #         if all_contracts:
-    #             data = list(mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
-    #         else:
-    #
-    #             if fut.contract_info.extra('eod_update_time') != None:
-    #                 data = list(
-    #                     mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
-    #                         'datetime': {'$gte': datetime.combine(
-    #                             time_to_utc(fut.contract_info.extra('eod_update_time'),fut.instrument_info.timezone.zone).date(), time(0, 0, 0))}}).sort(
-    #                         [('datetime', 1)]))
-    #             else:
-    #                 data = list(
-    #                     mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
-    #                                            'datetime': {'$gte': datetime.combine(test_time, time(0, 0, 0))}}).sort(
-    #                         [('datetime', 1)]))
-    #
-    #         if len(data) == 0:
-    #             print("Empty contract series for {0} ... skipping".format(fut))
-    #             continue
-    #         df = pd.DataFrame(data)
-    #         df = df[['datetime', 'open', 'high', 'low', 'close', 'volume']]
-    #         df.rename(columns={'datetime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
-    #                   inplace=True)
-    #         df.set_index('dt', inplace=True)
-    #         df.index = df.index.tz_localize(fut.instrument_info.timezone).tz_convert('UTC')
-    #
-    #         for idx_dt, df_value in df.groupby(by=df.index.date):
-    #             dt = datetime.combine(idx_dt, time(0, 0, 0))
-    #             rec = {
-    #                 'dt': dt,
-    #                 'tckr': fut.ticker,
-    #                 'ohlc': lz4.block.compress(pickle.dumps(df_value))
-    #             }
-    #             quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
-    #
-    #         datetime(data[-1]['datetime']).date()
-    #
-    #         asset_index_collection.update_one({'tckr': fut.ticker}, {'$set':{'extra_data.eod_update_time':df.iloc[-1].name}})
 
 import_futures_from_realtime()
