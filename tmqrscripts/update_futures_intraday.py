@@ -65,6 +65,7 @@ def import_futures_from_realtime():
 
 
     asset_index_collection = local_db['asset_index']
+    asset_index_collection.create_index([('extra_data.sqlid', pymongo.ASCENDING), ('type', pymongo.ASCENDING)], unique=False)
 
     quotes_collection = local_db['quotes_intraday']
     quotes_collection.create_index([('tckr', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)], unique=True)
