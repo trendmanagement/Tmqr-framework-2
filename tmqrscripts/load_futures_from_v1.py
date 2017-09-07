@@ -156,4 +156,4 @@ def run_current_futures():
             import_futures_from_v1(instrument['instrument'], all_contracts=False)
 
 
-import_futures_from_v1("US.CL", all_contracts=False)
+#import_futures_from_v1("US.CL", all_contracts=False)
