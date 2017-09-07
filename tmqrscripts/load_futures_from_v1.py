@@ -35,11 +35,11 @@ import pytz
 from pymongo import MongoClient
 from tqdm import tqdm
 
-
-
-from tmqrfeed.manager import DataManager
 from tmqr.serialization import *
 from tmqr.settings import *
+
+from tmqrfeed.manager import DataManager
+
 
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
@@ -86,23 +86,28 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
         test_time = datetime.now().date() - timedelta(days=5)
 
-        if all_contracts or fut_tuple[2] >= test_time:
+        if all_contracts or fut.contract_info.extra('eod_update_time') == None or fut_tuple[2] >= test_time:
 
-            if all_contracts:
+            if all_contracts or fut.contract_info.extra('eod_update_time') == None:
                 data = list(mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
             else:
 
-                if fut.contract_info.extra('eod_update_time') != None:
-                    data = list(
-                        mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
-                            'datetime': {'$gte': datetime.combine(
-                                time_to_utc(fut.contract_info.extra('eod_update_time'),fut.instrument_info.timezone.zone).date(), time(0, 0, 0))}}).sort(
-                            [('datetime', 1)]))
-                else:
-                    data = list(
-                        mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
-                                               'datetime': {'$gte': datetime.combine(test_time, time(0, 0, 0))}}).sort(
-                            [('datetime', 1)]))
+                #if fut.contract_info.extra('eod_update_time') != None:
+                data = list(
+                    mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
+                        'datetime': {'$gte': datetime.combine(
+                            time_to_utc(fut.contract_info.extra('eod_update_time'),fut.instrument_info.timezone.zone).date(), time(0, 0, 0))}}).sort(
+                        [('datetime', 1)]))
+                # else:
+                #     # data = list(
+                #     #     mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid'),
+                #     #                            'datetime': {'$gte': datetime.combine(test_time, time(0, 0, 0))}}).sort(
+                #     #         [('datetime', 1)]))
+                #     data = list(
+                #         mongo_collection.find({'idcontract': fut.contract_info.extra('sqlid')}).sort([('datetime', 1)]))
+
+
+
 
             if len(data) == 0:
                 print("Empty contract series for {0} ... skipping".format(fut))
@@ -123,7 +128,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
                 }
                 quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
-            datetime(data[-1]['datetime']).date()
+            #datetime(data[-1]['datetime']).date()
 
             asset_index_collection.update_one({'tckr': fut.ticker}, {'$set':{'extra_data.eod_update_time':df.iloc[-1].name}})
 
