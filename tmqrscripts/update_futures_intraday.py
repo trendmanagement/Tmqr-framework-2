@@ -63,73 +63,89 @@ def import_futures_from_realtime():
 
     # Storing futures
 
-
+    asset_info_collection = local_db['asset_info']
     asset_index_collection = local_db['asset_index']
     asset_index_collection.create_index([('extra_data.sqlid', pymongo.ASCENDING), ('type', pymongo.ASCENDING)], unique=False)
 
     quotes_collection = local_db['quotes_intraday']
     quotes_collection.create_index([('tckr', pymongo.ASCENDING), ('dt', pymongo.ASCENDING)], unique=True)
 
-    for fut in tqdm(contract_col_collection.find({'expirationdate':{'$gte':datetime.now()}})):  #'_id':4718,
+    #for fut in tqdm(contract_col_collection.find({'expirationdate':{'$gte':datetime.now()}})):  #'_id':4718,
 
-        future_id = asset_index_collection.find_one({'extra_data.sqlid': fut['_id'], 'type': 'F'})  #fut['_id']
+    realtime_contract_id_list = list(
+        contract_col_collection.find({'expirationdate': {'$gte': datetime.now()}}, {'_id': 1}))
+    realtime_contract_id_df = pd.DataFrame(realtime_contract_id_list)
+    realtime_contract_id_df.set_index('_id', inplace=True)
 
-        if future_id != None:
-            #print(future_id['tckr'])
+    for instrument in asset_info_collection.find({}):
 
-            #get latest
-            #extra_data.eod_update_time
-
-            instrument = dm.datafeed.get_instrument_info(future_id['instr'])
-
-            if 'eod_update_time' in future_id['extra_data']:
-                previous_date_time_for_realtime_query = utc_to_time(future_id['extra_data']['eod_update_time'],instrument.timezone.zone)
-                previous_date_quotes_intraday_utc = future_id['extra_data']['eod_update_time']
-            else:
-                previous_date_time_for_realtime_query = datetime.combine(datetime.now().date() - timedelta(days=1), time(0, 0, 0))
-                previous_date_quotes_intraday_utc = previous_date_time_for_realtime_query
-
-            stored_data = quotes_collection.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
-
-            if stored_data == None:
-                ohlc = pd.DataFrame()
-            else:
-                ohlc = object_load_decompress(stored_data['ohlc'])
-
-            #print(ohlc)
-
-            realtime_data = list(mongo_collection.find({'idcontract':fut['_id'], 'bartime':{'$gt':previous_date_time_for_realtime_query}}).sort(
-                            [('datetime', 1)]))
+        if not 'DEFAULT' in instrument['instrument']:
 
 
-            df = pd.DataFrame(realtime_data)
+            #chain = dm.datafeed.get_fut_chain(instrument['instrument'], date_start=datetime.now().date())
+            #futures = chain.get_all()
 
-            if not df.empty:
-                df = df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
+            for future_id in tqdm(asset_index_collection.find({'$and':[{'exp':{'$gte':datetime.now()}},
+                                                                      {'exp':{'$lte': datetime.now() + timedelta(days=365)}}],
+                                                               'type': 'F',
+                                                               'instr':instrument['instrument']})): #fut['_id']
 
-                #print(realtime_data)
+                if future_id['extra_data']['sqlid'] in realtime_contract_id_df.index:
+                    #print(future_id['tckr'])
 
-                df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
-                          inplace=True)
-                df.set_index('dt', inplace=True)
-                df.index = df.index.tz_localize(instrument.timezone).tz_convert('UTC')
+                    #get latest
+                    #extra_data.eod_update_time
 
-                if ohlc.empty:
-                    df_for_update = df
-                else:
-                    df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
+                    instrument = dm.datafeed.get_instrument_info(future_id['instr'])
 
-                #print(df_for_update)
+                    if 'eod_update_time' in future_id['extra_data']:
+                        previous_date_time_for_realtime_query = utc_to_time(future_id['extra_data']['eod_update_time'],instrument.timezone.zone)
+                        previous_date_quotes_intraday_utc = future_id['extra_data']['eod_update_time']
+                    else:
+                        previous_date_time_for_realtime_query = datetime.combine(datetime.now().date() - timedelta(days=1), time(0, 0, 0))
+                        previous_date_quotes_intraday_utc = previous_date_time_for_realtime_query
 
-                for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
-                    dt = datetime.combine(idx_dt, time(0, 0, 0))
-                    rec = {
-                        'dt': dt,
-                        'tckr': future_id['tckr'],
-                        'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
-                    }
-                    quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+                    stored_data = quotes_collection.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
 
-                    #print('test')
+                    if stored_data == None:
+                        ohlc = pd.DataFrame()
+                    else:
+                        ohlc = object_load_decompress(stored_data['ohlc'])
+
+                    #print(ohlc)
+
+                    realtime_data = list(mongo_collection.find({'idcontract':future_id['extra_data']['sqlid'], 'bartime':{'$gt':previous_date_time_for_realtime_query}}).sort(
+                                    [('datetime', 1)]))
+
+
+                    df = pd.DataFrame(realtime_data)
+
+                    if not df.empty:
+                        df = df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
+
+                        #print(realtime_data)
+
+                        df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
+                                  inplace=True)
+                        df.set_index('dt', inplace=True)
+                        df.index = df.index.tz_localize(instrument.timezone).tz_convert('UTC')
+
+                        if ohlc.empty:
+                            df_for_update = df
+                        else:
+                            df_for_update = pd.concat([ohlc[ohlc.index < df.index[0]], df])#.reset_index(drop=True)
+
+                        #print(df_for_update)
+
+                        for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
+                            dt = datetime.combine(idx_dt, time(0, 0, 0))
+                            rec = {
+                                'dt': dt,
+                                'tckr': future_id['tckr'],
+                                'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
+                            }
+                            quotes_collection.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+
+                            #print('test')
 
 import_futures_from_realtime()
