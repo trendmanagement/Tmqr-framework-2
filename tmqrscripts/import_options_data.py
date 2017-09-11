@@ -15,7 +15,7 @@ from pymongo import MongoClient
 import pymongo
 from datetime import datetime, time
 from tmqr.settings import *
-from tqdm import tqdm_notebook
+from tqdm import tqdm
 import pickle
 import lz4
 
@@ -102,5 +102,5 @@ for row in local_db['asset_info'].find({}):
     #tckr = 'US.C.F-CL-F12-111221.111215@100.0'
     #sqlid = 32110.0
 
-    for tckr, sqlid in tqdm_notebook(tickers_data.items(), desc='Progress'):
+    for tckr, sqlid in tqdm(tickers_data.items()):
         import_ticker(tckr, sqlid)
