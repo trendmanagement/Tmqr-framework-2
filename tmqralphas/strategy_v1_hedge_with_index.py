@@ -2,7 +2,7 @@ from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from datetime import datetime
 import pandas as pd
-from tmqrstrategy import StrategyBase
+from tmqrstrategy import StrategyBase, StrategyAlpha
 from tmqrfeed.quotes import QuoteIndex
 from tmqr.errors import PositionNotFoundError
 from tmqrfeed import DataManager
@@ -15,7 +15,7 @@ from exobuilder.data.exostorage import EXOStorage
 from scripts.settings import *
 
 
-class AlphaV1HedgeWithIndex(StrategyBase):
+class AlphaV1HedgeWithIndex(StrategyAlpha):
     def __init__(self, datamanager: DataManager, **kwargs):
         super().__init__(datamanager, **kwargs)
 
