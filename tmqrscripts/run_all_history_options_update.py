@@ -14,6 +14,6 @@ Futures data updates script, all futures contracts
 # if cmd_subfolder not in sys.path:
 #     sys.path.insert(0, cmd_subfolder)
 
-from tmqrscripts.load_futures_from_v1 import *
+from tmqrscripts.import_options_data import *
 
-run_all_futures()
+run_all_options()
