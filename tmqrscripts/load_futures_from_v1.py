@@ -149,6 +149,8 @@ def run_current_futures():
 
     asset_info_collection = local_db['asset_info']
 
+    #import_futures_from_v1(instrument['instrument'], all_contracts=False)
+
     for instrument in asset_info_collection.find({}):
 
         if not 'DEFAULT' in instrument['instrument']:
