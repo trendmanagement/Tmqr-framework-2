@@ -62,45 +62,71 @@ def import_ticker(tckr, sqlid):
                                                upsert=True
                                                )
 
-for row in local_db['asset_info'].find({}):
-    INSTRUMENT = row['instrument']
+def import_options(exp_after_current_day = False):
+    for row in local_db['asset_info'].find({}):
+        INSTRUMENT = row['instrument']
 
-    #INSTRUMENT = "US.6C"
+        #INSTRUMENT = "US.6C"
 
-    expirations = []
+        expirations = []
 
-    cursor = local_db['asset_index'].aggregate([
-                {'$match': {
-                    'instr': INSTRUMENT,
-                    'type': {'$in': ['P', 'C']},
-                }},
-                {'$sort': {'strike': 1}},
-                {'$project': {'tckr': 1, 'exp': 1, 'strike': 1, 'type': 1}},
-                {'$group': {
-                    '_id': {'date': '$exp'},
-                    #'chain': {'$push': '$exp'},
-                }
-                },
-                {'$sort': {"_id.date": 1}}
-            ])
+        if not exp_after_current_day:
+            cursor = local_db['asset_index'].aggregate([
+                        {'$match': {
+                            'instr': INSTRUMENT,
+                            'type': {'$in': ['P', 'C']},
+                        }},
+                        {'$sort': {'strike': 1}},
+                        {'$project': {'tckr': 1, 'exp': 1, 'strike': 1, 'type': 1}},
+                        {'$group': {
+                            '_id': {'date': '$exp'},
+                            #'chain': {'$push': '$exp'},
+                        }
+                        },
+                        {'$sort': {"_id.date": 1}}
+                    ])
 
-    for x in cursor:
-        expirations.append(x['_id']['date'])
+        else:
+            cursor = local_db['asset_index'].aggregate([
+                        {'$match': {
+                            'instr': INSTRUMENT,
+                            'type': {'$in': ['P', 'C']},
+                            'exp': {'$gte':datetime.combine(datetime.now().date(), time(0, 0, 0))}
+                        }},
+                        {'$sort': {'strike': 1}},
+                        {'$project': {'tckr': 1, 'exp': 1, 'strike': 1, 'type': 1}},
+                        {'$group': {
+                            '_id': {'date': '$exp'},
+                            # 'chain': {'$push': '$exp'},
+                        }
+                        },
+                        {'$sort': {"_id.date": 1}}
+                    ])
 
-    expirations
+        for x in cursor:
+            expirations.append(x['_id']['date'])
 
-    tickers_data = {}
+        #expirations
 
-    tickers_col = local_db['asset_index'].find({'instr': INSTRUMENT,
-                                                'type': {'$in': ['P','C']},
-                                                'exp': {'$in': expirations}})
-    for tdata in tickers_col:
-        tickers_data[tdata['tckr']] = tdata['extra_data']['sqlid']
+        tickers_data = {}
 
-    len(tickers_data)
+        tickers_col = local_db['asset_index'].find({'instr': INSTRUMENT,
+                                                    'type': {'$in': ['P','C']},
+                                                    'exp': {'$in': expirations}})
+        for tdata in tickers_col:
+            tickers_data[tdata['tckr']] = tdata['extra_data']['sqlid']
 
-    #tckr = 'US.C.F-CL-F12-111221.111215@100.0'
-    #sqlid = 32110.0
+        len(tickers_data)
 
-    for tckr, sqlid in tqdm(tickers_data.items()):
-        import_ticker(tckr, sqlid)
+        #tckr = 'US.C.F-CL-F12-111221.111215@100.0'
+        #sqlid = 32110.0
+
+        for tckr, sqlid in tqdm(tickers_data.items()):
+            import_ticker(tckr, sqlid)
+
+def run_all_options():
+    import_options(exp_after_current_day=False)
+
+
+def run_current_options():
+    import_options(exp_after_current_day=True)
