@@ -4,10 +4,11 @@ from tmqrfeed.manager import DataManager
 from tmqrfeed.position import Position
 from tmqrfeed.assetsession import AssetSession
 from datetime import timedelta
-from tmqr.serialization import object_load_decompress, object_save_compress
+from tmqr.serialization import object_load_decompress, object_save_compress, object_to_full_path, object_from_path
 import pytz
 import lz4
 import pickle
+import warnings
 
 INSTRUMENT_NA = "N/A"
 
@@ -87,7 +88,8 @@ class IndexBase:
                 
         :return: 
         """
-        raise NotImplementedError("set_data_and_position() is not implemented by Index")
+        raise NotImplementedError(
+            "set_data_and_position() is not implemented by child Index, or you are tryin to run IndexBase")
 
     def run(self):
         """
@@ -138,8 +140,18 @@ class IndexBase:
         Save index data and position to compatible format for MongoDB serialization
         :return: 
         """
+
+        try:
+            index_class_name = object_to_full_path(self)
+        except ArgumentError:
+            warnings.warn("Seems that you are trying to save index class defined in the notebook, that is ok, "
+                          "but online updates will be available only after index code will be deployed to codebase. "
+                          "This index will be allowed for read-only usage!")
+            index_class_name = object_to_full_path(IndexBase)
+
         result_dict = {
             'name': self.index_name,
+            'index_class': index_class_name,
             'instrument': self.instrument,
             'description_short': self._description_short,
             'description_long': self._description_long,
@@ -160,9 +172,21 @@ class IndexBase:
         :param as_readonly: Deserialize position as read only
         :return: new Index cls instance
         """
-        if cls._index_name != IndexBase._index_name and cls._index_name not in serialized_index_record['name']:
-            raise ArgumentError(
-                f"Index name {cls._index_name} doesn't match to DB index name {serialized_index_record['name']}")
+        Index_Class = cls
+        # Get index class name, or IndexBase if it is not set
+        index_base_class_name = object_to_full_path(IndexBase)
+        db_index_class_name = serialized_index_record.get('index_class', index_base_class_name)
+
+        if Index_Class is IndexBase:
+            # The case when we try to load alpha dynamically using StrategyBase class
+            # Getting strategy class from full-qualified class string
+            Index_Class = object_from_path(db_index_class_name)
+        else:
+            if index_base_class_name != db_index_class_name and object_to_full_path(cls) != index_base_class_name:
+                raise ArgumentError(f"Index class {object_to_full_path(cls)} doesn't match index class in the "
+                                    f"serialized index record {serialized_index_record['index_class']}, try "
+                                    f"to check index class or call IndexBase.deserialize() to load dynamically")
+            Index_Class = object_from_path(db_index_class_name)
 
         pos = None
         if serialized_index_record['position'] is not None:
@@ -174,16 +198,16 @@ class IndexBase:
             sess_dic = serialized_index_record['session']
             session = AssetSession(sess_dic['trading_session'], tz=pytz.timezone(sess_dic['tz']))
 
-        index_instance = cls(datamanager,
-                             instrument=serialized_index_record['instrument'],
-                             context=serialized_index_record['context'],
-                             data=object_load_decompress(serialized_index_record['data']),
-                             position=pos,
-                             index_name=serialized_index_record['name'],
-                             description_long=serialized_index_record['description_long'],
-                             description_short=serialized_index_record['description_short'],
-                             session=session,
-                             as_readonly=as_readonly)
+        index_instance = Index_Class(datamanager,
+                                     instrument=serialized_index_record['instrument'],
+                                     context=serialized_index_record['context'],
+                                     data=object_load_decompress(serialized_index_record['data']),
+                                     position=pos,
+                                     index_name=serialized_index_record['name'],
+                                     description_long=serialized_index_record['description_long'],
+                                     description_short=serialized_index_record['description_short'],
+                                     session=session,
+                                     as_readonly=as_readonly)
         return index_instance
 
     def save(self):
@@ -197,16 +221,11 @@ class IndexBase:
         self.dm.datafeed.data_engine.db_save_index(self.serialize())
 
     @classmethod
-    def load(cls, datamanager: DataManager, instrument=INSTRUMENT_NA):
+    def load(cls, datamanager: DataManager, index_name):
         """
         Loads index instance from DB
         :param datamanager: datamanager class instance
-        :param instrument: instrument name (default: INSTRUMENT_NA)
+        :param index_name: Full qualified index name
         :return: 
         """
-        if instrument == INSTRUMENT_NA:
-            idx_name = cls._index_name
-        else:
-            idx_name = f"{instrument}_{cls._index_name}"
-
-        return cls.deserialize(datamanager, datamanager.datafeed.data_engine.db_load_index(idx_name))
+        return cls.deserialize(datamanager, datamanager.datafeed.data_engine.db_load_index(index_name))
