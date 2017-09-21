@@ -12,6 +12,8 @@ class EXOLongEnhance_DT(IndexEXOBase):
 
     _index_name = "EXOLongEnhance_DT"
 
+
+
     def calc_exo_logic(self):
         """
         Calculates SmartEXO logic.
@@ -71,7 +73,7 @@ class EXOLongEnhance_DT(IndexEXOBase):
         :return: nothing, manages 'pos' in place
         """
 
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt)
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
 
         #
         # Help

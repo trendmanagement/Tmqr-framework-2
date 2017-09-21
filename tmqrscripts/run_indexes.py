@@ -1,7 +1,6 @@
-#import os
+
 from tmqrscripts.index_scripts.settings_index import *
 from tmqr.settings import *
-#from tmqrfeed.datafeed import DataFeed
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
@@ -29,6 +28,10 @@ class IndexGenerationScript:
         self.db = self.client[MONGO_DB]
         self.date_start = datetime(2011,1,1)
 
+        self.db['alpha_data'].create_index(
+            [('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
+            unique=False)
+
         self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
                                                unique=False)
 
@@ -48,6 +51,11 @@ class IndexGenerationScript:
         #for exo in INDEX_LIST:
         #    self.run_through_each_index_threads('US.ES', exo)
 
+        # for instrument in self.asset_info_collection.find({}):
+        #     if not 'DEFAULT' in instrument['instrument']:
+        #         for exo in INDEX_LIST:
+        #             self.run_through_each_index_threads(instrument['instrument'], exo)
+
     def run_through_each_index_threads(self,instrument, exo_index):
         '''
         runs through the creation and saving logic for each index and alpha
@@ -58,10 +66,9 @@ class IndexGenerationScript:
         :return: 
         '''
         ExoClass = exo_index['class']
-        ExoName = exo_index['name']
         try:
 
-            index_hedge_name = '{0}_{1}'.format(instrument,ExoName)
+            index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
 
             dm = DataManager(date_start=self.date_start)
             index = IndexBase.load(dm, index_hedge_name)
@@ -71,37 +78,51 @@ class IndexGenerationScript:
             sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
                                                                                      decision_time_shift=index.decision_time_shift - 1)
 
-            if current_time.weekday() < 5 and\
-                    ((current_time >= sess_decision and index.data.index[-1] < sess_decision) or (current_time >= sess_exec and index.data.index[-1] < sess_exec)):
-                self.run_index(index)
+
+            index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
+
+            if index_from_db == None or not 'index_update_time' in index_from_db['context']:
+                self.run_index(index, current_time, index_hedge_name)
+            else:
+                last_index_update_time = index_from_db['context']['index_update_time']
+
+                if current_time.weekday() < 5 and\
+                        ((current_time >= sess_decision and last_index_update_time < sess_decision)
+                         or (current_time >= sess_exec and last_index_update_time < sess_exec)):
+
+                    self.run_index(index, current_time, index_hedge_name)
 
             self.checking_alpha_then_run(index, current_time, index_hedge_name)
 
 
-        except DataEngineNotFoundError as e:
+        except (DataEngineNotFoundError, NotImplementedError) as e:
             log.warn(f"ExoIndexError: '{e}'")
 
             try:
-                index = ExoClass(dm, instrument=instrument)
-                self.run_index(index)
+
+                opt_codes_to_pass = []
+
+                for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
+                    if instrument == inst_opt_code['instrument']:
+                        opt_codes_to_pass = inst_opt_code['opt_codes']
+                        break
+
+                index = ExoClass(dm, instrument=instrument, opt_codes=opt_codes_to_pass)
+
+                self.run_index(index, current_time, index_hedge_name)
 
                 self.checking_alpha_then_run(index, current_time, index_hedge_name)
 
             except:
                 pass
 
-
-
-
-    def run_index(self, index):
-        '''
-        index run and save
-        :param index: 
-        :return: 
-        '''
+    def run_index(self, index, update_time, index_hedge_name):
         index.run()
         index.save()
-        #print(index)
+        self.db['index_data'].update_one({'name': index_hedge_name},
+                                            {'$set': {'context.index_update_time': update_time}})
+
+
 
     def checking_alpha_then_run(self,index,current_time,index_hedge_name):
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
@@ -134,10 +155,10 @@ class IndexGenerationScript:
             saved_alpha.run()
             saved_alpha.save()
 
-
+            print(alpha_name)
 
             self.db['alpha_data'].update_one({'name': alpha_name},
-                                                 {'$set': {'context.alpha_update_time': update_time}})
+                                                {'$set': {'context.alpha_update_time': update_time}})
 
         except:
             pass

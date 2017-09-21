@@ -19,6 +19,9 @@ class IndexEXOBase(IndexBase):
         self.costs_futures = self.context.get('costs_futures', 0.0)
         self.costs_options = self.context.get('costs_options', 0.0)
 
+        self.opt_codes = kwargs.get('opt_codes', [])
+
+
     def setup(self):
         # Load instrument session from the DB
         # And store session settings
