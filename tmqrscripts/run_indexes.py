@@ -76,7 +76,7 @@ class IndexGenerationScript:
 
             current_time = datetime.now(index.session.tz)
 
-            current_time_utc = self.time_to_utc(current_time, index.session.tz.zone)
+            current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
 
             sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
                                                                                      decision_time_shift=index.decision_time_shift - 1)
@@ -90,8 +90,6 @@ class IndexGenerationScript:
                 #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
                 last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                 last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
-
-                #test_time = self.time_to_utc(last_index_update_time,index.session.tz.zone)
 
                 if current_time.weekday() < 5 and\
                         ((current_time >= sess_decision and last_index_update_time < sess_decision)
@@ -144,9 +142,13 @@ class IndexGenerationScript:
                     t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                     t.start()
 
-                elif alpha['context']['alpha_update_time'] < alpha_sess_start:
-                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                    t.start()
+                else:
+                    last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
+                    last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
+
+                    if last_alpha_update_time < alpha_sess_decision:
+                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                        t.start()
 
 
     def run_alpha(self, alpha_name, update_time):
@@ -165,8 +167,6 @@ class IndexGenerationScript:
 
             print(alpha_name)
 
-
-
             self.db['alpha_data'].update_one({'name': alpha_name},
                                                 {'$set': {'context.alpha_update_time': update_time}})
 
@@ -174,12 +174,16 @@ class IndexGenerationScript:
             pass
 
     def time_to_utc_from_none(self, naive):
-        return naive.replace(tzinfo=pytz.utc)#.astimezone(pytz.timezone(timezone))
+        return naive.replace(tzinfo=pytz.utc)
 
 
-    def time_to_utc(self, local_dt, timezone):
+    def time_to_utc_from_local_tz(self, local_dt, timezone):
+        utc_dt = local_dt.astimezone(pytz.utc)
+        return utc_dt
+
+    def time_to_utc(self, naive, timezone):
         local = pytz.timezone(timezone)
-        # local_dt = local.localize(naive)
+        local_dt = local.localize(naive)
         utc_dt = local_dt.astimezone(pytz.utc)
         return utc_dt
 
