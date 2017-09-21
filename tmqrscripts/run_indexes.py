@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+#from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -50,19 +50,19 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        for instrument in self.asset_info_collection.find({}):
-            if not 'DEFAULT' in instrument['instrument']:
-                for exo in INDEX_LIST:
-                    t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-                    t.start()
+        # for instrument in self.asset_info_collection.find({}):
+        #     if not 'DEFAULT' in instrument['instrument']:
+        #         for exo in INDEX_LIST:
+        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+        #             t.start()
 
         #for exo in INDEX_LIST:
         #   self.run_through_each_index_threads('US.ES', exo)
 
-        # for instrument in self.asset_info_collection.find({}):
-        #     if not 'DEFAULT' in instrument['instrument']:
-        #         for exo in INDEX_LIST:
-        #             self.run_through_each_index_threads(instrument['instrument'], exo)
+        for instrument in self.asset_info_collection.find({}):
+            if not 'DEFAULT' in instrument['instrument']:
+                for exo in INDEX_LIST:
+                    self.run_through_each_index_threads(instrument['instrument'], exo)
 
     def run_through_each_index_threads(self,instrument, exo_index):
         '''
@@ -86,9 +86,9 @@ class IndexGenerationScript:
             if self.reset_from_beginning:
                 index = self.create_index_class(instrument, ExoClass, dm)
 
-                current_time = datetime.now(index.session.tz)
+                current_time = datetime.utcnow()
 
-                current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
+                current_time_utc = datetime.utcnow()
 
                 self.run_index(index, current_time_utc, index_hedge_name)
 
@@ -215,9 +215,9 @@ class IndexGenerationScript:
         try:
             dm2 = DataManager()
             #print(alpha_name)
-            saved_alpha = StrategyBase.load(dm2, alpha_name)
-            saved_alpha.run()
-            saved_alpha.save()
+            # saved_alpha = StrategyBase.load(dm2, alpha_name)
+            # saved_alpha.run()
+            # saved_alpha.save()
 
             print(alpha_name)
 
