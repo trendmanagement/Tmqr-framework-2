@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-#from tmqrstrategy.strategy_base import StrategyBase
+from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -24,9 +24,10 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 '''
 
 class IndexGenerationScript:
-    def __init__(self, override_run=False):
+    def __init__(self, override_run=False, reset_from_beginning = False):
 
         self.override_run = override_run
+        self.reset_from_beginning = reset_from_beginning
 
         self.client = MongoClient(MONGO_CONNSTR)
         self.db = self.client[MONGO_DB]
@@ -56,7 +57,7 @@ class IndexGenerationScript:
                     t.start()
 
         #for exo in INDEX_LIST:
-        #    self.run_through_each_index_threads('US.ES', exo)
+        #   self.run_through_each_index_threads('US.ES', exo)
 
         # for instrument in self.asset_info_collection.find({}):
         #     if not 'DEFAULT' in instrument['instrument']:
@@ -78,32 +79,48 @@ class IndexGenerationScript:
             index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
 
             dm = DataManager(date_start=self.date_start)
-            index = IndexBase.load(dm, index_hedge_name)
-
-            current_time = datetime.now(index.session.tz)
-
-            current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
-
-            sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
-                                                                                     decision_time_shift=index.decision_time_shift - 1)
 
 
-            index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
 
-            if index_from_db == None or not 'index_update_time' in index_from_db['context']:
+
+            if self.reset_from_beginning:
+                index = self.create_index_class(instrument, ExoClass, dm)
+
+                current_time = datetime.now(index.session.tz)
+
+                current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
+
                 self.run_index(index, current_time_utc, index_hedge_name)
+
+                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
             else:
-                #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
-                last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
-                last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-                if self.override_run or (current_time.weekday() < 5 and\
-                        ((current_time >= sess_decision and last_index_update_time < sess_decision)
-                         or (current_time >= sess_exec and last_index_update_time < sess_exec))):
+                index = IndexBase.load(dm, index_hedge_name)
 
+                current_time = datetime.now(index.session.tz)
+
+                current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
+
+                sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
+                                                                                         decision_time_shift=index.decision_time_shift - 1)
+
+
+                index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
+
+                if index_from_db == None or not 'index_update_time' in index_from_db['context']:
                     self.run_index(index, current_time_utc, index_hedge_name)
+                else:
+                    #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
+                    last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
+                    last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-            self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
+                    if self.override_run or (current_time.weekday() < 5 and\
+                            ((current_time >= sess_decision and last_index_update_time < sess_decision)
+                             or (current_time >= sess_exec and last_index_update_time < sess_exec))):
+
+                        self.run_index(index, current_time_utc, index_hedge_name)
+
+                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
 
 
         except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -111,14 +128,26 @@ class IndexGenerationScript:
 
             try:
 
-                opt_codes_to_pass = []
+                # opt_codes_to_pass = []
+                #
+                # for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
+                #     if instrument == inst_opt_code['instrument']:
+                #         opt_codes_to_pass = inst_opt_code['opt_codes']
+                #         break
+                #
+                # INDEX_CONTEXT = {
+                #     'instrument': instrument,
+                #     'costs_futures': 3.0,
+                #     'costs_options': 3.0,
+                #     'opt_codes': opt_codes_to_pass
+                # }
+                #
+                # index = ExoClass(dm, **INDEX_CONTEXT)
 
-                for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
-                    if instrument == inst_opt_code['instrument']:
-                        opt_codes_to_pass = inst_opt_code['opt_codes']
-                        break
+                #index = ExoClass(dm, instrument=instrument, costs_futures= 3.0,
+                #                 costs_options=3.0, opt_codes=opt_codes_to_pass)
 
-                index = ExoClass(dm, instrument=instrument, opt_codes=opt_codes_to_pass)
+                index = self.create_index_class(instrument, ExoClass, dm)
 
                 self.run_index(index, current_time_utc, index_hedge_name)
 
@@ -126,6 +155,25 @@ class IndexGenerationScript:
 
             except:
                 pass
+
+    def create_index_class(self, instrument, ExoClass, dm):
+        opt_codes_to_pass = []
+
+        for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
+            if instrument == inst_opt_code['instrument']:
+                opt_codes_to_pass = inst_opt_code['opt_codes']
+                break
+
+        INDEX_CONTEXT = {
+            'instrument': instrument,
+             'context':{'costs_futures': 3.0,
+                        'costs_options': 3.0},
+            'opt_codes': opt_codes_to_pass
+        }
+
+        index = ExoClass(dm, **INDEX_CONTEXT)
+        return index
+        #pass
 
     def run_index(self, index, update_time, index_hedge_name):
         index.run()
@@ -140,7 +188,7 @@ class IndexGenerationScript:
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
             current_time, 0)
 
-        if self.override_run or current_time >= alpha_sess_start:
+        if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_start:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
             for alpha in alphas_list:
@@ -152,7 +200,7 @@ class IndexGenerationScript:
                     last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
                     last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
-                    if self.override_run or last_alpha_update_time < alpha_sess_decision:
+                    if self.reset_from_beginning or self.override_run or last_alpha_update_time < alpha_sess_decision:
                         t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         t.start()
 
@@ -167,9 +215,9 @@ class IndexGenerationScript:
         try:
             dm2 = DataManager()
             #print(alpha_name)
-            #saved_alpha = StrategyBase.load(dm2, alpha_name)
-            #saved_alpha.run()
-            #saved_alpha.save()
+            saved_alpha = StrategyBase.load(dm2, alpha_name)
+            saved_alpha.run()
+            saved_alpha.save()
 
             print(alpha_name)
 
@@ -195,6 +243,8 @@ class IndexGenerationScript:
 
     def utc_to_time(self, naive, timezone):
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
+
+
 
 
 
