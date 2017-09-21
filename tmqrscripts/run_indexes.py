@@ -50,19 +50,19 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        # for instrument in self.asset_info_collection.find({}):
-        #     if not 'DEFAULT' in instrument['instrument']:
-        #         for exo in INDEX_LIST:
-        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-        #             t.start()
+        for instrument in self.asset_info_collection.find({}):
+            if not 'DEFAULT' in instrument['instrument']:
+                for exo in INDEX_LIST:
+                    t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+                    t.start()
 
         #for exo in INDEX_LIST:
         #   self.run_through_each_index_threads('US.ES', exo)
 
-        for instrument in self.asset_info_collection.find({}):
-            if not 'DEFAULT' in instrument['instrument']:
-                for exo in INDEX_LIST:
-                    self.run_through_each_index_threads(instrument['instrument'], exo)
+        # for instrument in self.asset_info_collection.find({}):
+        #     if not 'DEFAULT' in instrument['instrument']:
+        #         for exo in INDEX_LIST:
+        #             self.run_through_each_index_threads(instrument['instrument'], exo)
 
     def run_through_each_index_threads(self,instrument, exo_index):
         '''
