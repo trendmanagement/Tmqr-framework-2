@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+#from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -24,7 +24,10 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 '''
 
 class IndexGenerationScript:
-    def __init__(self):
+    def __init__(self, override_run=False):
+
+        self.override_run = override_run
+
         self.client = MongoClient(MONGO_CONNSTR)
         self.db = self.client[MONGO_DB]
         self.date_start = datetime(2011,1,1)
@@ -39,8 +42,11 @@ class IndexGenerationScript:
     def run_main_index_alpha_script(self):
         '''
         runs the script for all instruments and indexes in settings_index and associated alphas
+        :param override_run: runs regardless of time
         :return: 
         '''
+
+
         self.asset_info_collection = self.db['asset_info']
 
         for instrument in self.asset_info_collection.find({}):
@@ -91,9 +97,9 @@ class IndexGenerationScript:
                 last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                 last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-                if current_time.weekday() < 5 and\
+                if self.override_run or (current_time.weekday() < 5 and\
                         ((current_time >= sess_decision and last_index_update_time < sess_decision)
-                         or (current_time >= sess_exec and last_index_update_time < sess_exec)):
+                         or (current_time >= sess_exec and last_index_update_time < sess_exec))):
 
                     self.run_index(index, current_time_utc, index_hedge_name)
 
@@ -134,7 +140,7 @@ class IndexGenerationScript:
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
             current_time, 0)
 
-        if current_time >= alpha_sess_start:
+        if self.override_run or current_time >= alpha_sess_start:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
             for alpha in alphas_list:
@@ -146,7 +152,7 @@ class IndexGenerationScript:
                     last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
                     last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
-                    if last_alpha_update_time < alpha_sess_decision:
+                    if self.override_run or last_alpha_update_time < alpha_sess_decision:
                         t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         t.start()
 
@@ -161,9 +167,9 @@ class IndexGenerationScript:
         try:
             dm2 = DataManager()
             #print(alpha_name)
-            saved_alpha = StrategyBase.load(dm2, alpha_name)
-            saved_alpha.run()
-            saved_alpha.save()
+            #saved_alpha = StrategyBase.load(dm2, alpha_name)
+            #saved_alpha.run()
+            #saved_alpha.save()
 
             print(alpha_name)
 
@@ -192,8 +198,7 @@ class IndexGenerationScript:
 
 
 
-x = IndexGenerationScript()
-x.run_main_index_alpha_script()
+
 
 
 
