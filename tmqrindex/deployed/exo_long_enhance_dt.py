@@ -6,7 +6,7 @@ from bdateutil import relativedelta
 from tmqr.logs import log
 
 
-class EXODeltaTargetGeneric(IndexEXOBase):
+class EXOLongEnhance_DT(IndexEXOBase):
     _description_short = "EXO Vanilla DeltaTargeting 6C LongEnhance"
     _description_long = ""
 
