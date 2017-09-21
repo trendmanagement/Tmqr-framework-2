@@ -8,6 +8,7 @@ from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
+import pytz
 from tmqr.errors import DataEngineNotFoundError
 import threading
 
@@ -75,6 +76,8 @@ class IndexGenerationScript:
 
             current_time = datetime.now(index.session.tz)
 
+            current_time_utc = self.time_to_utc(current_time, index.session.tz.zone)
+
             sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
                                                                                      decision_time_shift=index.decision_time_shift - 1)
 
@@ -82,17 +85,21 @@ class IndexGenerationScript:
             index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
 
             if index_from_db == None or not 'index_update_time' in index_from_db['context']:
-                self.run_index(index, current_time, index_hedge_name)
+                self.run_index(index, current_time_utc, index_hedge_name)
             else:
-                last_index_update_time = index_from_db['context']['index_update_time']
+                #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
+                last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
+                last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
+
+                #test_time = self.time_to_utc(last_index_update_time,index.session.tz.zone)
 
                 if current_time.weekday() < 5 and\
                         ((current_time >= sess_decision and last_index_update_time < sess_decision)
                          or (current_time >= sess_exec and last_index_update_time < sess_exec)):
 
-                    self.run_index(index, current_time, index_hedge_name)
+                    self.run_index(index, current_time_utc, index_hedge_name)
 
-            self.checking_alpha_then_run(index, current_time, index_hedge_name)
+            self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
 
 
         except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -109,9 +116,9 @@ class IndexGenerationScript:
 
                 index = ExoClass(dm, instrument=instrument, opt_codes=opt_codes_to_pass)
 
-                self.run_index(index, current_time, index_hedge_name)
+                self.run_index(index, current_time_utc, index_hedge_name)
 
-                self.checking_alpha_then_run(index, current_time, index_hedge_name)
+                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
 
             except:
                 pass
@@ -119,12 +126,13 @@ class IndexGenerationScript:
     def run_index(self, index, update_time, index_hedge_name):
         index.run()
         index.save()
+
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
 
 
 
-    def checking_alpha_then_run(self,index,current_time,index_hedge_name):
+    def checking_alpha_then_run(self,index,current_time, current_time_utc, index_hedge_name):
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
             current_time, 0)
 
@@ -133,11 +141,11 @@ class IndexGenerationScript:
 
             for alpha in alphas_list:
                 if not 'alpha_update_time' in alpha['context']:
-                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time))
+                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                     t.start()
 
                 elif alpha['context']['alpha_update_time'] < alpha_sess_start:
-                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time))
+                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                     t.start()
 
 
@@ -157,11 +165,26 @@ class IndexGenerationScript:
 
             print(alpha_name)
 
+
+
             self.db['alpha_data'].update_one({'name': alpha_name},
                                                 {'$set': {'context.alpha_update_time': update_time}})
 
         except:
             pass
+
+    def time_to_utc_from_none(self, naive):
+        return naive.replace(tzinfo=pytz.utc)#.astimezone(pytz.timezone(timezone))
+
+
+    def time_to_utc(self, local_dt, timezone):
+        local = pytz.timezone(timezone)
+        # local_dt = local.localize(naive)
+        utc_dt = local_dt.astimezone(pytz.utc)
+        return utc_dt
+
+    def utc_to_time(self, naive, timezone):
+        return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
 
 
