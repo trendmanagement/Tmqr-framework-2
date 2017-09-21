@@ -9,9 +9,9 @@ INDEX_LIST = [
     {
         'class': EXOLongEnhance_DT_CallSpread
     },
-    {
-        'class': EXOLongEnhance_DT
-    },
+    # {
+    #     'class': EXOLongEnhance_DT
+    # },
 ]
 
 INSTRUMENT_OPT_CODE_LIST = [
