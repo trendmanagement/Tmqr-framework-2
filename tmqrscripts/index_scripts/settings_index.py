@@ -1,9 +1,9 @@
-from tmqrscripts.index_algorithms.EXOLongEnhance_DT import EXODeltaTargetGeneric
+from tmqrindex.deployed.exo_long_enhance_dt import EXOLongEnhance_DT
 
 INDEX_LIST = [
 
     {
-        'name': 'EXODeltaTargetGeneric',
-        'class': EXODeltaTargetGeneric,
+        'name': 'EXOLongEnhance_DT',
+        'class': EXOLongEnhance_DT,
     },
 ]
