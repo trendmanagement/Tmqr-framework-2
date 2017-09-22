@@ -7,12 +7,10 @@ from tmqr.logs import log
 
 
 class EXOLongEnhance_DT(IndexEXOBase):
-    _description_short = "EXO Vanilla DeltaTargeting 6C LongEnhance"
+    _description_short = "EXO Vanilla DeltaTargeting LongEnhance"
     _description_long = ""
 
     _index_name = "EXOLongEnhance_DT"
-
-
 
     def calc_exo_logic(self):
         """
@@ -55,7 +53,7 @@ class EXOLongEnhance_DT(IndexEXOBase):
         # Delta based rebalance
         #
         delta = pos.delta(dt)
-        if delta > 0.15:
+        if delta > 0.55:
             log.debug("Delta > 0.35")
             #    # Close the position
             pos.close(dt)
@@ -113,7 +111,7 @@ class EXOLongEnhance_DT(IndexEXOBase):
         """
         # pos.add_transaction(dt, opt_chain.find(dt, 0.01, 'C', how='delta'), 2.0)
         # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'C', how='delta'), -3.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.25, 'C', how='delta'), -1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.20, 'P', how='delta'), 1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), -2.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 2.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.20, 'C', how='delta'), -1.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), 1.0)
+        # pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), -2.0)
+        # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 2.0)

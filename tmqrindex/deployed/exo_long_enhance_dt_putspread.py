@@ -6,11 +6,11 @@ from bdateutil import relativedelta
 from tmqr.logs import log
 
 
-class EXOLongEnhance_DT_CallSpread(IndexEXOBase):
-    _description_short = "EXO Vanilla DeltaTargeting Callspread"
+class EXOLongEnhance_DT_PutSpread(IndexEXOBase):
+    _description_short = "EXO Vanilla DeltaTargeting LongEnhance PutSpread"
     _description_long = ""
 
-    _index_name = "EXOLongEnhance_DT_CallSpread"
+    _index_name = "EXOLongEnhance_DT_PutSpread"
 
     def calc_exo_logic(self):
         """
@@ -53,7 +53,7 @@ class EXOLongEnhance_DT_CallSpread(IndexEXOBase):
         # Delta based rebalance
         #
         delta = pos.delta(dt)
-        if delta > 0.35:
+        if delta > 0.55:
             log.debug("Delta > 0.35")
             #    # Close the position
             pos.close(dt)
@@ -111,9 +111,7 @@ class EXOLongEnhance_DT_CallSpread(IndexEXOBase):
         """
         # pos.add_transaction(dt, opt_chain.find(dt, 0.01, 'C', how='delta'), 2.0)
         # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'C', how='delta'), -3.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.55, 'C', how='delta'), -1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.35, 'C', how='delta'), -1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'C', how='delta'), -1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.01, 'C', how='delta'), 3.0)
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), -2.0)
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 2.0)
+        # pos.add_transaction(dt, opt_chain.find(dt, 0.20, 'C', how='delta'), -1.0)
+        # pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), 1.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'P', how='delta'), -2.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 2.0)
