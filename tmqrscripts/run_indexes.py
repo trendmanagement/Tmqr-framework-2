@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+#from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -50,14 +50,14 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        for instrument in self.asset_info_collection.find({}):
-            if not 'DEFAULT' in instrument['instrument']:
-                for exo in INDEX_LIST:
-                    t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-                    t.start()
+        # for instrument in self.asset_info_collection.find({}):
+        #     if not 'DEFAULT' in instrument['instrument']:
+        #         for exo in INDEX_LIST:
+        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+        #             t.start()
 
-        #for exo in INDEX_LIST:
-        #   self.run_through_each_index_threads('US.ES', exo)
+        for exo in INDEX_LIST:
+          self.run_through_each_index_threads('US.ES', exo)
 
         # for instrument in self.asset_info_collection.find({}):
         #     if not 'DEFAULT' in instrument['instrument']:
@@ -215,9 +215,9 @@ class IndexGenerationScript:
         try:
             dm2 = DataManager()
             #print(alpha_name)
-            saved_alpha = StrategyBase.load(dm2, alpha_name)
-            saved_alpha.run()
-            saved_alpha.save()
+            # saved_alpha = StrategyBase.load(dm2, alpha_name)
+            # saved_alpha.run()
+            # saved_alpha.save()
 
             print(alpha_name)
 
