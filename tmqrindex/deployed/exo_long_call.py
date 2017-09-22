@@ -37,7 +37,8 @@ class EXOLongCall(IndexEXOBase):
         :param logic_df: result of calc_exo_logic()[dt]  if applicable
         :return: nothing, manages 'pos' in place
         """
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW', ''])
+        # fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW', ''])
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
 
         pos.add_transaction(dt, opt_chain.find(dt, -15, 'P'), -1.0)
         pos.add_transaction(dt, opt_chain.find(dt, 15, 'C'), 1.0)
