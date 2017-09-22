@@ -8,20 +8,20 @@ INDEX_LIST = [
     {
         'class': EXOLongEnhance_DT
     },
-    # {
-    #     'class': EXOLongEnhance_DT_PutSpread
-    # },
-    # {
-    #     'class': EXOShortEnhance_DT_2
-    # },
-    # {
-    #     'class': EXOShortEnhance_DT_2_CallSpread
-    # },
+    {
+        'class': EXOLongEnhance_DT_PutSpread
+    },
+    {
+        'class': EXOShortEnhance_DT_2
+    },
+    {
+        'class': EXOShortEnhance_DT_2_CallSpread
+    },
 ]
 
 INSTRUMENT_OPT_CODE_LIST = [
     {
         'instrument':'US.ES',
-        'opt_codes':['EUU','']
+        'opt_codes':['EW','']
     },
 ]
