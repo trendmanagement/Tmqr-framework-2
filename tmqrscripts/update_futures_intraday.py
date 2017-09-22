@@ -135,7 +135,7 @@ def import_futures_from_realtime():
                         '''this is where the future is updated from the historical contracts_bars'''
 
                         data = list(mongo_collection.find({'idcontract': future_id['extra_data']['sqlid']}).sort(
-                            [('datetime', 1)]))
+                            [('bartime', 1)]))
 
 
                         previous_date_quotes_intraday_utc = fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2,)
@@ -151,14 +151,14 @@ def import_futures_from_realtime():
 
                         #python weekdays 0 Mon, 6 Sun
                         acceptable_offset = 1
-                        if datetime.today().weekday() == 0:
+                        if datetime.now(instrument.timezone).weekday() == 0:
                             acceptable_offset = 3
 
-                        if datetime.today().replace(tzinfo=instrument.timezone) - previous_date_time_in_local_timezone > timedelta(days=acceptable_offset):
+                        if datetime.now(instrument.timezone) - previous_date_time_in_local_timezone > timedelta(days=acceptable_offset):
                             data = list(
                                 mongo_collection.find({'idcontract': future_id['extra_data']['sqlid'],
-                                                       'datetime': {'$gt': previous_date_time_in_local_timezone}}).sort(
-                                    [('datetime', 1)]))
+                                                       'bartime': {'$gt': previous_date_time_in_local_timezone.replace(tzinfo=None)}}).sort(
+                                    [('bartime', 1)]))
 
                             previous_date_quotes_intraday_utc = fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2)
 
@@ -180,7 +180,7 @@ def import_futures_from_realtime():
                     #    previous_date_quotes_intraday_utc = future_id['extra_data']['eod_update_time']
                     else:
 
-                        previous_date_time_in_local_timezone = datetime.combine(datetime.now().date() - timedelta(days=1), time(0, 0, 0))
+                        previous_date_time_in_local_timezone = datetime.combine(datetime.now(instrument.timezone).date() - timedelta(days=1), time(0, 0, 0))
                         previous_date_quotes_intraday_utc = time_to_utc(previous_date_time_in_local_timezone, instrument.timezone.zone)
 
                     stored_data = quotes_intraday_collection_v2.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
@@ -192,8 +192,8 @@ def import_futures_from_realtime():
 
                     #print(ohlc)
 
-                    realtime_data = list(mongo_collection.find({'idcontract':future_id['extra_data']['sqlid'], 'bartime':{'$gte':previous_date_time_in_local_timezone}}).sort(
-                                    [('datetime', 1)]))
+                    realtime_data = list(mongo_collection.find({'idcontract':future_id['extra_data']['sqlid'], 'bartime':{'$gte':previous_date_time_in_local_timezone.replace(tzinfo=None)}})
+                                    .sort([('bartime', 1)]))
 
                     realtime_df = pd.DataFrame(realtime_data)
 
