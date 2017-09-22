@@ -57,7 +57,9 @@ class IndexGenerationScript:
         #             t.start()
 
         for exo in INDEX_LIST:
-          self.run_through_each_index_threads('US.ES', exo)
+          #self.run_through_each_index_threads('US.ES', exo)
+          t = threading.Thread(target=self.run_through_each_index_threads, args=('US.ES', exo))
+          t.start()
 
         # for instrument in self.asset_info_collection.find({}):
         #     if not 'DEFAULT' in instrument['instrument']:
