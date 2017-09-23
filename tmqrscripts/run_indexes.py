@@ -201,8 +201,9 @@ class IndexGenerationScript:
                 print('running 1 ' + alpha['name'])
 
                 if not 'alpha_update_time' in alpha['context']:
-                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                    t.start()
+                    # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                    # t.start()
+                    self.run_alpha(alpha['name'], current_time_utc)
                     print('running 2 ' + alpha['name'])
 
                 else:
@@ -210,8 +211,9 @@ class IndexGenerationScript:
                     last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
                     if self.reset_from_beginning or self.override_run or last_alpha_update_time < alpha_sess_decision:
-                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                        t.start()
+                        # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                        # t.start()
+                        self.run_alpha(alpha['name'], current_time_utc)
                         print('running 3 ' + alpha['name'])
 
 
