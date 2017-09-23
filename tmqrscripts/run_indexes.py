@@ -178,8 +178,8 @@ class IndexGenerationScript:
         #pass
 
     def run_index(self, index, update_time, index_hedge_name):
-        #index.run()
-        #index.save()
+        index.run()
+        index.save()
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
