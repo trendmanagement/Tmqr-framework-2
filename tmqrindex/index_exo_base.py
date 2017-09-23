@@ -4,6 +4,7 @@ from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from tmqr.logs import log
 from tmqrfeed.position import Position
+import pandas as pd
 
 
 class IndexEXOBase(IndexBase):
@@ -75,7 +76,15 @@ class IndexEXOBase(IndexBase):
             except QuoteNotFoundError as exc2:
                 log.error(f"QuoteNotFoundError: {dt}: {exc2}")
 
+
         self.data = pos.get_pnl_series()
+
+        # Adding delta series to the EXO dataframe
+        delta_series = pd.Series(0.0, index=self.data.index)
+        for i, dt in enumerate(self.data.index):
+            delta_series[i] = pos.delta(dt)
+        self.data['delta'] = delta_series
+
         self.position = pos
 
     def calc_exo_logic(self):
