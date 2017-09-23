@@ -224,20 +224,20 @@ class IndexGenerationScript:
         :param update_time: 
         :return: 
         '''
-        try:
-            dm2 = DataManager()
-            #print(alpha_name)
-            saved_alpha = StrategyBase.load(dm2, alpha_name)
-            saved_alpha.run()
-            saved_alpha.save()
+        # try:
+        dm2 = DataManager()
+        #print(alpha_name)
+        saved_alpha = StrategyBase.load(dm2, alpha_name)
+        saved_alpha.run()
+        saved_alpha.save()
 
-            print('running finished ' + alpha_name)
+        print('running finished ' + alpha_name)
 
-            self.db['alpha_data'].update_one({'name': alpha_name},
-                                                {'$set': {'context.alpha_update_time': update_time}})
+        self.db['alpha_data'].update_one({'name': alpha_name},
+                                            {'$set': {'context.alpha_update_time': update_time}})
 
-        except:
-            pass
+        # except:
+
 
     def time_to_utc_from_none(self, naive):
         return naive.replace(tzinfo=pytz.utc)
