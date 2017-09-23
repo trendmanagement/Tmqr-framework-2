@@ -114,4 +114,8 @@ class IndexEXOBase(IndexBase):
         if self._index_name == 'EXOBase':
             raise SettingsError("You must replace default '_index_name' in child class source code")
 
-        return f"{self.instrument}_{self._index_name}"
+        if self._index_name_loaded:
+            # Force return exact index name how it was previously saved to the DB
+            return self._index_name_loaded
+        else:
+            return f"{self.instrument}_{self._index_name}"
