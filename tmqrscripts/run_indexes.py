@@ -178,8 +178,8 @@ class IndexGenerationScript:
         #pass
 
     def run_index(self, index, update_time, index_hedge_name):
-        index.run()
-        index.save()
+        #index.run()
+        #index.save()
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
@@ -190,13 +190,20 @@ class IndexGenerationScript:
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
             current_time, 0)
 
+
+
         if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_start:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
+
+
             for alpha in alphas_list:
+                print('running 1 ' + alpha['name'])
+
                 if not 'alpha_update_time' in alpha['context']:
                     t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                     t.start()
+                    print('running 2 ' + alpha['name'])
 
                 else:
                     last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
@@ -205,6 +212,7 @@ class IndexGenerationScript:
                     if self.reset_from_beginning or self.override_run or last_alpha_update_time < alpha_sess_decision:
                         t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         t.start()
+                        print('running 3 ' + alpha['name'])
 
 
     def run_alpha(self, alpha_name, update_time):
@@ -221,7 +229,7 @@ class IndexGenerationScript:
             saved_alpha.run()
             saved_alpha.save()
 
-            print(alpha_name)
+            print('running finished ' + alpha_name)
 
             self.db['alpha_data'].update_one({'name': alpha_name},
                                                 {'$set': {'context.alpha_update_time': update_time}})
