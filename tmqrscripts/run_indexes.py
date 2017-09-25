@@ -50,16 +50,16 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        for instrument in self.asset_info_collection.find({}):
-            if not 'DEFAULT' in instrument['instrument']:
-                for exo in INDEX_LIST:
-                    t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-                    t.start()
+        # for instrument in self.asset_info_collection.find({}):
+        #     if not 'DEFAULT' in instrument['instrument']:
+        #         for exo in INDEX_LIST:
+        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+        #             t.start()
 
-        # for exo in INDEX_LIST:
-        #    # self.run_through_each_index_threads('US.ES', exo)
-        #    t = threading.Thread(target=self.run_through_each_index_threads, args=('US.ES', exo))
-        #    t.start()
+        for exo in INDEX_LIST:
+           # self.run_through_each_index_threads('US.ES', exo)
+           t = threading.Thread(target=self.run_through_each_index_threads, args=('US.CL', exo))
+           t.start()
 
         # for instrument in self.asset_info_collection.find({}):
         #     if not 'DEFAULT' in instrument['instrument']:
@@ -201,9 +201,9 @@ class IndexGenerationScript:
                 # print('running 1 ' + alpha['name'])
 
                 if not 'alpha_update_time' in alpha['context']:
-                    # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                    # t.start()
-                    self.run_alpha(alpha['name'], current_time_utc)
+                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                    t.start()
+                    # self.run_alpha(alpha['name'], current_time_utc)
                     # print('running 2 ' + alpha['name'])
 
                 else:
@@ -211,9 +211,9 @@ class IndexGenerationScript:
                     last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
                     if self.reset_from_beginning or self.override_run or last_alpha_update_time < alpha_sess_decision:
-                        # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                        # t.start()
-                        self.run_alpha(alpha['name'], current_time_utc)
+                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                        t.start()
+                        # self.run_alpha(alpha['name'], current_time_utc)
                         # print('running 3 ' + alpha['name'])
 
 
