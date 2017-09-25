@@ -50,16 +50,16 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        # for instrument in self.asset_info_collection.find({}):
-        #     if not 'DEFAULT' in instrument['instrument']:
-        #         for exo in INDEX_LIST:
-        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-        #             t.start()
+        for instrument in self.asset_info_collection.find({}):
+            if not 'DEFAULT' in instrument['instrument']:
+                for exo in INDEX_LIST:
+                    t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+                    t.start()
 
-        for exo in INDEX_LIST:
-           # self.run_through_each_index_threads('US.ES', exo)
-           t = threading.Thread(target=self.run_through_each_index_threads, args=('US.ES', exo))
-           t.start()
+        # for exo in INDEX_LIST:
+        #    # self.run_through_each_index_threads('US.ES', exo)
+        #    t = threading.Thread(target=self.run_through_each_index_threads, args=('US.ES', exo))
+        #    t.start()
 
         # for instrument in self.asset_info_collection.find({}):
         #     if not 'DEFAULT' in instrument['instrument']:
@@ -198,13 +198,13 @@ class IndexGenerationScript:
 
 
             for alpha in alphas_list:
-                print('running 1 ' + alpha['name'])
+                # print('running 1 ' + alpha['name'])
 
                 if not 'alpha_update_time' in alpha['context']:
                     # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                     # t.start()
                     self.run_alpha(alpha['name'], current_time_utc)
-                    print('running 2 ' + alpha['name'])
+                    # print('running 2 ' + alpha['name'])
 
                 else:
                     last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
@@ -214,7 +214,7 @@ class IndexGenerationScript:
                         # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         # t.start()
                         self.run_alpha(alpha['name'], current_time_utc)
-                        print('running 3 ' + alpha['name'])
+                        # print('running 3 ' + alpha['name'])
 
 
     def run_alpha(self, alpha_name, update_time):
@@ -235,6 +235,8 @@ class IndexGenerationScript:
 
         self.db['alpha_data'].update_one({'name': alpha_name},
                                             {'$set': {'context.alpha_update_time': update_time}})
+
+        #log.warn('running finished ' + alpha_name)
 
         # except:
 
