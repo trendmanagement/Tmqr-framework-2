@@ -55,7 +55,8 @@ class IndexBase:
         if self.session is not None and not isinstance(self.session, AssetSession):
             raise ArgumentError(f"Saved index session should be AssetSession type, got {type(self.session)}")
 
-        self._index_name = kwargs.get('index_name', self._index_name)
+        self._index_name_loaded = kwargs.get('index_name', None)
+
         self._description_long = kwargs.get('description_long', self._description_long)
         self._description_short = kwargs.get('description_short', self._description_short)
 
@@ -117,10 +118,14 @@ class IndexBase:
 
     @property
     def index_name(self):
-        if self.instrument != INSTRUMENT_NA and f"{self.instrument}_" not in self._index_name:
-            return f"{self.instrument}_{self._index_name}"
+        if self._index_name_loaded:
+            # Force return exact index name how it was previously saved to the DB
+            return self._index_name_loaded
         else:
-            return self._index_name
+            if self.instrument != INSTRUMENT_NA and f"{self.instrument}_" not in self._index_name:
+                return f"{self.instrument}_{self._index_name}"
+            else:
+                return self._index_name
 
     @property
     def fields(self):
