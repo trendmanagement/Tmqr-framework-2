@@ -289,7 +289,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': tz.localize(datetime.combine(base_date, time(10, 40))), 'c': 1},
                 {'dt': tz.localize(datetime.combine(base_date, time(10, 41))), 'c': 0},
             ]
-            source_df = pd.DataFrame(data).set_index('dt')
+            source_df = pd.DataFrame(data).set_index('dt').tz_convert("UTC")
             mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
             dfeed = DataFeed()
             self.assertEqual(0, len(dfeed._cache_price_data))
@@ -304,6 +304,8 @@ class DataFeedTestCase(unittest.TestCase):
             #
             # Test timezone
             #
+            source_df = pd.DataFrame(data).set_index('dt').tz_convert("UTC")
+            mock_db_get_raw_series.return_value = source_df, QTYPE_INTRADAY
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720', SRC_INTRADAY,
                                           [tz.localize(datetime(2008, 10, 10, 10, 39))],
                                           timezone='US/Pacific')
@@ -313,6 +315,7 @@ class DataFeedTestCase(unittest.TestCase):
                               [tz.localize(datetime(2008, 10, 10, 10, 39))])
 
             # Test not implemented stuff
+            source_df = pd.DataFrame(data).set_index('dt').tz_convert("UTC")
             mock_db_get_raw_series.return_value = source_df, 'UNKNOWN_QTYPE'
             self.assertRaises(NotImplementedError, dfeed.get_raw_prices, 'US.F.CL.Q83.830720', SRC_INTRADAY,
                               [tz.localize(datetime(2008, 10, 10, 10, 39))], timezone='US/Pacific')
@@ -327,7 +330,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': datetime(2011, 1, 3, 23, 59, 59), 'iv': 3.0},
                 {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
             ]
-            source_df = pd.DataFrame(data).set_index('dt')
+            source_df = pd.DataFrame(data).set_index('dt').tz_localize("UTC")
             mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
@@ -376,7 +379,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': datetime(2011, 1, 6, 23, 59, 59), 'iv': 6.0},
                 {'dt': datetime(2011, 1, 7, 23, 59, 59), 'iv': 7.0},
             ]
-            source_df = pd.DataFrame(data).set_index('dt')
+            source_df = pd.DataFrame(data).set_index('dt').tz_localize("UTC")
             mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
             result = dfeed.get_raw_prices('US.F.CL.Q83.830720',
@@ -422,7 +425,7 @@ class DataFeedTestCase(unittest.TestCase):
                 {'dt': datetime(2011, 1, 3, 23, 59, 59), 'iv': 3.0},
                 {'dt': datetime(2011, 1, 4, 23, 59, 59), 'iv': 4.0},
             ]
-            source_df = pd.DataFrame(data).set_index('dt')
+            source_df = pd.DataFrame(data).set_index('dt').tz_localize("UTC")
             mock_db_get_raw_series.return_value = source_df, QTYPE_OPTIONS_EOD
             dfeed = DataFeed()
             self.assertEqual(0, len(dfeed._cache_price_data))
