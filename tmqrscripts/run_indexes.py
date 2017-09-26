@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+# from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -47,26 +47,26 @@ class IndexGenerationScript:
         :return: 
         '''
 
-
         self.asset_info_collection = self.db['asset_info']
 
-        # for instrument in self.asset_info_collection.find({}):
-        #     if not 'DEFAULT' in instrument['instrument']:
-        #         for exo in INDEX_LIST:
-        #             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-        #             t.start()
+        instrument_list = ['US.ES', 'US.CL', 'US.ZN']
 
-        for exo in INDEX_LIST:
-           # self.run_through_each_index_threads('US.ES', exo)
-           t = threading.Thread(target=self.run_through_each_index_threads, args=('US.CL', exo))
-           t.start()
+        for instrument in self.asset_info_collection.find({}):
+        # instrument = {'instrument':'US.ES'}
+            if not 'DEFAULT' in instrument['instrument'] or instrument['instrument'] in instrument_list:
+                for exo in INDEX_LIST:
+                    if 'instrument' in exo:
+                        print(exo['instrument'])
+                        if instrument['instrument'] == exo['instrument']:
+                            t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
+                            t.start()
+                    else:
+                        t = threading.Thread(target=self.run_through_each_index_threads,
+                                             args=(instrument['instrument'], exo))
+                        t.start()
 
-        # for instrument in self.asset_info_collection.find({}):
-        #     if not 'DEFAULT' in instrument['instrument']:
-        #         for exo in INDEX_LIST:
-        #             self.run_through_each_index_threads(instrument['instrument'], exo)
 
-    def run_through_each_index_threads(self,instrument, exo_index):
+    def run_through_each_index_threads(self,instrument, exo_index, instrument_specific = False):
         '''
         runs through the creation and saving logic for each index and alpha
         only runs indexes on Mon-Fri
@@ -81,8 +81,6 @@ class IndexGenerationScript:
             index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
 
             dm = DataManager(date_start=self.date_start)
-
-
 
 
             if self.reset_from_beginning:
@@ -130,25 +128,6 @@ class IndexGenerationScript:
 
             try:
 
-                # opt_codes_to_pass = []
-                #
-                # for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
-                #     if instrument == inst_opt_code['instrument']:
-                #         opt_codes_to_pass = inst_opt_code['opt_codes']
-                #         break
-                #
-                # INDEX_CONTEXT = {
-                #     'instrument': instrument,
-                #     'costs_futures': 3.0,
-                #     'costs_options': 3.0,
-                #     'opt_codes': opt_codes_to_pass
-                # }
-                #
-                # index = ExoClass(dm, **INDEX_CONTEXT)
-
-                #index = ExoClass(dm, instrument=instrument, costs_futures= 3.0,
-                #                 costs_options=3.0, opt_codes=opt_codes_to_pass)
-
                 index = self.create_index_class(instrument, ExoClass, dm)
 
                 self.run_index(index, current_time_utc, index_hedge_name)
@@ -158,20 +137,23 @@ class IndexGenerationScript:
             except:
                 pass
 
-    def create_index_class(self, instrument, ExoClass, dm):
-        opt_codes_to_pass = []
-
-        for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
-            if instrument == inst_opt_code['instrument']:
-                opt_codes_to_pass = inst_opt_code['opt_codes']
-                break
+    def create_index_class(self, instrument, ExoClass, dm, instrument_specific):
 
         INDEX_CONTEXT = {
             'instrument': instrument,
-             'context':{'costs_futures': 3.0,
-                        'costs_options': 3.0},
-            'opt_codes': opt_codes_to_pass
+            'context': {'costs_futures': 3.0,
+                        'costs_options': 3.0}
         }
+
+        if not instrument_specific:
+            opt_codes_to_pass = []
+
+            for inst_opt_code in INSTRUMENT_OPT_CODE_LIST:
+                if instrument == inst_opt_code['instrument']:
+                    opt_codes_to_pass = inst_opt_code['opt_codes']
+                    break
+
+            INDEX_CONTEXT['opt_codes'] = opt_codes_to_pass
 
         index = ExoClass(dm, **INDEX_CONTEXT)
         return index
@@ -227,9 +209,9 @@ class IndexGenerationScript:
         # try:
         dm2 = DataManager()
         #print(alpha_name)
-        saved_alpha = StrategyBase.load(dm2, alpha_name)
-        saved_alpha.run()
-        saved_alpha.save()
+        # saved_alpha = StrategyBase.load(dm2, alpha_name)
+        # saved_alpha.run()
+        # saved_alpha.save()
 
         print('running finished ' + alpha_name)
 
