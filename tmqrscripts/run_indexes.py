@@ -84,7 +84,7 @@ class IndexGenerationScript:
 
 
             if self.reset_from_beginning:
-                index = self.create_index_class(instrument, ExoClass, dm)
+                index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
                 current_time = datetime.utcnow()
 
@@ -128,7 +128,7 @@ class IndexGenerationScript:
 
             try:
 
-                index = self.create_index_class(instrument, ExoClass, dm)
+                index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
                 self.run_index(index, current_time_utc, index_hedge_name)
 
