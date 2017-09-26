@@ -15,6 +15,7 @@ from tmqr.errors import ArgumentError, OptionsEODQuotesNotFoundError, ChainNotFo
 from collections import OrderedDict
 from datetime import datetime, time, timedelta
 from tmqr.logs import log
+from bdateutil import relativedelta
 
 
 class DataFeed:
@@ -195,6 +196,7 @@ class DataFeed:
         if dfseries is None:
             # Cache is not exists for 'tckr'
             dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
+            assert dfseries.index.tz is pytz.UTC, 'Quotes data Pandas.DataFrame index expected to be in UTC timezone'
 
         if qtype == QTYPE_INTRADAY:
             # Convert timezone of the dataframe (in place)
@@ -209,13 +211,45 @@ class DataFeed:
 
             data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
             df = dfseries
-            if data_options_use_prev_date:
-                df = df.shift(1)
+
 
             try:
-                return [df.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
+                if data_options_use_prev_date:
+                    df_shifted = df.shift(1)
+                    return [df_shifted.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
+                else:
+                    return [df.at[datetime.combine(d.date(), time(23, 59, 59)), 'iv'] for d in dt_list]
             except KeyError:
-                # return [df.ix[:datetime.combine(d.date(), time(23, 59, 59))].tail(1)['iv'][0] for d in dt_list]
-                raise OptionsEODQuotesNotFoundError(f"Option {tckr} EOD quotes not found at {dt_list}")
+                #
+                # Handling data holes or fridays
+                #
+
+                px_list = []
+                for d in dt_list:
+                    _dt_tz = pytz.utc.localize(datetime.combine(d.date(), time(23, 59, 59)))
+                    df_data = df.ix[:_dt_tz].tail(2)
+
+                    # Raise error if dataframe is empty
+                    if len(df_data) == 0:
+                        raise OptionsEODQuotesNotFoundError(
+                            f"Option {tckr} EOD quotes not found at {dt_list} (no data before: {d})")
+
+                    # Raise error if data is delayed more than 0 business day
+                    bd_delta = relativedelta(_dt_tz, df_data.index[-1])
+
+                    assert bd_delta.bdays >= 0
+
+                    if bd_delta.bdays > 1:
+                        raise OptionsEODQuotesNotFoundError(
+                            f"Option {tckr} EOD quotes data delay at {d} last DB date: {df_data.index[-1]}")
+                    else:
+                        # bd_delta.bdays == 0
+                        if data_options_use_prev_date and bd_delta.bdays == 0:
+                            # use previous date if requested date is last in the df index
+                            px_list.append(df_data['iv'][-2])
+                        else:
+                            px_list.append(df_data['iv'][-1])
+                return px_list
+
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
