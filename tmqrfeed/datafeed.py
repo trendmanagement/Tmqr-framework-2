@@ -196,6 +196,7 @@ class DataFeed:
         if dfseries is None:
             # Cache is not exists for 'tckr'
             dfseries, qtype = self.data_engine.db_get_raw_series(tckr, source_type, **kwargs)
+            assert dfseries.index.tz is pytz.UTC, 'Quotes data Pandas.DataFrame index expected to be in UTC timezone'
 
         if qtype == QTYPE_INTRADAY:
             # Convert timezone of the dataframe (in place)
@@ -211,6 +212,7 @@ class DataFeed:
             data_options_use_prev_date = kwargs.get('data_options_use_prev_date', False)
             df = dfseries
 
+
             try:
                 if data_options_use_prev_date:
                     df_shifted = df.shift(1)
@@ -221,9 +223,11 @@ class DataFeed:
                 #
                 # Handling data holes or fridays
                 #
+
                 px_list = []
                 for d in dt_list:
-                    df_data = df.ix[:datetime.combine(d.date(), time(23, 59, 59))].tail(2)
+                    _dt_tz = pytz.utc.localize(datetime.combine(d.date(), time(23, 59, 59)))
+                    df_data = df.ix[:_dt_tz].tail(2)
 
                     # Raise error if dataframe is empty
                     if len(df_data) == 0:
@@ -231,7 +235,7 @@ class DataFeed:
                             f"Option {tckr} EOD quotes not found at {dt_list} (no data before: {d})")
 
                     # Raise error if data is delayed more than 0 business day
-                    bd_delta = relativedelta(datetime.combine(d.date(), time(23, 59, 59)), df_data.index[-1])
+                    bd_delta = relativedelta(_dt_tz, df_data.index[-1])
 
                     assert bd_delta.bdays >= 0
 
