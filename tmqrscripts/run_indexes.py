@@ -53,10 +53,11 @@ class IndexGenerationScript:
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
-            if not 'DEFAULT' in instrument['instrument'] or instrument['instrument'] in instrument_list:
+            if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in instrument_list:
+                print(instrument['instrument'])
                 for exo in INDEX_LIST:
                     if 'instrument' in exo:
-                        print(exo['instrument'])
+                        # print(exo['instrument'])
                         if instrument['instrument'] == exo['instrument']:
                             t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
                             t.start()
