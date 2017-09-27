@@ -4,7 +4,7 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-# from tmqrstrategy.strategy_base import StrategyBase
+from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
 from datetime import datetime
@@ -175,7 +175,7 @@ class IndexGenerationScript:
 
 
 
-        if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_start:
+        if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_decision:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
 
@@ -210,9 +210,9 @@ class IndexGenerationScript:
         # try:
         dm2 = DataManager()
         #print(alpha_name)
-        # saved_alpha = StrategyBase.load(dm2, alpha_name)
-        # saved_alpha.run()
-        # saved_alpha.save()
+        saved_alpha = StrategyBase.load(dm2, alpha_name)
+        saved_alpha.run()
+        saved_alpha.save()
 
         print('running finished ' + alpha_name)
 
