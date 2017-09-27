@@ -40,6 +40,11 @@ class IndexGenerationScript:
         self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
                                                unique=False)
 
+        RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
+        RMT_MONGO_DB = 'tmldb_v2'
+        self.remote_client = MongoClient(RMT_MONGO_CONNSTR)
+        self.remote_db = self.remote_client[RMT_MONGO_DB]
+
     def run_main_index_alpha_script(self):
         '''
         runs the script for all instruments and indexes in settings_index and associated alphas
@@ -87,6 +92,7 @@ class IndexGenerationScript:
             if self.reset_from_beginning:
                 index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
+                #no need to worry putting current_time in local time zone in the if reset_from_beginning
                 current_time = datetime.utcnow()
 
                 current_time_utc = datetime.utcnow()
@@ -103,7 +109,7 @@ class IndexGenerationScript:
                 current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
 
                 sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
-                                                                                         decision_time_shift=index.decision_time_shift - 1)
+                                                                    decision_time_shift=index.decision_time_shift - 1)
 
 
                 index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
@@ -178,10 +184,29 @@ class IndexGenerationScript:
         if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_decision:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
-
+            v1_alpha_ok = True
 
             for alpha in alphas_list:
                 # print('running 1 ' + alpha['name'])
+
+
+
+                if 'v1_alphas' in alpha['context']:
+                    swarm_list = alpha['context']['v1_alphas']
+
+                    if swarm_list:
+                        earliest_date = current_time.date()
+                        for swarm in swarm_list:
+
+                            v1_alpha = self.remote_db['swarms'].find_one({'swarm_name': swarm})
+
+                            if v1_alpha['last_date'].date() < earliest_date:
+                                earliest_date = v1_alpha['last_date'].date()
+                                v1_alpha_ok = False
+
+                            if not v1_alpha_ok:
+                                current_time_utc = self.time_to_utc_from_local_tz(earliest_date, index.session.tz.zone)
+
 
                 if not 'alpha_update_time' in alpha['context']:
                     t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
@@ -193,7 +218,13 @@ class IndexGenerationScript:
                     last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
                     last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
-                    if self.reset_from_beginning or self.override_run or last_alpha_update_time < alpha_sess_decision:
+
+                    if self.reset_from_beginning or self.override_run:
+                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                        t.start()
+                    elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
+                        #check V1 alpha update
+
                         t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         t.start()
                         # self.run_alpha(alpha['name'], current_time_utc)
