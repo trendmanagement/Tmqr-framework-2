@@ -48,8 +48,8 @@ def fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v
         return None
     else:
         df = pd.DataFrame(data)
-        df = df[['datetime', 'open', 'high', 'low', 'close', 'volume']]
-        df.rename(columns={'datetime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c',
+        df = df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
+        df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c',
                            'volume': 'v'},
                   inplace=True)
         df.set_index('dt', inplace=True)
