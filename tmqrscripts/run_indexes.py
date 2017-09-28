@@ -4,10 +4,10 @@ from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+# from tmqrstrategy.strategy_base import StrategyBase
 
 from tmqr.logs import log
-from datetime import datetime
+from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
 import threading
@@ -167,8 +167,8 @@ class IndexGenerationScript:
         #pass
 
     def run_index(self, index, update_time, index_hedge_name):
-        index.run()
-        index.save()
+        # index.run()
+        # index.save()
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
@@ -205,7 +205,7 @@ class IndexGenerationScript:
                                 v1_alpha_ok = False
 
                             if not v1_alpha_ok:
-                                current_time_utc = self.time_to_utc_from_local_tz(earliest_date, index.session.tz.zone)
+                                current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
 
 
                 if not 'alpha_update_time' in alpha['context']:
@@ -241,9 +241,9 @@ class IndexGenerationScript:
         # try:
         dm2 = DataManager()
         #print(alpha_name)
-        saved_alpha = StrategyBase.load(dm2, alpha_name)
-        saved_alpha.run()
-        saved_alpha.save()
+        # saved_alpha = StrategyBase.load(dm2, alpha_name)
+        # saved_alpha.run()
+        # saved_alpha.save()
 
         print('running finished ' + alpha_name)
 
