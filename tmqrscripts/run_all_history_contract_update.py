@@ -15,5 +15,16 @@ Futures data updates script, all futures contracts
 #     sys.path.insert(0, cmd_subfolder)
 
 from tmqrscripts.load_futures_from_v1 import *
+import argparse
 
-run_all_futures()
+parser = argparse.ArgumentParser()
+parser.add_argument("--instrument", help="an instrument you want to backfill", type=str)
+args = parser.parse_args()
+
+if args.instrument is None:
+    print('run all')
+    backfill_full_futures_history_all_instruments()
+else:
+    print('run ',args.instrument)
+    backfill_full_futures_history_selected_instrument(args.instrument)
+#backfill_futures_history_all_instruments()

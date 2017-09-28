@@ -6,4 +6,16 @@ Futures data updates script, all futures contracts
 
 from tmqrscripts.load_futures_from_v1 import *
 
-run_current_futures()
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--instrument", help="an instrument you want to backfill", type=str)
+args = parser.parse_args()
+
+if args.instrument is None:
+    print('run all')
+    run_current_futures_history_all_instruments()
+else:
+    print('run ',args.instrument)
+    run_current_futures_history_selected_instrument(args.instrument)

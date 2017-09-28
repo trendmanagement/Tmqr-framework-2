@@ -134,7 +134,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
             asset_index_collection.update_one({'tckr': fut.ticker}, {'$set':{'extra_data.eod_update_time':df.iloc[-1].name}})
 
-def run_all_futures():
+def backfill_full_futures_history_all_instruments():
 
     asset_info_collection = local_db['asset_info']
 
@@ -144,18 +144,28 @@ def run_all_futures():
 
             import_futures_from_v1(instrument['instrument'], all_contracts = True)
 
-
-def run_current_futures():
+def backfill_full_futures_history_selected_instrument(instrument):
 
     asset_info_collection = local_db['asset_info']
 
-    #import_futures_from_v1(instrument['instrument'], all_contracts=False)
+    import_futures_from_v1(instrument, all_contracts = True)
+
+
+def run_current_futures_history_all_instruments():
+
+    asset_info_collection = local_db['asset_info']
 
     for instrument in asset_info_collection.find({}):
 
         if not 'DEFAULT' in instrument['instrument']:
 
             import_futures_from_v1(instrument['instrument'], all_contracts=False)
+
+def run_current_futures_history_selected_instrument(instrument):
+
+    asset_info_collection = local_db['asset_info']
+
+    import_futures_from_v1(instrument, all_contracts=False)
 
 
 #import_futures_from_v1("US.CL", all_contracts=False)
