@@ -54,7 +54,7 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US,6C']
+        instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J']
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
@@ -172,6 +172,7 @@ class IndexGenerationScript:
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
+        pass
 
 
 
