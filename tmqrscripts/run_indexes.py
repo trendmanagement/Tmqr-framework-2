@@ -112,7 +112,7 @@ class IndexGenerationScript:
 
                 # current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
 
-                ct = self.current_time_generate(pytz.timezone(index.session.tz))
+                ct = self.current_time_generate(index.session.tz)
 
                 sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(ct['current_time'],
                                                                     decision_time_shift=index.decision_time_shift - 1)
