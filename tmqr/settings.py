@@ -5,6 +5,8 @@ from datetime import datetime
 MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
 MONGO_DB = 'tmqr2'
 
+DEFAULT_TIMEZONE = 'US/Pacific'
+
 #
 # Datasources types for DataFeed
 #

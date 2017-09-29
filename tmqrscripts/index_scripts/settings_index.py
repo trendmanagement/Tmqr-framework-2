@@ -6,6 +6,8 @@ from tmqrindex.deployed.es_exoweekly_calendar_risk_restriction_shorts import ES_
 from tmqrindex.deployed.es_exoweekly_calendar_risk_restriction_longs import ES_EXOWeeklyCalendarRiskRestrictionLongs
 from tmqrindex.deployed.es_exoweekly_calendar_putspread import ES_EXOWeeklyCalendarPutSpread
 
+
+
 INDEX_LIST = [
 
     {

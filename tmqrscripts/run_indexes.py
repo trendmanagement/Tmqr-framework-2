@@ -58,6 +58,7 @@ class IndexGenerationScript:
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
+        # instrument = {'US.6J']
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in instrument_list:
                 print(instrument['instrument'])
                 for exo in INDEX_LIST:
@@ -70,6 +71,8 @@ class IndexGenerationScript:
                         t = threading.Thread(target=self.run_through_each_index_threads,
                                              args=(instrument['instrument'], exo))
                         t.start()
+                        # self.run_through_each_index_threads(instrument['instrument'], exo)
+
 
 
     def run_through_each_index_threads(self,instrument, exo_index, instrument_specific = False):
@@ -92,42 +95,45 @@ class IndexGenerationScript:
             if self.reset_from_beginning:
                 index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
-                #no need to worry putting current_time in local time zone in the if reset_from_beginning
-                current_time = datetime.utcnow()
+                #current_time = datetime.utcnow()
 
-                current_time_utc = datetime.utcnow()
+                #current_time_utc = datetime.utcnow()
 
-                self.run_index(index, current_time_utc, index_hedge_name)
+                ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
 
-                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
+                self.run_index(index, ct['current_time_utc'], index_hedge_name)
+
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
             else:
 
                 index = IndexBase.load(dm, index_hedge_name)
 
-                current_time = datetime.now(index.session.tz)
+                # current_time = datetime.now(index.session.tz)
 
-                current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
+                # current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
 
-                sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(current_time,
+                ct = self.current_time_generate(pytz.timezone(index.session.tz))
+
+                sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(ct['current_time'],
                                                                     decision_time_shift=index.decision_time_shift - 1)
 
 
                 index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
 
                 if index_from_db == None or not 'index_update_time' in index_from_db['context']:
-                    self.run_index(index, current_time_utc, index_hedge_name)
+                    self.run_index(index, ct['current_time_utc'], index_hedge_name)
                 else:
                     #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
                     last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                     last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-                    if self.override_run or (current_time.weekday() < 5 and\
-                            ((current_time >= sess_decision and last_index_update_time < sess_decision)
-                             or (current_time >= sess_exec and last_index_update_time < sess_exec))):
+                    if self.override_run or (ct['current_time'].weekday() < 5 and\
+                            ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
+                             or (ct['current_time'] >= sess_exec and last_index_update_time < sess_exec))):
 
-                        self.run_index(index, current_time_utc, index_hedge_name)
+                        self.run_index(index, ct['current_time_utc'], index_hedge_name)
 
-                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
 
 
         except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -137,12 +143,27 @@ class IndexGenerationScript:
 
                 index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
-                self.run_index(index, current_time_utc, index_hedge_name)
+                ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
 
-                self.checking_alpha_then_run(index, current_time, current_time_utc, index_hedge_name)
+                self.run_index(index, ct['current_time_utc'], index_hedge_name)
 
-            except:
-                pass
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
+
+            except Exception as e1:
+                log.warn(f"ExoIndexError: '{e1}'")
+
+    def current_time_generate(self, tz):
+        assert tz != None, 'no timezone passed to current_time_generate'
+
+        ct = {}
+
+        ct['current_time'] = datetime.now(tz)
+
+        ct['current_time_utc'] = self.time_to_utc_from_local_tz(ct['current_time'], tz.zone)
+
+        return ct
+
+
 
     def create_index_class(self, instrument, ExoClass, dm, instrument_specific):
 
@@ -172,7 +193,7 @@ class IndexGenerationScript:
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
-        pass
+        #pass
 
 
 
