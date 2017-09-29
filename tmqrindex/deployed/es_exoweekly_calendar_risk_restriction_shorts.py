@@ -44,12 +44,12 @@ class ES_EXOWeeklyCalendarRiskRestrictionShorts(IndexEXOBase):
         # fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW1','EW4'])
         # fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW',''])
         # Selling ATM call
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW2', 'EW4', 'EW5', 'EW'])
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW2', 'EW4', 'EW'])
         pos.add_transaction(dt, opt_chain.find(dt, 0.2, 'C', how='delta'), 2.0)
 
         # Hedging with next series by delta 0.75 call
         # fut_next, opt_chain_next = self.dm.chains_options_get(self.instrument, dt,opt_offset=0)
-        fut_next, opt_chain_next = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW1', 'EW3', 'EW5'])
+        fut_next, opt_chain_next = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW1', 'EW3'])
         pos.add_transaction(dt, opt_chain_next.find(dt, 0.1, 'P', how='delta'), -1.0)
 
         # fut_next, opt_chain_next = self.dm.chains_options_get(self.instrument, dt, opt_offset=6)

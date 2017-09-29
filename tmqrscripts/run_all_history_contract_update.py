@@ -27,4 +27,4 @@ if args.instrument is None:
 else:
     print('run ',args.instrument)
     backfill_full_futures_history_selected_instrument(args.instrument)
-#backfill_futures_history_all_instruments()
+

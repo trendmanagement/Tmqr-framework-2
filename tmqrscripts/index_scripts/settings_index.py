@@ -36,6 +36,10 @@ INDEX_LIST = [
 
 INSTRUMENT_OPT_CODE_LIST = [
     {
+        'instrument':'US.ES',
+        'opt_codes':['EW','EW1','EW2','EW3','EW4','']
+    },
+    {
         'instrument':'US.6E',
         'opt_codes':['EUU','']
     },
