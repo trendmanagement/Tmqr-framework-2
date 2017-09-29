@@ -54,11 +54,11 @@ class IndexGenerationScript:
 
         self.asset_info_collection = self.db['asset_info']
 
-        instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J']
+        instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
-        # instrument = {'US.6J']
+        # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in instrument_list:
                 print(instrument['instrument'])
                 for exo in INDEX_LIST:
