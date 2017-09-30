@@ -39,26 +39,26 @@ INDEX_LIST = [
 INSTRUMENT_OPT_CODE_LIST = [
     {
         'instrument':'US.ES',
-        'opt_codes':['EW','EW1','EW2','EW3','EW4','\ ']
+        'opt_codes':['EW','EW1','EW2','EW3','EW4',' ']
     },
     {
         'instrument':'US.6E',
-        'opt_codes':['EUU','\ ']
+        'opt_codes':['EUU',' ']
     },
     {
         'instrument':'US.6B',
-        'opt_codes':['GBU','\ ']
+        'opt_codes':['GBU',' ']
     },
     {
         'instrument':'US.6C',
-        'opt_codes':['CAU','\ ']
+        'opt_codes':['CAU',' ']
     },
     {
         'instrument':'US.6A',
-        'opt_codes':['ADU','\ ']
+        'opt_codes':['ADU',' ']
     },
-{
+    {
         'instrument':'US.6J',
-        'opt_codes':['JPU','\ ']
+        'opt_codes':['JPU',' ']
     },
 ]
