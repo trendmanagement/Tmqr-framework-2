@@ -1,4 +1,10 @@
 
+'''V1 package calls'''
+from exobuilder.data.datasource_mongo import DataSourceMongo
+from tradingcore.execution_manager import ExecutionManager
+from exobuilder.data.assetindex_mongo import AssetIndexMongo
+from exobuilder.data.exostorage import EXOStorage
+
 from tmqrscripts.index_scripts.settings_index import *
 from tmqr.settings import *
 from tmqrfeed.manager import DataManager
@@ -273,10 +279,20 @@ class IndexGenerationScript:
         self.db['alpha_data'].update_one({'name': alpha_name},
                                             {'$set': {'context.alpha_update_time': update_time}})
 
+        self.run_account_positions_process()
+
         #log.warn('running finished ' + alpha_name)
 
         # except:
 
+    def run_account_positions_process(self):
+        assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
+        storage = EXOStorage(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
+        datasource = DataSourceMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1, assetindex, futures_limit=10, options_limit=10,
+                                     exostorage=storage)
+
+        exmgr = ExecutionManager(MONGO_CONNSTR_V1, datasource, MONGO_EXO_DB_V1)
+        exmgr.account_positions_process(write_to_db=True)
 
     def time_to_utc_from_none(self, naive):
         return naive.replace(tzinfo=pytz.utc)

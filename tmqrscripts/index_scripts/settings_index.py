@@ -5,7 +5,7 @@ from tmqrindex.deployed.exo_short_enhance_dt_2_callspread import EXOShortEnhance
 from tmqrindex.deployed.es_exoweekly_calendar_risk_restriction_shorts import ES_EXOWeeklyCalendarRiskRestrictionShorts
 from tmqrindex.deployed.es_exoweekly_calendar_risk_restriction_longs import ES_EXOWeeklyCalendarRiskRestrictionLongs
 from tmqrindex.deployed.es_exoweekly_calendar_putspread import ES_EXOWeeklyCalendarPutSpread
-
+from tmqrindex.deployed.es_exoweekly_calendar_risk_reversal_long import ES_EXOWeeklyCalendarRiskReversalLong
 
 
 INDEX_LIST = [
@@ -33,6 +33,10 @@ INDEX_LIST = [
     {
         'instrument':'US.ES',
         'class': ES_EXOWeeklyCalendarPutSpread
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOWeeklyCalendarRiskReversalLong
     }
 ]
 
