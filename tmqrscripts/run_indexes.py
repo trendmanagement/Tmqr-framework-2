@@ -46,10 +46,13 @@ class IndexGenerationScript:
         self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
                                                unique=False)
 
-        RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
-        RMT_MONGO_DB = 'tmldb_v2'
-        self.remote_client = MongoClient(RMT_MONGO_CONNSTR)
-        self.remote_db = self.remote_client[RMT_MONGO_DB]
+        self.campaign_alpha_list = self.get_campaign_alpha_list()
+
+        # RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
+        # RMT_MONGO_DB = 'tmldb_v2'
+
+        self.remote_client = MongoClient(MONGO_CONNSTR_V1)
+        self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
 
     def run_main_index_alpha_script(self):
         '''
@@ -218,47 +221,69 @@ class IndexGenerationScript:
             for alpha in alphas_list:
                 # print('running 1 ' + alpha['name'])
 
+                if alpha['name'] in self.campaign_alpha_list:
+
+                    if 'v1_alphas' in alpha['context']:
+                        swarm_list = alpha['context']['v1_alphas']
+
+                        if swarm_list:
+                            earliest_date = current_time.date()
+                            for swarm in swarm_list:
+
+                                v1_alpha = self.remote_db['swarms'].find_one({'swarm_name': swarm})
+
+                                if v1_alpha['last_date'].date() < earliest_date:
+                                    earliest_date = v1_alpha['last_date'].date()
+                                    v1_alpha_ok = False
+
+                                if not v1_alpha_ok:
+                                    current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
 
 
-                if 'v1_alphas' in alpha['context']:
-                    swarm_list = alpha['context']['v1_alphas']
-
-                    if swarm_list:
-                        earliest_date = current_time.date()
-                        for swarm in swarm_list:
-
-                            v1_alpha = self.remote_db['swarms'].find_one({'swarm_name': swarm})
-
-                            if v1_alpha['last_date'].date() < earliest_date:
-                                earliest_date = v1_alpha['last_date'].date()
-                                v1_alpha_ok = False
-
-                            if not v1_alpha_ok:
-                                current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
-
-
-                if not 'alpha_update_time' in alpha['context']:
-                    t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                    t.start()
-                    # self.run_alpha(alpha['name'], current_time_utc)
-                    # print('running 2 ' + alpha['name'])
-
-                else:
-                    last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
-                    last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
-
-
-                    if self.reset_from_beginning or self.override_run:
-                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                        t.start()
-                    elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
-                        #check V1 alpha update
-
+                    if not 'alpha_update_time' in alpha['context']:
                         t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                         t.start()
                         # self.run_alpha(alpha['name'], current_time_utc)
-                        # print('running 3 ' + alpha['name'])
+                        # print('running 2 ' + alpha['name'])
 
+                    else:
+                        last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
+                        last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
+
+
+                        if self.reset_from_beginning or self.override_run:
+                            t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                            t.start()
+                        elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
+                            #check V1 alpha update
+
+                            t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                            t.start()
+                            # self.run_alpha(alpha['name'], current_time_utc)
+                            # print('running 3 ' + alpha['name'])
+
+    def get_campaign_alpha_list(self):
+        pipeline = [
+            {
+                '$lookup':
+                    {
+                        'from': 'campaigns',
+                        'localField': 'campaign_name',
+                        'foreignField': 'name',
+                        'as': 'alphas'
+                    }
+            },
+            {'$group': {'_id': '$campaign_name', 'alphas_list': {'$push': '$alphas'}}}
+
+        ]
+        final_alpha_list = []
+        for campaign_list in list(self.remote_db['accounts'].aggregate(pipeline)):
+
+            for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
+                alpha_list_replace = alpha_list.replace('!NEW_', "")
+                final_alpha_list.append(alpha_list_replace)
+
+        return final_alpha_list
 
     def run_alpha(self, alpha_name, update_time):
         '''
