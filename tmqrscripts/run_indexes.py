@@ -66,7 +66,8 @@ class IndexGenerationScript:
         self.asset_info_collection = self.db['asset_info']
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
-        instrument_list = ['US.ES', 'US.CL', 'US.ZN']
+        # instrument_list = ['US.ES', 'US.CL', 'US.ZN']
+        instrument_list = ['US.ES']
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
