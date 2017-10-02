@@ -46,13 +46,15 @@ class IndexGenerationScript:
         self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
                                                unique=False)
 
-        self.campaign_alpha_list = self.get_campaign_alpha_list()
+
 
         # RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
         # RMT_MONGO_DB = 'tmldb_v2'
 
         self.remote_client = MongoClient(MONGO_CONNSTR_V1)
         self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
+
+        self.campaign_alpha_list = self.get_campaign_alpha_list()
 
     def run_main_index_alpha_script(self):
         '''
