@@ -6,6 +6,7 @@ from tmqrfeed.costs import Costs
 from tmqr.logs import log
 from tmqrfeed.position import Position
 import pandas as pd
+import pytz
 
 
 
@@ -55,14 +56,20 @@ class IndexEXOBase(IndexBase):
             pos = self.position
 
         # Get last position date
+        quotes_date_index = self.dm.quotes().index
+
         try:
             position_last_date = pos.last_date
         except PositionNotFoundError:
-            position_last_date = QDATE_MIN
+            if quotes_date_index.tz:
+                # Avoid: "TypeError: can't compare offset-naive and offset-aware datetimes"
+                position_last_date = quotes_date_index.tz.localize(QDATE_MIN)
+            else:
+                position_last_date = QDATE_MIN
 
         exo_df = self.calc_exo_logic()
 
-        for dt in self.dm.quotes().index:
+        for dt in quotes_date_index:
             if dt <= position_last_date:
                 # Just updating EXO index position
                 continue
