@@ -1,10 +1,12 @@
 from tmqrindex.index_base import IndexBase, INSTRUMENT_NA
-from tmqr.errors import ArgumentError, ChainNotFoundError, QuoteNotFoundError, SettingsError
+from tmqr.settings import QDATE_MIN
+from tmqr.errors import ArgumentError, ChainNotFoundError, QuoteNotFoundError, SettingsError, PositionNotFoundError
 from tmqrfeed.quotes.quote_contfut import QuoteContFut
 from tmqrfeed.costs import Costs
 from tmqr.logs import log
 from tmqrfeed.position import Position
 import pandas as pd
+
 
 
 class IndexEXOBase(IndexBase):
@@ -47,11 +49,23 @@ class IndexEXOBase(IndexBase):
         :return: 
         """
 
-        pos = Position(self.dm, decision_time_shift=self.decision_time_shift)
+        if self.position is None:
+            pos = Position(self.dm, decision_time_shift=self.decision_time_shift)
+        else:
+            pos = self.position
+
+        # Get last position date
+        try:
+            position_last_date = pos.last_date
+        except PositionNotFoundError:
+            position_last_date = QDATE_MIN
 
         exo_df = self.calc_exo_logic()
 
         for dt in self.dm.quotes().index:
+            if dt <= position_last_date:
+                # Just updating EXO index position
+                continue
 
             try:
                 pos.keep_previous_position(dt)
@@ -76,13 +90,32 @@ class IndexEXOBase(IndexBase):
             except QuoteNotFoundError as exc2:
                 log.error(f"QuoteNotFoundError: {dt}: {exc2}")
 
+        old_delta_series = None
+        if self.data is not None:
+            if 'delta' in self.data:
+                old_delta_series = self.data['delta']
+
 
         self.data = pos.get_pnl_series()
 
-        # Adding delta series to the EXO dataframe
-        delta_series = pd.Series(0.0, index=self.data.index)
-        for i, dt in enumerate(self.data.index):
-            delta_series[i] = pos.delta(dt)
+        if old_delta_series is None or len(old_delta_series) == 0:
+            # Adding delta series to the EXO dataframe
+            delta_series = pd.Series(0.0, index=self.data.index)
+            for i, dt in enumerate(self.data.index):
+                delta_series[i] = pos.delta(dt)
+        else:
+            # Updating delta series
+            delta_series = pd.Series(0.0, index=self.data.index)
+            # Rewriting by old delta series
+            delta_series[old_delta_series.index] = old_delta_series
+
+            for i, dt in enumerate(reversed(self.data.index)):
+                if dt < old_delta_series.index[-1]:
+                    # just update recent days
+                    break
+                delta_series[i] = pos.delta(dt)
+
+
         self.data['delta'] = delta_series
 
         self.position = pos

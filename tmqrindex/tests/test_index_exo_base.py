@@ -45,8 +45,6 @@ class IndexEXOBaseTestCase(unittest.TestCase):
         }
         idx = IndexEXOBase(dm, instrument='CL', context=context)
 
-        self.assertRaises(ArgumentError, IndexEXOBase, dm)
-
         self.assertEqual(idx.instrument, 'CL')
         self.assertEqual(idx.costs_futures, 1)
         self.assertEqual(idx.costs_options, 3)

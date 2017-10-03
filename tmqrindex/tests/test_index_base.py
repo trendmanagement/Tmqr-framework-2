@@ -14,7 +14,7 @@ import lz4
 import numpy as np
 from tmqrfeed.assetsession import AssetSession
 import pytz
-
+from tmqr.serialization import object_to_full_path
 
 class IndexBaseTestCase(unittest.TestCase):
     def setUp(self):
@@ -155,7 +155,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
         serialized_idx = idx.serialize()
 
-        self.assertEqual(9, len(serialized_idx))
+        self.assertEqual(10, len(serialized_idx))
         self.assertEqual(kwcontext, serialized_idx['context'])
         self.assertEqual('TEST', serialized_idx['instrument'])
         self.assertEqual(IndexBase._description_long, serialized_idx['description_long'])
@@ -166,6 +166,7 @@ class IndexBaseTestCase(unittest.TestCase):
         self.assertTrue('data' in serialized_idx['position'])
         self.assertTrue('kwargs' in serialized_idx['position'])
         self.assertTrue('session' in serialized_idx)
+        self.assertEqual(serialized_idx['index_class'], object_to_full_path(idx))
 
     def test_deserialize(self):
         dm = MagicMock(DataManager)()
@@ -187,7 +188,7 @@ class IndexBaseTestCase(unittest.TestCase):
 
         serialized_idx = idx.serialize()
 
-        self.assertRaises(ArgumentError, IndexContFut.deserialize, dm, serialized_idx)
+        # self.assertRaises(ArgumentError, IndexContFut.deserialize, dm, serialized_idx)
 
         idx2 = IndexBase.deserialize(dm, serialized_idx, as_readonly=False)
 
@@ -311,7 +312,7 @@ class IndexBaseTestCase(unittest.TestCase):
         idx = IndexBase(dm, instrument=kwinstrument, context=kwcontext, data=kwdata, position=kwposition)
         idx.save()
 
-        idx2 = IndexBase.load(dm, kwinstrument)
+        idx2 = IndexBase.load(dm, idx.index_name)
 
         self.assertEqual(True, np.all(idx2.data == kwdata))
         self.assertEqual(kwcontext, idx2.context)
@@ -340,7 +341,7 @@ class IndexBaseTestCase(unittest.TestCase):
         idx = IndexBase(dm, context=kwcontext, data=kwdata, position=kwposition)
         idx.save()
 
-        idx2 = IndexBase.load(dm)
+        idx2 = IndexBase.load(dm, 'IndexBase')
 
         self.assertEqual(True, np.all(idx2.data == kwdata))
         self.assertEqual(kwcontext, idx2.context)

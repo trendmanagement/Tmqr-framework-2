@@ -187,7 +187,8 @@ class IndexBase:
             # Getting strategy class from full-qualified class string
             Index_Class = object_from_path(db_index_class_name)
         else:
-            if index_base_class_name != db_index_class_name and object_to_full_path(cls) != index_base_class_name:
+            if index_base_class_name != db_index_class_name and object_to_full_path(cls) != serialized_index_record[
+                'index_class']:
                 raise ArgumentError(f"Index class {object_to_full_path(cls)} doesn't match index class in the "
                                     f"serialized index record {serialized_index_record['index_class']}, try "
                                     f"to check index class or call IndexBase.deserialize() to load dynamically")
