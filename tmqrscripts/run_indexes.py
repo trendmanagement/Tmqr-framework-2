@@ -1,16 +1,26 @@
 
+
 '''V1 package calls'''
 from exobuilder.data.datasource_mongo import DataSourceMongo
 from tradingcore.execution_manager import ExecutionManager
 from exobuilder.data.assetindex_mongo import AssetIndexMongo
 from exobuilder.data.exostorage import EXOStorage
 
+from tradingcore.signalapp import SignalApp, APPCLASS_EXO, APPCLASS_ALPHA
+from tradingcore.messages import *
+
+try:
+    '''C - compiled code, will not run on local machine'''
+    from tmqrstrategy.strategy_base import StrategyBase
+except:
+    pass
+
 from tmqrscripts.index_scripts.settings_index import *
 from tmqr.settings import *
 from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
-from tmqrstrategy.strategy_base import StrategyBase
+
 
 from tmqr.logs import log
 from datetime import datetime, time
@@ -55,6 +65,9 @@ class IndexGenerationScript:
         self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
 
         self.campaign_alpha_list = self.get_campaign_alpha_list()
+
+        self.signalapp_exo = SignalApp('V2 calcs', APPCLASS_EXO, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
+        self.signalapp_alpha = SignalApp('V2 calcs', APPCLASS_ALPHA, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
 
     def run_main_index_alpha_script(self):
         '''
@@ -180,6 +193,14 @@ class IndexGenerationScript:
 
 
     def create_index_class(self, instrument, ExoClass, dm, instrument_specific):
+        '''
+        creates the index class taking into account instrument specific (a class specific to instrument) and option codes
+        :param instrument: 
+        :param ExoClass: 
+        :param dm: 
+        :param instrument_specific: 
+        :return: 
+        '''
 
         INDEX_CONTEXT = {
             'instrument': instrument,
@@ -202,16 +223,33 @@ class IndexGenerationScript:
         #pass
 
     def run_index(self, index, update_time, index_hedge_name):
+        '''
+        runs and saves the index
+        :param index: 
+        :param update_time: 
+        :param index_hedge_name: 
+        :return: 
+        '''
         index.run()
         index.save()
 
         self.db['index_data'].update_one({'name': index_hedge_name},
                                             {'$set': {'context.index_update_time': update_time}})
+
+        self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
 
 
 
     def checking_alpha_then_run(self,index,current_time, current_time_utc, index_hedge_name):
+        '''
+        This runs the alphas based on time and if the V1 alphas have run
+        :param index: 
+        :param current_time: 
+        :param current_time_utc: 
+        :param index_hedge_name: 
+        :return: 
+        '''
         alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
             current_time, 0)
 
@@ -227,6 +265,9 @@ class IndexGenerationScript:
 
                 if alpha['name'] in self.campaign_alpha_list:
 
+                    '''
+                    below checks if v1 alpha has been calculated                    
+                    '''
                     if 'v1_alphas' in alpha['context']:
                         swarm_list = alpha['context']['v1_alphas']
 
@@ -267,6 +308,10 @@ class IndexGenerationScript:
                             # print('running 3 ' + alpha['name'])
 
     def get_campaign_alpha_list(self):
+        '''
+        this gets the full list of alphas that the current active campaigns use
+        :return: the list of alphas that the campaigns use
+        '''
         pipeline = [
             {
                 '$lookup':
@@ -308,13 +353,21 @@ class IndexGenerationScript:
         self.db['alpha_data'].update_one({'name': alpha_name},
                                             {'$set': {'context.alpha_update_time': update_time}})
 
+        self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
+
         self.run_account_positions_process()
+
+
 
         #log.warn('running finished ' + alpha_name)
 
         # except:
 
     def run_account_positions_process(self):
+        '''
+        this updates the account position to the db for realtime
+        :return: 
+        '''
         assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
         storage = EXOStorage(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
         datasource = DataSourceMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1, assetindex, futures_limit=10, options_limit=10,
