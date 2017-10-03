@@ -80,7 +80,8 @@ class IndexBase:
         etc...
         :return: nothing, class instance can populate internal values 
         """
-        raise NotImplementedError("You must implement setup() method in child class.")
+        raise NotImplementedError(
+            "You must implement setup() method in child class, or you are trying to run IndexBase.")
 
 
     def set_data_and_position(self):
@@ -90,7 +91,7 @@ class IndexBase:
         :return: 
         """
         raise NotImplementedError(
-            "set_data_and_position() is not implemented by child Index, or you are tryin to run IndexBase")
+            "set_data_and_position() is not implemented by child Index, or you are trying to run IndexBase")
 
     def run(self):
         """

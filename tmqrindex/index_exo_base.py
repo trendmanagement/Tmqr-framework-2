@@ -120,7 +120,7 @@ class IndexEXOBase(IndexBase):
                 if dt < old_delta_series.index[-1]:
                     # just update recent days
                     break
-                delta_series[i] = pos.delta(dt)
+                delta_series[-(i + 1)] = pos.delta(dt)
 
 
         self.data['delta'] = delta_series
