@@ -66,8 +66,8 @@ class IndexGenerationScript:
         self.asset_info_collection = self.db['asset_info']
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
-        # instrument_list = ['US.ES', 'US.CL', 'US.ZN']
-        instrument_list = ['US.ES']
+        instrument_list = ['US.ES', 'US.CL', 'US.ZN']
+        # instrument_list = ['US.ES']
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
@@ -78,14 +78,14 @@ class IndexGenerationScript:
                     if 'instrument' in exo:
                         # print(exo['instrument'])
                         if instrument['instrument'] == exo['instrument']:
-                            # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
-                            # t.start()
-                            self.run_through_each_index_threads(instrument['instrument'], exo, True)
+                            t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
+                            t.start()
+                            # self.run_through_each_index_threads(instrument['instrument'], exo, True)
                     else:
-                        # t = threading.Thread(target=self.run_through_each_index_threads,
-                        #                      args=(instrument['instrument'], exo))
-                        # t.start()
-                        self.run_through_each_index_threads(instrument['instrument'], exo)
+                        t = threading.Thread(target=self.run_through_each_index_threads,
+                                             args=(instrument['instrument'], exo))
+                        t.start()
+                        # self.run_through_each_index_threads(instrument['instrument'], exo)
 
 
 
