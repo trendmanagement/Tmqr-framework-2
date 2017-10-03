@@ -78,13 +78,14 @@ class IndexGenerationScript:
                     if 'instrument' in exo:
                         # print(exo['instrument'])
                         if instrument['instrument'] == exo['instrument']:
-                            t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
-                            t.start()
+                            # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
+                            # t.start()
+                            self.run_through_each_index_threads(instrument['instrument'], exo, True)
                     else:
-                        t = threading.Thread(target=self.run_through_each_index_threads,
-                                             args=(instrument['instrument'], exo))
-                        t.start()
-                        # self.run_through_each_index_threads(instrument['instrument'], exo)
+                        # t = threading.Thread(target=self.run_through_each_index_threads,
+                        #                      args=(instrument['instrument'], exo))
+                        # t.start()
+                        self.run_through_each_index_threads(instrument['instrument'], exo)
 
 
 
