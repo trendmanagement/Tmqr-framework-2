@@ -1,9 +1,6 @@
-from tmqrfeed.manager import DataManager
-from tmqrindex.index_exo_base import IndexEXOBase
-from datetime import datetime
-
 from bdateutil import relativedelta
 from tmqr.logs import log
+from tmqrindex.index_exo_base import IndexEXOBase
 
 
 class EXOLongEnhance_DT(IndexEXOBase):

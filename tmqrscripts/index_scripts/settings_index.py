@@ -7,6 +7,12 @@ from tmqrindex.deployed.es_exoweekly_calendar_risk_restriction_longs import ES_E
 from tmqrindex.deployed.es_exoweekly_calendar_putspread import ES_EXOWeeklyCalendarPutSpread
 from tmqrindex.deployed.es_exoweekly_calendar_risk_reversal_long import ES_EXOWeeklyCalendarRiskReversalLong
 
+from tmqrindex.deployed.exo_semifuture_dynkel_20_60_longs import EXOSemiFuture_DynKel_20_60_longs
+from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs import EXOSemiFuture_DynKel_20_80_longs
+from tmqrindex.deployed.exo_semifuture_dynkel_60_20_shorts import EXOSemiFuture_DynKel_60_20_shorts
+from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts import EXOSemiFuture_DynKel_80_20_shorts
+
+INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN']
 
 INDEX_LIST = [
 
@@ -21,6 +27,18 @@ INDEX_LIST = [
     },
     {
         'class': EXOShortEnhance_DT_2_CallSpread
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_60_longs
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_80_longs
+    },
+    {
+        'class': EXOSemiFuture_DynKel_60_20_shorts
+    },
+    {
+        'class': EXOSemiFuture_DynKel_80_20_shorts
     },
     {
         'instrument':'US.ES',

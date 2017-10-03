@@ -4,10 +4,9 @@ Futures data updates script, all futures contracts
 # import sys
 # sys.path.append('..')
 
-from tmqrscripts.load_futures_from_v1 import *
-
-
 import argparse
+
+from tmqrscripts.historical_futures.load_futures_from_v1 import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--instrument", help="an instrument you want to backfill", type=str)

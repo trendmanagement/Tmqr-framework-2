@@ -1,13 +1,18 @@
+import pandas as pd
 from bdateutil import relativedelta
 from tmqr.logs import log
 from tmqrindex.index_exo_base import IndexEXOBase
 
 
-class EXOShortEnhance_DT_2(IndexEXOBase):
-    _description_short = "EXO Vanilla DeltaTargeting ShortEnhance"
+# from datetime import datetime
+
+# fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
+
+class EXOSemiFuture_DynKel_20_80_longs(IndexEXOBase):
+    _description_short = "EXO Vanilla DeltaTargeting DynKel Delta Risk Reversal"
     _description_long = ""
 
-    _index_name = "EXOShortEnhance_DT_2"
+    _index_name = "EXOSemiFuture_DynKel_20_80_longs"
 
     def calc_exo_logic(self):
         """
@@ -16,7 +21,19 @@ class EXOShortEnhance_DT_2(IndexEXOBase):
               calculate SmartEXO logic
         :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)
         """
-        pass
+
+        # Get primary instrument quotes (typically continuous futures quotes)
+        ohlc = self.dm.quotes()
+
+        # https://en.wikipedia.org/wiki/Keltner_channel
+        typical_px = (ohlc.h + ohlc.l + ohlc.c) / 3.0
+        typical_avg = typical_px.rolling(10).mean()
+
+        keltner_direction = typical_avg > typical_avg.shift()
+
+        return pd.DataFrame({'keltner_direction_current': keltner_direction,
+                             'keltner_direction_prev': keltner_direction.shift(),
+                             })
 
     def manage_position(self, dt, pos, logic_df):
         """
@@ -33,6 +50,14 @@ class EXOShortEnhance_DT_2(IndexEXOBase):
             pos.close(dt)
 
         #
+        # Smart EXO Keltner channel logic
+        #
+        if logic_df['keltner_direction_current'] != logic_df['keltner_direction_prev']:
+            log.debug(f"Keltner channel direction changed")
+            # Close the position
+            pos.close(dt)
+
+        #
         # Check business days after last transaction
         #
         pos_last_transaction_date = pos.last_transaction_date(dt)
@@ -46,11 +71,12 @@ class EXOShortEnhance_DT_2(IndexEXOBase):
             #    # Avoid following checks
             return
 
+
             #
         # Delta based rebalance
         #
         delta = pos.delta(dt)
-        if delta > 0.35:
+        if delta > 0.55:
             log.debug("Delta > 0.35")
             #    # Close the position
             pos.close(dt)
@@ -106,9 +132,12 @@ class EXOShortEnhance_DT_2(IndexEXOBase):
                             )
 
         """
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.01, 'C', how='delta'), 2.0)
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'C', how='delta'), -3.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'C', how='delta'), 1.0)
-        pos.add_transaction(dt, opt_chain.find(dt, 0.40, 'P', how='delta'), -1.0)
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.25, 'C', how='delta'), -2.0)
-        # pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'C', how='delta'), 2.0)
+        if logic_df['keltner_direction_current'] == True:
+            # Open the position when keltner channel is up
+            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'C', how='delta'), -1.0)
+        else:
+
+            # Open the position when keltner channel is down
+            pos.add_transaction(dt, opt_chain.find(dt, 0.50, 'P', how='delta'), 1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.30, 'C', how='delta'), -1.0)

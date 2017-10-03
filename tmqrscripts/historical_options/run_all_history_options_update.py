@@ -14,7 +14,10 @@ Futures data updates script, all futures contracts
 # if cmd_subfolder not in sys.path:
 #     sys.path.insert(0, cmd_subfolder)
 
-from tmqrscripts.load_futures_from_v1 import *
+from tmqrscripts.historical_options.import_options_data import *
+
+#run_all_options()
+
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -23,8 +26,7 @@ args = parser.parse_args()
 
 if args.instrument is None:
     print('run all')
-    backfill_full_futures_history_all_instruments()
+    run_full_options()
 else:
     print('run ',args.instrument)
-    backfill_full_futures_history_selected_instrument(args.instrument)
-
+    run_full_options_selected_instrument(args.instrument)

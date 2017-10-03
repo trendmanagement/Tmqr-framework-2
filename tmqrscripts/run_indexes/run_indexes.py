@@ -69,7 +69,15 @@ class IndexGenerationScript:
         self.signalapp_exo = SignalApp('V2 calcs', APPCLASS_EXO, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
         self.signalapp_alpha = SignalApp('V2 calcs', APPCLASS_ALPHA, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
 
-    def run_main_index_alpha_script(self):
+    def run_all_instruments(self):
+        self.run_main_index_alpha_script(INSTRUMENT_LIST_TO_RUN_INDEXES)
+
+    def run_selected_intruments(self, instrument):
+        instrument_list = []
+        instrument_list.append(instrument)
+        self.run_main_index_alpha_script(instrument_list)
+
+    def run_main_index_alpha_script(self, instrument_list):
         '''
         runs the script for all instruments and indexes in settings_index and associated alphas
         :param override_run: runs regardless of time
@@ -79,7 +87,7 @@ class IndexGenerationScript:
         self.asset_info_collection = self.db['asset_info']
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
-        instrument_list = ['US.ES', 'US.CL', 'US.ZN']
+        # instrument_list = ['US.ES', 'US.CL', 'US.ZN']
         # instrument_list = ['US.ES']
 
         for instrument in self.asset_info_collection.find({}):

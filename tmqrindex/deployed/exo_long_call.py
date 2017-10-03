@@ -1,6 +1,4 @@
-from tmqrfeed.manager import DataManager
 from tmqrindex.index_exo_base import IndexEXOBase
-from datetime import datetime
 
 
 class EXOLongCall(IndexEXOBase):
