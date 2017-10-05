@@ -71,7 +71,7 @@ class EXOShortEnhance_DT_2_CallSpread(IndexEXOBase):
         :return: nothing, manages 'pos' in place
         """
 
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.context['opt_codes'])
 
         #
         # Help

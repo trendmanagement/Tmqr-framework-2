@@ -8,16 +8,17 @@ To update you have 2 options (I don’t know which is the best, you should proba
 2. Read all options quotes for the contract in the old DB, parse these quotes to the Pandas.DataFrame and save.
 '''
 
-import numpy as np
+import pickle
+from datetime import time
+
+import lz4
 import pandas as pd
 import pytz
 from pymongo import MongoClient
-import pymongo
-from datetime import datetime, time
 from tmqr.settings import *
 from tqdm import tqdm
-import pickle
-import lz4
+from tradingcore.messages import *
+from tradingcore.signalapp import SignalApp, APPCLASS_DATA
 
 local_client = MongoClient(MONGO_CONNSTR)
 local_db = local_client[MONGO_DB]
@@ -29,6 +30,7 @@ RMT_MONGO_DB = 'tmldb_v2'
 remote_client = MongoClient(RMT_MONGO_CONNSTR)
 remote_db = remote_client[RMT_MONGO_DB]
 
+signalapp = SignalApp('V2 calcs', APPCLASS_DATA, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
 
 def import_ticker(tckr, sqlid):
     quotes_list = []
@@ -123,6 +125,9 @@ def import_options(INSTRUMENT, exp_after_current_day = False):
 
     for tckr, sqlid in tqdm(tickers_data.items()):
         import_ticker(tckr, sqlid)
+
+
+    signalapp.send(MsgStatus('V2_Option_Span_update', 'V2 Option Data finished {0}'.format(INSTRUMENT), notify=True))
 
 def run_full_options():
     for row in local_db['asset_info'].find({}):

@@ -82,5 +82,5 @@ INSTRUMENT_OPT_CODE_LIST = [
     {
         'instrument':'US.6J',
         'opt_codes':['JPU','']
-    },
+    }
 ]

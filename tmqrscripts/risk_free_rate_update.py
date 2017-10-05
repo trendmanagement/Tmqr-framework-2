@@ -4,19 +4,16 @@ RFR series also should be loaded and updated at daily basis.
 Here is full functional notebook: https://10.0.1.2:8889/notebooks/data/Import%20risk%20free%20rate%20data.ipynb
 '''
 
-import sys, argparse, logging
-from datetime import datetime, time
-from decimal import Decimal
+import pickle
+
+import lz4
+import pandas as pd
 import pymongo
 from pymongo import MongoClient
-from tqdm import tqdm, tnrange, tqdm_notebook
-import pandas as pd
 from tmqr.settings import *
-import pickle
-import lz4
-
 from tmqrfeed.manager import DataManager
-
+from tradingcore.messages import *
+from tradingcore.signalapp import SignalApp, APPCLASS_DATA
 
 RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
 RMT_MONGO_DB = 'tmldb_v2'
@@ -31,6 +28,7 @@ MONGO_DB = 'tmqr2'
 local_client = MongoClient(MONGO_CONNSTR)
 local_db = local_client[MONGO_DB]
 
+signalapp = SignalApp('V2 calcs', APPCLASS_DATA, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
 
 dm = DataManager()
 
@@ -57,5 +55,7 @@ rec = {
 quotes_collection.replace_one({'market': 'US'}, rec, upsert=True)
 
 
-if len(rfr_series.ix[:datetime(2001, 4, 29, 12, 3).date()].tail(1)) > 0:
-    print('ok')
+# if len(rfr_series.ix[:datetime(2001, 4, 29, 12, 3).date()].tail(1)) > 0:
+#     print('ok')
+
+signalapp.send(MsgStatus('V2_Risk_Free_Rate_update', 'V2 Risk_Free_Rate Update finished', notify=True))

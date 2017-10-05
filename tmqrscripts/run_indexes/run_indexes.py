@@ -40,7 +40,7 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 '''
 
 class IndexGenerationScript:
-    def __init__(self, override_run=False, reset_from_beginning = False):
+    def __init__(self, override_run=False, reset_from_beginning = False, date_end = None):
 
         self.override_run = override_run
         self.reset_from_beginning = reset_from_beginning
@@ -48,6 +48,7 @@ class IndexGenerationScript:
         self.client = MongoClient(MONGO_CONNSTR)
         self.db = self.client[MONGO_DB]
         self.date_start = datetime(2011,1,1)
+        self.date_end = date_end
 
         self.db['alpha_data'].create_index(
             [('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
@@ -124,7 +125,10 @@ class IndexGenerationScript:
 
             index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
 
-            dm = DataManager(date_start=self.date_start)
+            if self.date_end is None:
+                dm = DataManager(date_start=self.date_start)
+            else:
+                dm = DataManager(date_start=self.date_start, date_end=self.date_end)
 
 
             if self.reset_from_beginning:
@@ -238,11 +242,12 @@ class IndexGenerationScript:
         :param index_hedge_name: 
         :return: 
         '''
-        index.run()
-        index.save()
 
         self.db['index_data'].update_one({'name': index_hedge_name},
-                                            {'$set': {'context.index_update_time': update_time}})
+                                         {'$set': {'context.index_update_time': update_time}})
+
+        index.run()
+        index.save()
 
         self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
@@ -315,6 +320,42 @@ class IndexGenerationScript:
                             # self.run_alpha(alpha['name'], current_time_utc)
                             # print('running 3 ' + alpha['name'])
 
+
+    def run_alpha(self, alpha_name, update_time):
+        '''
+        alpha run and save
+        :param alpha_name: 
+        :param update_time: 
+        :return: 
+        '''
+        # try:
+
+        self.db['alpha_data'].update_one({'name': alpha_name},
+                                         {'$set': {'context.alpha_update_time': update_time}})
+
+        if self.date_end is None:
+            dm2 = DataManager()
+        else:
+            dm2 = DataManager(date_start=self.date_start, date_end=self.date_end)
+        #print(alpha_name)
+        saved_alpha = StrategyBase.load(dm2, alpha_name)
+        saved_alpha.run()
+        saved_alpha.save()
+
+        #print('running finished ' + alpha_name)
+
+
+
+        self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
+
+        self.run_account_positions_process()
+
+
+
+        #log.warn('running finished ' + alpha_name)
+
+        # except:
+
     def get_campaign_alpha_list(self):
         '''
         this gets the full list of alphas that the current active campaigns use
@@ -341,35 +382,6 @@ class IndexGenerationScript:
                 final_alpha_list.append(alpha_list_replace)
 
         return final_alpha_list
-
-    def run_alpha(self, alpha_name, update_time):
-        '''
-        alpha run and save
-        :param alpha_name: 
-        :param update_time: 
-        :return: 
-        '''
-        # try:
-        dm2 = DataManager()
-        #print(alpha_name)
-        saved_alpha = StrategyBase.load(dm2, alpha_name)
-        saved_alpha.run()
-        saved_alpha.save()
-
-        print('running finished ' + alpha_name)
-
-        self.db['alpha_data'].update_one({'name': alpha_name},
-                                            {'$set': {'context.alpha_update_time': update_time}})
-
-        self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
-
-        self.run_account_positions_process()
-
-
-
-        #log.warn('running finished ' + alpha_name)
-
-        # except:
 
     def run_account_positions_process(self):
         '''
