@@ -228,7 +228,7 @@ class IndexGenerationScript:
                     opt_codes_to_pass = inst_opt_code['opt_codes']
                     break
 
-            INDEX_CONTEXT['opt_codes'] = opt_codes_to_pass
+            INDEX_CONTEXT['context']['opt_codes'] = opt_codes_to_pass
 
         index = ExoClass(dm, **INDEX_CONTEXT)
         return index
