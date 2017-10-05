@@ -100,14 +100,16 @@ class IndexGenerationScript:
                     if 'instrument' in exo:
                         # print(exo['instrument'])
                         if instrument['instrument'] == exo['instrument']:
-                            t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
-                            t.start()
+                            # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
+                            # t.start()
                             # self.run_through_each_index_threads(instrument['instrument'], exo, True)
+                            pass
                     else:
-                        t = threading.Thread(target=self.run_through_each_index_threads,
-                                             args=(instrument['instrument'], exo))
-                        t.start()
+                        # t = threading.Thread(target=self.run_through_each_index_threads,
+                        #                      args=(instrument['instrument'], exo))
+                        # t.start()
                         # self.run_through_each_index_threads(instrument['instrument'], exo)
+                        pass
 
 
 
@@ -140,7 +142,7 @@ class IndexGenerationScript:
 
                 ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
 
-                self.run_index(index, ct['current_time_utc'], index_hedge_name)
+                self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
                 self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
             else:
@@ -184,7 +186,7 @@ class IndexGenerationScript:
 
                 ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
 
-                self.run_index(index, ct['current_time_utc'], index_hedge_name)
+                self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
                 self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
 
@@ -234,7 +236,7 @@ class IndexGenerationScript:
         return index
         #pass
 
-    def run_index(self, index, update_time, index_hedge_name):
+    def run_index(self, index, update_time, index_hedge_name, creating_index = False):
         '''
         runs and saves the index
         :param index: 
@@ -243,11 +245,16 @@ class IndexGenerationScript:
         :return: 
         '''
 
-        self.db['index_data'].update_one({'name': index_hedge_name},
+        if not creating_index:
+            self.db['index_data'].update_one({'name': index_hedge_name},
                                          {'$set': {'context.index_update_time': update_time}})
 
         index.run()
         index.save()
+
+        if creating_index:
+            self.db['index_data'].update_one({'name': index_hedge_name},
+                                         {'$set': {'context.index_update_time': update_time}})
 
         self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
