@@ -12,7 +12,7 @@ from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs import EXOSemiFuture_D
 from tmqrindex.deployed.exo_semifuture_dynkel_60_20_shorts import EXOSemiFuture_DynKel_60_20_shorts
 from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts import EXOSemiFuture_DynKel_80_20_shorts
 
-INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN']
+INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.6J']
 
 INDEX_LIST = [
 
