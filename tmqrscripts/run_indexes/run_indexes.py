@@ -350,7 +350,8 @@ class IndexGenerationScript:
 
         #print('running finished ' + alpha_name)
 
-
+        self.db['alpha_data'].update_one({'name': alpha_name},
+                                         {'$set': {'context.alpha_end_update_time': update_time}})
 
         self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
 
