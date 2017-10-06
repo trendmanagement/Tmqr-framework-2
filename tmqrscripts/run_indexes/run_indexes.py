@@ -398,13 +398,18 @@ class IndexGenerationScript:
         this updates the account position to the db for realtime
         :return: 
         '''
-        assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
-        storage = EXOStorage(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
-        datasource = DataSourceMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1, assetindex, futures_limit=10, options_limit=10,
-                                     exostorage=storage)
 
-        exmgr = ExecutionManager(MONGO_CONNSTR_V1, datasource, MONGO_EXO_DB_V1)
-        exmgr.account_positions_process(write_to_db=True)
+        try:
+            assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
+            storage = EXOStorage(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
+            datasource = DataSourceMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1, assetindex, futures_limit=10, options_limit=10,
+                                         exostorage=storage)
+
+            exmgr = ExecutionManager(MONGO_CONNSTR_V1, datasource, MONGO_EXO_DB_V1)
+            exmgr.account_positions_process(write_to_db=True)
+        except Exception as e:
+            print(e)
+            #pass
 
     def time_to_utc_from_none(self, naive):
         return naive.replace(tzinfo=pytz.utc)
