@@ -358,7 +358,7 @@ class IndexGenerationScript:
 
         self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
 
-        self.run_account_positions_process()
+        # self.run_account_positions_process()
 
 
 

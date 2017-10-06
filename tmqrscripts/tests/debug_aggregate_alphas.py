@@ -28,16 +28,24 @@ pipeline = [
   {'$group':{'_id':'$campaign_name','alphas_list':{'$push':'$alphas'}}}
 
 ]
+# final_alpha_list = []
+# for campaign_list in list(remote_db['accounts'].aggregate(pipeline)):
+#
+#     for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
+#         alpha_list_replace = alpha_list.replace('!NEW_',"")
+#         final_alpha_list.append(alpha_list_replace)
+#
+# print('6J_CallSpread_Short_Strategy_DSP_LPBP_Combination__Bearish_May_12_custom' in final_alpha_list)
+
 final_alpha_list = []
 for campaign_list in list(remote_db['accounts'].aggregate(pipeline)):
 
     for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
-        alpha_list_replace = alpha_list.replace('!NEW_',"")
-        final_alpha_list.append(alpha_list_replace)
-# w = list(x[0]['alphas_list'][0][0]['alphas'])
-# t.append(w)
+        for alpha in alpha_list:
+            if "!NEW_" in alpha:
+                alpha_v2 = alpha.replace('!NEW_',"")
+                print(alpha_v2)
 
-print('6J_CallSpread_Short_Strategy_DSP_LPBP_Combination__Bearish_May_12_custom' in final_alpha_list)
 
 
 
