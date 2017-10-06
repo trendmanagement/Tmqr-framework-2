@@ -43,9 +43,11 @@ INDEX_LIST = [
         'class': EXOSemiFuture_DynKel_80_20_shorts
     },
     {
+        'instrument':'US.ES',
         'class': ES_EXOSemiFuture_DynKel_20_80_Longs
     },
     {
+        'instrument':'US.ES',
         'class': ES_EXOSemiFuture_DynKel_80_20_Longs
     },
     {
