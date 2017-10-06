@@ -11,6 +11,8 @@ from tmqrindex.deployed.exo_semifuture_dynkel_20_60_longs import EXOSemiFuture_D
 from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs import EXOSemiFuture_DynKel_20_80_longs
 from tmqrindex.deployed.exo_semifuture_dynkel_60_20_shorts import EXOSemiFuture_DynKel_60_20_shorts
 from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts import EXOSemiFuture_DynKel_80_20_shorts
+from tmqrindex.deployed.es_exo_semifuture_dynkel_20_80_longs import ES_EXOSemiFuture_DynKel_20_80_Longs
+from tmqrindex.deployed.es_exo_semifuture_dynkel_80_20_longs import ES_EXOSemiFuture_DynKel_80_20_Longs
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN']
 
@@ -39,6 +41,12 @@ INDEX_LIST = [
     },
     {
         'class': EXOSemiFuture_DynKel_80_20_shorts
+    },
+    {
+        'class': ES_EXOSemiFuture_DynKel_20_80_Longs
+    },
+    {
+        'class': ES_EXOSemiFuture_DynKel_80_20_Longs
     },
     {
         'instrument':'US.ES',
