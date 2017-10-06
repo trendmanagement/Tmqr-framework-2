@@ -106,10 +106,10 @@ class StrategyAlphaTestCase(unittest.TestCase):
 
         self.assertEqual(1, mock_index_position.get_net_position.call_count)
         self.assertEqual(dt, mock_index_position.get_net_position.call_args[0][0])
-        self.assertEqual(1, mock_alpha_position.add_net_position.call_count)
-        self.assertEqual(dt, mock_alpha_position.add_net_position.call_args[0][0])
-        self.assertEqual(mock_replicated_pos, mock_alpha_position.add_net_position.call_args[0][1])
-        self.assertEqual(exposure_rec['exposure'].sum(), mock_alpha_position.add_net_position.call_args[1]['qty'])
+        self.assertEqual(1, mock_alpha_position.set_net_position.call_count)
+        self.assertEqual(dt, mock_alpha_position.set_net_position.call_args[0][0])
+        self.assertEqual(mock_replicated_pos, mock_alpha_position.set_net_position.call_args[0][1])
+        self.assertEqual(exposure_rec['exposure'].sum(), mock_alpha_position.set_net_position.call_args[1]['qty'])
 
     def test_calculate_position_error_no_exposure_col(self):
         dm = MagicMock(DataManager)()

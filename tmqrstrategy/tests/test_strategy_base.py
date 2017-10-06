@@ -729,7 +729,7 @@ class StrategyBaseTestCase(unittest.TestCase):
                 strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
                 mock_position_has_position.return_value = True
 
-                self.assertEqual(1, mock_calculate_position.call_count)
+                self.assertEqual(2, mock_calculate_position.call_count)
 
                 self.assertEqual(datetime(2011, 1, 6), mock_calculate_position.call_args[0][0])
                 self.assertEqual(pd.DataFrame, type(mock_calculate_position.call_args[0][1]))
@@ -740,7 +740,7 @@ class StrategyBaseTestCase(unittest.TestCase):
                 self.assertEqual(3, pos_df['exposure'].sum())
                 self.assertEqual(2, pos_df['some_value'].sum())
 
-                self.assertEqual(1, len(strategy.exposure_series))
+                self.assertEqual(2, len(strategy.exposure_series))
                 self.assertEqual(3, strategy.exposure_series['exposure'][datetime(2011, 1, 6)])
                 self.assertEqual(2, strategy.exposure_series['some_value'][datetime(2011, 1, 6)])
 
@@ -822,7 +822,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
                 strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
 
-                self.assertEqual(0, mock_calculate_position.call_count)
+                self.assertEqual(1, mock_calculate_position.call_count)
                 self.assertEqual(0, mock_keep_previous_position.call_count)
 
     def test_process_position_valid_empty_alphas_list(self):
@@ -878,7 +878,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
                 strategy.process_position(exp_df_list_valid, datetime(2011, 1, 5), datetime(2011, 1, 20))
 
-                self.assertEqual(0, mock_calculate_position.call_count)
+                self.assertEqual(1, mock_calculate_position.call_count)
                 self.assertEqual(0, mock_keep_previous_position.call_count)
 
     def test_exposure(self):
@@ -1083,7 +1083,7 @@ class StrategyBaseTestCase(unittest.TestCase):
 
         best_list_random = np.random.random(10)
 
-        self.assertEqual(True, np.all(best_list_random[:5] == strategy.pick(best_list_random)))
+        self.assertEqual(True, np.all(best_list_random[-5:] == strategy.pick(best_list_random)))
 
     def test__exposure_update(self):
 

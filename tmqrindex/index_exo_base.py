@@ -70,7 +70,7 @@ class IndexEXOBase(IndexBase):
         exo_df = self.calc_exo_logic()
 
         for dt in quotes_date_index:
-            if dt <= position_last_date:
+            if dt < position_last_date:
                 # Just updating EXO index position
                 continue
 
