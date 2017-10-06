@@ -244,16 +244,19 @@ class IndexGenerationScript:
         :return: 
         '''
 
-        if not creating_index:
+        # if not creating_index:
+        try:
             self.db['index_data'].update_one({'name': index_hedge_name},
-                                         {'$set': {'context.index_update_time': update_time}})
+                                     {'$set': {'context.index_update_time': update_time}})
+        except:
+            pass
 
         index.run()
         index.save()
 
-        if creating_index:
-            self.db['index_data'].update_one({'name': index_hedge_name},
-                                         {'$set': {'context.index_update_time': update_time}})
+        # if creating_index:
+        self.db['index_data'].update_one({'name': index_hedge_name},
+                                     {'$set': {'context.index_update_time': update_time}})
 
         self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass

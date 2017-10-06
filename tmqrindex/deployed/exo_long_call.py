@@ -36,7 +36,12 @@ class EXOLongCall(IndexEXOBase):
         :return: nothing, manages 'pos' in place
         """
         # fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=['EW', ''])
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.context['opt_codes'])
+        try:
+            opt_codes_in = self.context['opt_codes']
+        except:
+            opt_codes_in = []
+
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=opt_codes_in)
 
         pos.add_transaction(dt, opt_chain.find(dt, -15, 'P'), -1.0)
         pos.add_transaction(dt, opt_chain.find(dt, 15, 'C'), 1.0)
