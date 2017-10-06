@@ -77,4 +77,4 @@ class StrategyAlpha(StrategyBase):
         # Just replicate primary quotes position
         #
         replicated_pos = primary_quotes_position.get_net_position(date)
-        self.position.add_net_position(date, replicated_pos, qty=exposure)
+        self.position.set_net_position(date, replicated_pos, qty=exposure)

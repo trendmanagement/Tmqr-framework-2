@@ -621,7 +621,7 @@ class StrategyBase:
         # TODO: not decided is it's properly to use date(), because we have intraday systems to, NEED CHECK
         date_start = max(oos_start.date(), position_last_date.date())
         for dt in date_idx:
-            if dt.date() <= date_start:
+            if dt.date() < date_start:
                 # Skip all days before new data
                 continue
 

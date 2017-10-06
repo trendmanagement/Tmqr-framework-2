@@ -268,6 +268,88 @@ class PositionTestCase(unittest.TestCase):
             for i, v in enumerate((1.0, 2.0, 1.0)):
                 self.assertEqual(v, p._position[dt][asset][i])
 
+    def test_set_net_position_qty_factor(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        with patch('tmqrfeed.position.Position._check_position_validity') as mock__check_position_validity:
+            p.add_transaction(dt, asset, 3.0)
+
+            self.assertEqual(1, len(p._position))
+            for i, v in enumerate((1.0, 2.0, 3.0)):
+                self.assertEqual(v, p._position[dt][asset][i])
+
+            new_position = {asset: (1.0, 2.0, 1.0)}
+
+            p.set_net_position(dt, new_position, qty=-2)
+
+            self.assertEqual(True, mock__check_position_validity.called)
+            self.assertEqual(1, len(p._position))
+            self.assertEqual(1, len(p._position[dt]))
+            for i, v in enumerate((1.0, 2.0, -2.0)):
+                self.assertEqual(v, p._position[dt][asset][i])
+
+    def test_set_net_position_qty_is_zero(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        with patch('tmqrfeed.position.Position._check_position_validity') as mock__check_position_validity:
+            new_position = {asset: (1.0, 2.0, 1.0)}
+
+            p.set_net_position(dt, new_position, qty=0)
+
+            self.assertEqual(True, mock__check_position_validity.called)
+            self.assertEqual(1, len(p._position))
+            self.assertEqual(0, len(p._position[dt]))
+
+    def test_set_net_position_previous_date_raises_error(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        with patch('tmqrfeed.position.Position._check_position_validity') as mock__check_position_validity:
+            p.add_transaction(dt, asset, 3.0)
+
+            self.assertEqual(1, len(p._position))
+            for i, v in enumerate((1.0, 2.0, 3.0)):
+                self.assertEqual(v, p._position[dt][asset][i])
+
+            new_position = {asset: (1.0, 2.0, 1.0)}
+
+            p.set_net_position(dt, new_position, qty=-2)
+
+            self.assertEqual(True, mock__check_position_validity.called)
+            self.assertEqual(1, len(p._position))
+            self.assertEqual(1, len(p._position[dt]))
+            for i, v in enumerate((1.0, 2.0, -2.0)):
+                self.assertEqual(v, p._position[dt][asset][i])
+
+            p.set_net_position(dt, new_position, qty=-2)
+
+            self.assertEqual(True, mock__check_position_validity.called)
+            self.assertEqual(1, len(p._position))
+            self.assertEqual(1, len(p._position[dt]))
+            for i, v in enumerate((1.0, 2.0, -2.0)):
+                self.assertEqual(v, p._position[dt][asset][i])
+
+            self.assertRaises(ArgumentError, p.set_net_position, datetime(2010, 12, 31), new_position, qty=-2)
+
+
+
     def test_keep_previous_position_skip_zero_qty(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)
@@ -356,7 +438,20 @@ class PositionTestCase(unittest.TestCase):
 
         dt2 = datetime(2011, 1, 2)
         p.keep_previous_position(dt2)
-        self.assertRaises(ArgumentError, p.keep_previous_position, datetime(2010, 1, 2))
+        p.keep_previous_position(dt2)
+
+        self.assertEqual(2, len(p._position))
+        self.assertEqual(True, dt in p._position)
+        self.assertEqual(True, dt2 in p._position)
+
+        for i, v in enumerate((5.0, 6.0, 3.0)):
+            self.assertEqual(v, p._position[dt2][asset][i])
+
+        #
+        # But this is not allowed to call previous days once we have them processed
+        #
+        self.assertRaises(ArgumentError, p.keep_previous_position, dt)
+
 
     def test_keep_previous_position_existing_but_empty(self):
         dm = MagicMock(DataManager())
@@ -382,8 +477,7 @@ class PositionTestCase(unittest.TestCase):
         self.assertEqual(2, len(p._position))
         self.assertEqual(0, len(p._position[dt2]))
 
-
-    def test_keep_previous_position_existing_not_allowed(self):
+    def test_keep_previous_position_overwrites_existing(self):
         dm = MagicMock(DataManager())
         dm.price_get.return_value = (1.0, 2.0)
 
@@ -393,12 +487,42 @@ class PositionTestCase(unittest.TestCase):
         asset.price.return_value = (1.0, 2.0)
 
         p.add_transaction(dt, asset, 3.0)
-        self.assertRaises(ArgumentError, p.keep_previous_position, dt)
+        p.keep_previous_position(dt)
+
+        self.assertEqual(1, len(p._position))
+        self.assertTrue(dt in p._position)
+        self.assertEqual(0, len(p._position[dt]))
+
+    def test_keep_previous_position_overwrites_existing_add_postion(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+        dt = datetime(2011, 1, 1)
+        asset = MagicMock(ContractBase("US.S.AAPL"), dm)
+        asset.price.return_value = (1.0, 2.0)
+
+        p.add_transaction(dt, asset, 3.0)
 
         dt2 = datetime(2011, 1, 2)
         p.keep_previous_position(dt2)
+        # Add new
+        p.add_transaction(dt2, asset, 10.0)
 
-        self.assertRaises(ArgumentError, p.keep_previous_position, datetime(2010, 1, 2))
+        # Expected to be overwritten
+        p.keep_previous_position(dt2)
+
+        self.assertEqual(2, len(p._position))
+        self.assertTrue(dt in p._position)
+        self.assertEqual(1, len(p._position[dt]))
+        self.assertEqual(3.0, p._position[dt2][asset][2])
+
+        self.assertTrue(dt2 in p._position)
+        self.assertEqual(1, len(p._position[dt2]))
+        self.assertEqual(3.0, p._position[dt2][asset][2])
+
+
+
 
     def test_keep_previous_position_not_exists_warn(self):
         dm = MagicMock(DataManager())
@@ -1020,6 +1144,15 @@ class PositionTestCase(unittest.TestCase):
             for txt in ['Asset', 'DecisionPx', 'ExecPx', 'Qty', 'US.C.F-ZB-H11-110322.110121@89.0',
                         'US.F.CL.M83.110121']:
                 self.assertTrue(txt in repr_text)
+
+    def test_repr_position_not_found_exception(self):
+        dm = MagicMock(DataManager())
+        dm.price_get.return_value = (1.0, 2.0)
+
+        p = Position(dm)
+
+        with patch('tmqrfeed.contracts.ContractBase.instrument_info') as mock_instrument_info:
+            self.assertEqual('<Empty position>', p.__repr__())
 
     def test_str(self):
         dm = MagicMock(DataManager())

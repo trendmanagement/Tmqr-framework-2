@@ -262,22 +262,78 @@ class Position:
 
     def set_net_position(self,
                          date: datetime,
-                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]]) -> None:
+                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]],
+                         qty: float = 1.0) -> None:
         """
-        Set net position at given date (overwrites old position if it exists). This method intended to be used
-        by low-level Quote* algorithms to initiate positions, generic strategies should use add_net_position() method.
-        
+        Set net position at given date (overwrites old position if it exists).
         This method allow to change position at the previous date, use with care this could ruin data validity.
 
         :param date: datetime
         :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
+        :param qty: position size factor
         :return: nothing, changes position in place
         """
+        if self._position and date < self._prev_day_key(date=None):
+            # check if 'date' >= last date of the position
+            raise ArgumentError(f'Setting position at date less then last available date is not allowed')
+
         # Do sanity checks
         self._check_position_validity(net_position_dict)
 
+        if qty == 0.0:
+            # If qty is 0.0, just skip position calculation (assumming that position is zero)
+            # but keep date record for empty position, that will allow maintain flat equity line of the position
+            self._position[date] = {}
+            return
+
         # Overwrite the position
-        self._position[date] = net_position_dict
+        pos_dict = {}
+        if qty == 1.0:
+            # Old flow, just replacing position as is
+            self._position[date] = net_position_dict
+        else:
+            # Add qty factor to the position
+            for asset, new_position in net_position_dict.items():
+                pos_dict[asset] = (new_position[iDPX], new_position[iEPX], new_position[iQTY] * qty)
+            self._position[date] = pos_dict
+
+    def add_net_position(self,
+                         date: datetime,
+                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]],
+                         qty: float = 1.0) -> None:
+        """
+        Add net position at given date.
+        This method adds to current position holdings, and calculates required transactions to maintain the new position.
+
+        :param date: datetime
+        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
+        :param qty: qty times of the net_position, negative values allowed
+        :return: nothing, changes position in place
+        """
+
+        if self._position and date < self._prev_day_key(date=None):
+            # check if 'date' >= last date of the position
+            raise ArgumentError(f'Adding position at date less then last available date is not allowed')
+
+        # Do sanity checks
+        self._check_position_validity(net_position_dict)
+
+        pos_dict = self._position.setdefault(date, {})
+
+        if qty == 0.0:
+            # If qty is 0.0, just skip position calculation (assumming that position is zero)
+            # but keep date record for empty position, that will allow maintain flat equity line of the position
+            return
+
+        for asset, new_position in net_position_dict.items():
+            # Searching existing positions first
+            current_position = pos_dict.get(asset, None)
+            decision_price, exec_price = asset.price(date)
+
+            if not current_position:
+                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty)
+            else:
+                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty + current_position[iQTY])
 
     def keep_previous_position(self,
                                date: datetime) -> None:
@@ -291,9 +347,6 @@ class Position:
             if date < self._prev_day_key(date=None):
                 # check if 'date' >= last date of the position
                 raise ArgumentError(f'Managing position at date less then last available date is not allowed')
-            if date in self._position:
-                raise ArgumentError(f"Position already has record at {date}, you should call "
-                                    f"position.keep_previous_position() before all position actions and only once.")
 
         try:
             updated_position = {}
@@ -315,47 +368,12 @@ class Position:
                 updated_position[asset] = (decision_price, exec_price, pos_rec_qty)
 
             # Add updated position record at specified date
-            self.add_net_position(date, updated_position, qty=1.0)
+            self.set_net_position(date, updated_position)
         except PositionNotFoundError as exc:
+            self.set_net_position(date, {})
             log.warn(f'keep_previous_position: {str(exc)}')
 
-    def add_net_position(self,
-                         date: datetime,
-                         net_position_dict: Dict[ContractBase, Tuple[float, float, float]],
-                         qty: float = 1.0) -> None:
-        """
-        Add net position at given date. 
-        This method adds to current position holdings, and calculates required transactions to maintain the new position.
 
-        :param date: datetime
-        :param net_position_dict: Dict[ContractBase, Tuple(decision_px, exec_px, qty)
-        :param qty: qty times of the net_position, negative values allowed
-        :return: nothing, changes position in place
-        """
-
-        if self._position and date < self._prev_day_key(date=None):
-            # check if 'date' >= last date of the position
-            raise ArgumentError(f'Managing position at date less then last available date is not allowed')
-
-        # Do sanity checks
-        self._check_position_validity(net_position_dict)
-
-        pos_dict = self._position.setdefault(date, {})
-
-        if qty == 0.0:
-            # If qty is 0.0, just skip position calculation (assumming that position is zero)
-            # but keep date record for empty position, that will allow maintain flat equity line of the position
-            return
-
-        for asset, new_position in net_position_dict.items():
-            # Searching existing positions first
-            current_position = pos_dict.get(asset, None)
-            decision_price, exec_price = asset.price(date)
-
-            if not current_position:
-                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty)
-            else:
-                pos_dict[asset] = (decision_price, exec_price, new_position[iQTY] * qty + current_position[iQTY])
 
     def add_transaction(self,
                         date: datetime,
