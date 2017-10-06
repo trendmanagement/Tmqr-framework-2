@@ -11,6 +11,12 @@ MONGO_EXO_DB_V1 = 'tmldb_v2'
 DEFAULT_TIMEZONE = 'US/Pacific'
 
 #
+# RabbitMQ credentials
+RABBIT_HOST = '10.0.1.2'
+RABBIT_USER = 'tmqr'
+RABBIT_PASSW = 'tmqr'
+
+#
 # Datasources types for DataFeed
 #
 SRC_INTRADAY = 'quotes_intraday'

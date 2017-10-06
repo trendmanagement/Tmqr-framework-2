@@ -1,9 +1,6 @@
-from tmqrfeed.manager import DataManager
-from tmqrindex.index_exo_base import IndexEXOBase
-from datetime import datetime
-
 from bdateutil import relativedelta
 from tmqr.logs import log
+from tmqrindex.index_exo_base import IndexEXOBase
 
 
 class EXOShortEnhance_DT_2(IndexEXOBase):
@@ -71,7 +68,7 @@ class EXOShortEnhance_DT_2(IndexEXOBase):
         :return: nothing, manages 'pos' in place
         """
 
-        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
+        fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.context['opt_codes'])
 
         #
         # Help
