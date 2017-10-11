@@ -308,9 +308,9 @@ class IndexGenerationScript:
 
 
                     if not 'alpha_update_time' in alpha['context']:
-                        t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                        t.start()
-                        # self.run_alpha(alpha['name'], current_time_utc)
+                        # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                        # t.start()
+                        self.run_alpha(alpha['name'], current_time_utc)
                         # print('running 2 ' + alpha['name'])
 
                     else:
@@ -319,14 +319,14 @@ class IndexGenerationScript:
 
 
                         if self.reset_from_beginning or self.override_run:
-                            t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                            t.start()
+                            # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                            # t.start()
+                            self.run_alpha(alpha['name'], current_time_utc)
                         elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
                             #check V1 alpha update
-
-                            t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                            t.start()
-                            # self.run_alpha(alpha['name'], current_time_utc)
+                            # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                            # t.start()
+                            self.run_alpha(alpha['name'], current_time_utc)
                             # print('running 3 ' + alpha['name'])
 
 
@@ -429,7 +429,9 @@ class IndexGenerationScript:
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
 
-
+if __name__ == "__main__":
+    igs = IndexGenerationScript()
+    igs.run_all_instruments()
 
 
 
