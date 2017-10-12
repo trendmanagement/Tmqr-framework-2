@@ -67,8 +67,8 @@ class IndexGenerationScript:
         # RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
         # RMT_MONGO_DB = 'tmldb_v2'
 
-        self.remote_client = MongoClient(MONGO_CONNSTR_V1)
-        self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
+        # self.remote_client = MongoClient(MONGO_CONNSTR_V1)
+        # self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
 
         self.campaign_alpha_list = self.get_campaign_alpha_list()
 
@@ -376,6 +376,10 @@ class IndexGenerationScript:
         this gets the full list of alphas that the current active campaigns use
         :return: the list of alphas that the campaigns use
         '''
+
+        mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
+        mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+
         pipeline = [
             {
                 '$lookup':
@@ -390,7 +394,7 @@ class IndexGenerationScript:
 
         ]
         final_alpha_list = []
-        for campaign_list in list(self.remote_db['accounts'].aggregate(pipeline)):
+        for campaign_list in list(mongo_db_v1['accounts'].aggregate(pipeline)):
 
             for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
                 alpha_list_replace = alpha_list.replace('!NEW_', "")
