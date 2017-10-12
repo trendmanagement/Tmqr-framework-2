@@ -20,13 +20,19 @@ parser.add_argument("-e",
                     required=False,
                     type=valid_date)
 
+parser.add_argument("-a",
+                    "--alphas",
+                    help="Force alphas to run",
+                    required=False,
+                    type=bool)
+
 args = parser.parse_args()
 
 if args.instrument is None:
-    indexGenerationScript = IndexGenerationScript(reset_from_beginning=True, date_end=args.date_end)
+    indexGenerationScript = IndexGenerationScript(reset_exo_from_beginning=True, date_end=args.date_end, override_run_alpha=args.alphas)
     indexGenerationScript.run_all_instruments()
 else:
-    indexGenerationScript = IndexGenerationScript(reset_from_beginning=True, date_end=args.date_end)
+    indexGenerationScript = IndexGenerationScript(reset_exo_from_beginning=True, date_end=args.date_end, override_run_alpha=args.alphas)
     indexGenerationScript.run_selected_intruments(args.instrument)
 
 

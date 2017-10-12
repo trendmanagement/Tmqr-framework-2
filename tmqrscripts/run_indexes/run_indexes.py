@@ -40,10 +40,15 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 '''
 
 class IndexGenerationScript:
-    def __init__(self, override_run=False, reset_from_beginning = False, date_end = None):
+    def __init__(self, override_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False):
 
-        self.override_run = override_run
-        self.reset_from_beginning = reset_from_beginning
+        self.override_run_exo = override_run_exo
+        self.reset_exo_from_beginning = reset_exo_from_beginning
+
+        if override_run_alpha == None:
+            self.override_run_alpha = False
+        else:
+            self.override_run_alpha = override_run_alpha
 
         self.client = MongoClient(MONGO_CONNSTR)
         self.db = self.client[MONGO_DB]
@@ -132,7 +137,7 @@ class IndexGenerationScript:
                 dm = DataManager(date_start=self.date_start, date_end=self.date_end)
 
 
-            if self.reset_from_beginning:
+            if self.reset_exo_from_beginning:
                 index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
                 #current_time = datetime.utcnow()
@@ -167,7 +172,7 @@ class IndexGenerationScript:
                     last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                     last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-                    if self.override_run or (ct['current_time'].weekday() < 5 and\
+                    if self.override_run_exo or (ct['current_time'].weekday() < 5 and\
                             ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
                              or (ct['current_time'] >= sess_exec and last_index_update_time < sess_exec))):
 
@@ -277,7 +282,7 @@ class IndexGenerationScript:
 
 
 
-        if self.reset_from_beginning or self.override_run or current_time >= alpha_sess_decision:
+        if self.reset_exo_from_beginning or self.override_run_exo or current_time >= alpha_sess_decision:
             alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
             v1_alpha_ok = True
@@ -285,7 +290,7 @@ class IndexGenerationScript:
             for alpha in alphas_list:
                 # print('running 1 ' + alpha['name'])
 
-                if alpha['name'] in self.campaign_alpha_list:
+                if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha :
 
                     '''
                     below checks if v1 alpha has been calculated                    
@@ -318,7 +323,7 @@ class IndexGenerationScript:
                         last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
 
-                        if self.reset_from_beginning or self.override_run:
+                        if self.reset_exo_from_beginning or self.override_run_exo:
                             # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                             # t.start()
                             self.run_alpha(alpha['name'], current_time_utc)
