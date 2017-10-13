@@ -26,7 +26,7 @@ from tmqr.logs import log
 from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
-import threading
+# import threading
 
 import pymongo
 from pymongo import MongoClient
@@ -50,25 +50,18 @@ class IndexGenerationScript:
         else:
             self.override_run_alpha = override_run_alpha
 
-        self.client = MongoClient(MONGO_CONNSTR)
-        self.db = self.client[MONGO_DB]
+        mongo_client_v2 = MongoClient(MONGO_CONNSTR)
+        self.mongo_db_v2 = mongo_client_v2[MONGO_DB]
+
         self.date_start = datetime(2011,1,1)
         self.date_end = date_end
 
-        self.db['alpha_data'].create_index(
+        self.mongo_db_v2['alpha_data'].create_index(
             [('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
             unique=False)
 
-        # self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
-        #                                        unique=False)
-
-
-
-        # RMT_MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
-        # RMT_MONGO_DB = 'tmldb_v2'
-
-        # self.remote_client = MongoClient(MONGO_CONNSTR_V1)
-        # self.remote_db = self.remote_client[MONGO_EXO_DB_V1]
+        mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
+        self.mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
 
         self.campaign_alpha_list = self.get_campaign_alpha_list()
 
@@ -90,30 +83,37 @@ class IndexGenerationScript:
         :return: 
         '''
 
-        self.asset_info_collection = self.db['asset_info']
+        self.asset_info_collection = self.mongo_db_v2['asset_info']
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
-        # instrument_list = ['US.ES', 'US.CL', 'US.ZN']
-        # instrument_list = ['US.ES']
 
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in instrument_list:
+
                 print(instrument['instrument'])
+
                 for exo in INDEX_LIST:
-                    if 'instrument' in exo:
-                        # print(exo['instrument'])
-                        if instrument['instrument'] == exo['instrument']:
-                            t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
-                            t.start()
-                            # self.run_through_each_index_threads(instrument['instrument'], exo, True)
-                            # pass
-                    else:
-                        t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-                        t.start()
-                        # self.run_through_each_index_threads(instrument['instrument'], exo)
-                        # pass
+
+                    instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
+
+                    if instrument_specific or not 'instrument' in exo:
+
+                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+
+                    # if 'instrument' in exo:
+                    #     # print(exo['instrument'])
+                    #     if instrument['instrument'] == exo['instrument']:
+                    #         t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
+                    #         t.start()
+                    #         # self.run_through_each_index_threads(instrument['instrument'], exo, True)
+                    #         # pass
+                    # else:
+                    #     t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
+                    #     t.start()
+                    #     # self.run_through_each_index_threads(instrument['instrument'], exo)
+                    #     # pass
 
 
 
@@ -127,10 +127,10 @@ class IndexGenerationScript:
         :return: 
         '''
 
-        mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
-        mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+        mongo_db_v1 = self.mongo_db_v1
 
         ExoClass = exo_index['class']
+
         try:
 
             index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
@@ -167,12 +167,11 @@ class IndexGenerationScript:
                                                                     decision_time_shift=index.decision_time_shift - 1)
 
 
-                index_from_db = self.db['index_data'].find_one({'name': index_hedge_name})
+                index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name})
 
                 if index_from_db == None or not 'index_update_time' in index_from_db['context']:
                     self.run_index(index, ct['current_time_utc'], index_hedge_name)
                 else:
-                    #last_index_update_time = pytz.timezone(index.session.tz.zone).localize(index_from_db['context']['index_update_time'])
                     last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                     last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
@@ -255,8 +254,8 @@ class IndexGenerationScript:
 
         # if not creating_index:
         try:
-            self.db['index_data'].update_one({'name': index_hedge_name},
-                                     {'$set': {'context.index_update_time': update_time}})
+            self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
+                                                      {'$set': {'context.index_update_time': update_time}})
         except:
             pass
 
@@ -264,8 +263,8 @@ class IndexGenerationScript:
         index.save()
 
         # if creating_index:
-        self.db['index_data'].update_one({'name': index_hedge_name},
-                                     {'$set': {'context.index_update_time': update_time}})
+        self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
+                                                  {'$set': {'context.index_update_time': update_time}})
 
         self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
@@ -287,7 +286,7 @@ class IndexGenerationScript:
 
 
         if self.reset_exo_from_beginning or self.override_run_exo or current_time >= alpha_sess_decision:
-            alphas_list = list(self.db['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
+            alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
             v1_alpha_ok = True
 
@@ -348,8 +347,8 @@ class IndexGenerationScript:
         '''
         # try:
 
-        self.db['alpha_data'].update_one({'name': alpha_name},
-                                         {'$set': {'context.alpha_update_time': update_time}})
+        self.mongo_db_v2['alpha_data'].update_one({'name': alpha_name},
+                                                  {'$set': {'context.alpha_update_time': update_time}})
 
         if self.date_end is None:
             dm2 = DataManager()
@@ -362,14 +361,12 @@ class IndexGenerationScript:
 
         #print('running finished ' + alpha_name)
 
-        self.db['alpha_data'].update_one({'name': alpha_name},
-                                         {'$set': {'context.alpha_end_update_time': update_time}})
+        self.mongo_db_v2['alpha_data'].update_one({'name': alpha_name},
+                                                  {'$set': {'context.alpha_end_update_time': update_time}})
 
         self.signalapp_alpha.send(MsgStatus('V2_Alpha', 'V2 Alpha finished {0}'.format(alpha_name), notify=True))
 
         # self.run_account_positions_process()
-
-
 
         #log.warn('running finished ' + alpha_name)
 
