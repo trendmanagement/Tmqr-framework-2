@@ -26,7 +26,7 @@ from tmqr.logs import log
 from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
-# import threading
+import threading
 
 import pymongo
 from pymongo import MongoClient
@@ -99,8 +99,9 @@ class IndexGenerationScript:
                     instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
 
                     if instrument_specific or not 'instrument' in exo:
-
-                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+                        t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                        t.start()
+                        # self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
 
                     # if 'instrument' in exo:
                     #     # print(exo['instrument'])
