@@ -45,10 +45,10 @@ INDEX_LIST = [
     {
         'class': EXOSemiFuture_DynKel_80_20_shorts
     },
-{
+    {
         'class': EXOCallSpread_DynKel_Shorts
     },
-{
+    {
         'class': EXOPutSpread_DynKel_Longs
     },
     {

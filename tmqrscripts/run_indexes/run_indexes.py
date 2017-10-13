@@ -59,8 +59,8 @@ class IndexGenerationScript:
             [('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
             unique=False)
 
-        self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
-                                               unique=False)
+        # self.db['alpha_data'].create_index([('context.index_hedge_name', pymongo.ASCENDING), ('type', pymongo.ASCENDING)],
+        #                                        unique=False)
 
 
 
@@ -126,6 +126,10 @@ class IndexGenerationScript:
         :param exo_index: 
         :return: 
         '''
+
+        mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
+        mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+
         ExoClass = exo_index['class']
         try:
 
@@ -148,7 +152,7 @@ class IndexGenerationScript:
 
                 self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
             else:
 
                 index = IndexBase.load(dm, index_hedge_name)
@@ -178,7 +182,7 @@ class IndexGenerationScript:
 
                         self.run_index(index, ct['current_time_utc'], index_hedge_name)
 
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
 
 
         except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -192,7 +196,7 @@ class IndexGenerationScript:
 
                 self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name)
+                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
 
             except Exception as e1:
                 log.warn(f"ExoIndexError: '{e1}'")
@@ -268,7 +272,7 @@ class IndexGenerationScript:
 
 
 
-    def checking_alpha_then_run(self,index,current_time, current_time_utc, index_hedge_name):
+    def checking_alpha_then_run(self,index,current_time, current_time_utc, index_hedge_name, mongo_db_v1):
         '''
         This runs the alphas based on time and if the V1 alphas have run
         :param index: 
@@ -302,7 +306,7 @@ class IndexGenerationScript:
                             earliest_date = current_time.date()
                             for swarm in swarm_list:
 
-                                v1_alpha = self.remote_db['swarms'].find_one({'swarm_name': swarm})
+                                v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm})
 
                                 if v1_alpha['last_date'].date() < earliest_date:
                                     earliest_date = v1_alpha['last_date'].date()
