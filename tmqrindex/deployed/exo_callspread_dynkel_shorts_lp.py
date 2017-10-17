@@ -20,7 +20,7 @@ def lp_filter(series, filt_order, filt_freq):
 
     return series
 
-class EXOSemiFuture_DynKel_20_80_longs_lp(IndexEXOBase):
+class EXOCallSpread_DynKel_shorts_lp(IndexEXOBase):
     _description_short = "EXO Vanilla DeltaTargeting DynKel Delta Risk Reversal"
     _description_long = ""
 

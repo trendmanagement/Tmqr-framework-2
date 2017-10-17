@@ -17,6 +17,12 @@ from tmqrindex.deployed.es_exo_semifuture_dynkel_80_20_longs import ES_EXOSemiFu
 from tmqrindex.deployed.exo_callspread_dynkel_shorts import EXOCallSpread_DynKel_Shorts
 from tmqrindex.deployed.exo_putspread_dynkel_longs import EXOPutSpread_DynKel_Longs
 
+from tmqrindex.deployed.exo_callspread_dynkel_shorts_lp import EXOCallSpread_DynKel_shorts_lp
+from tmqrindex.deployed.exo_putspread_dynkel_longs_lp import EXOPutSpread_DynKel_longs_lp
+from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs_lp import EXOSemiFuture_DynKel_20_80_longs_lp
+from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts_lp import EXOSemiFuture_DynKel_80_20_shorts_lp
+
+
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC', 'US.NG', 'US.ZW', 'US.ZS']
 
 INDEX_LIST = [
@@ -51,6 +57,22 @@ INDEX_LIST = [
     {
         'class': EXOPutSpread_DynKel_Longs
     },
+
+
+    {
+        'class': EXOCallSpread_DynKel_shorts_lp
+    },
+    {
+        'class': EXOPutSpread_DynKel_longs_lp
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_80_longs_lp
+    },
+    {
+        'class': EXOSemiFuture_DynKel_80_20_shorts_lp
+    },
+
+
     {
         'instrument':'US.ES',
         'class': ES_EXOSemiFuture_DynKel_20_80_Longs
