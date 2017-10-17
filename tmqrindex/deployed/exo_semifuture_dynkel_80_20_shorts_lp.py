@@ -24,7 +24,7 @@ class EXOSemiFuture_DynKel_20_80_longs_lp(IndexEXOBase):
     _description_short = "EXO Vanilla DeltaTargeting DynKel Delta Risk Reversal"
     _description_long = ""
 
-    _index_name = "EXO_SemiFuture_DynKel_20_80_longs_LP"
+    _index_name = "EXO_SemiFuture_DynKel_80_20_shorts_LP"
 
     def calc_exo_logic(self):
         """
@@ -174,10 +174,10 @@ class EXOSemiFuture_DynKel_20_80_longs_lp(IndexEXOBase):
         """
         if logic_df['keltner_direction_current'] == True:
             # Open the position when keltner channel is up
-            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), -1.0)
-            pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'C', how='delta'), 1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.30, 'P', how='delta'), -1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.50, 'C', how='delta'), 1.0)
         else:
 
             # Open the position when keltner channel is down
-            pos.add_transaction(dt, opt_chain.find(dt, 0.30, 'P', how='delta'), -1.0)
-            pos.add_transaction(dt, opt_chain.find(dt, 0.50, 'C', how='delta'), 1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), -1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.15, 'C', how='delta'), 1.0)
