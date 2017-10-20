@@ -91,6 +91,19 @@ class UpdateFuturesIntraday:
         contract_col_collection = v1_live_db['contractcol']
         future_bar_collection = v1_live_db['futurebarcol']
 
+        try:
+            v1_live_db['futurebarcol'].create_index(
+                [('idcontract', pymongo.ASCENDING), ('bartime', pymongo.ASCENDING), ('errorbar', pymongo.ASCENDING)],
+                unique=True)
+        except:
+            try:
+                v1_live_db['futurebarcol'].create_index(
+                    [('idcontract', pymongo.ASCENDING), ('bartime', pymongo.ASCENDING),
+                     ('errorbar', pymongo.ASCENDING)],
+                    unique=False)
+            except:
+                pass
+
         asset_info_collection_v2 = self.db_v2['asset_info']
         asset_index_collection_v2 = self.db_v2['asset_index']
         #asset_index_collection_v2.create_index([('extra_data.sqlid', pymongo.ASCENDING), ('type', pymongo.ASCENDING)], unique=False)
@@ -136,7 +149,7 @@ class UpdateFuturesIntraday:
                             #if not 'eod_update_time' in future_id['extra_data']:
                                 '''this is where the future is updated from the historical contracts_bars'''
 
-                                data = list(future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid']}).sort(
+                                data = list(future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'], 'errorbar':False}).sort(
                                     [('bartime', 1)]))
 
 
@@ -158,7 +171,7 @@ class UpdateFuturesIntraday:
 
                                 if datetime.now(instrument.timezone) - previous_date_time_in_local_timezone > timedelta(days=acceptable_offset):
                                     data = list(
-                                        future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'],
+                                        future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'],'errorbar':False,
                                                                'bartime': {'$gt': previous_date_time_in_local_timezone.replace(tzinfo=None)}}).sort(
                                             [('bartime', 1)]))
 
@@ -185,7 +198,8 @@ class UpdateFuturesIntraday:
 
                             #print(ohlc)
 
-                            realtime_data = list(future_bar_collection.find({'idcontract':future_id['extra_data']['sqlid'], 'bartime':{'$gte':previous_date_time_in_local_timezone.replace(tzinfo=None)}})
+                            realtime_data = list(future_bar_collection.find({'idcontract':future_id['extra_data']['sqlid'],'errorbar':False,
+                                                                             'bartime':{'$gte':previous_date_time_in_local_timezone.replace(tzinfo=None)}})
                                             .sort([('bartime', 1)]))
 
                             realtime_df = pd.DataFrame(realtime_data)
