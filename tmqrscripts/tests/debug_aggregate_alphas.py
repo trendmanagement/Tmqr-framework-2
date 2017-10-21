@@ -13,6 +13,9 @@ RMT_MONGO_DB = 'tmldb_v2'
 remote_client = MongoClient(MONGO_CONNSTR_V1)
 remote_db = remote_client[MONGO_EXO_DB_V1]
 
+mongo_client_v2 = MongoClient(MONGO_CONNSTR)
+mongo_db_v2 = mongo_client_v2[MONGO_DB]
+
 from bson.son import SON
 
 pipeline = [
@@ -45,7 +48,17 @@ for campaign_list in list(remote_db['accounts'].aggregate(pipeline)):
             if "!NEW_" in alpha:
                 alpha_v2 = alpha.replace('!NEW_',"")
                 print(alpha_v2)
+                final_alpha_list.append(alpha_v2)
 
+print(final_alpha_list)
 
+x = (mongo_db_v2['alpha_data'].find({'name': {'$in': final_alpha_list}}))
+# print(list(x))
+ww = []
+for g in x:
+    ww.append(g['context']['index_hedge_name'])
+# print(g['context']['index_hedge_name'])
+
+print(ww)
 
 

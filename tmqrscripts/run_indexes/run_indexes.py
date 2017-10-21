@@ -40,15 +40,36 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 '''
 
 class IndexGenerationScript:
-    def __init__(self, override_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False):
+    def __init__(self, override_time_check_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False, try_run_all_exos_live_and_test = False,
+                 instrument=None):
 
-        self.override_run_exo = override_run_exo
-        self.reset_exo_from_beginning = reset_exo_from_beginning
+        if override_time_check_run_exo == None:
+            self.override_time_check_run_exo = False
+        else:
+            self.override_time_check_run_exo = override_time_check_run_exo
+
+        if reset_exo_from_beginning == None:
+            self.reset_exo_from_beginning = False
+        else:
+            self.reset_exo_from_beginning = reset_exo_from_beginning
 
         if override_run_alpha == None:
             self.override_run_alpha = False
         else:
             self.override_run_alpha = override_run_alpha
+
+        if try_run_all_exos_live_and_test == None:
+            self.try_run_all_exos_live_and_test = False
+        else:
+            self.try_run_all_exos_live_and_test = try_run_all_exos_live_and_test
+
+        if instrument == None:
+            self.instrument_list = INSTRUMENT_LIST_TO_RUN_INDEXES
+        else:
+            self.instrument_list = []
+            self.instrument_list.append(instrument)
+
+
 
         mongo_client_v2 = MongoClient(MONGO_CONNSTR)
         self.mongo_db_v2 = mongo_client_v2[MONGO_DB]
@@ -65,18 +86,21 @@ class IndexGenerationScript:
 
         self.campaign_alpha_list = self.get_campaign_alpha_list()
 
+        self.campaign_exo_list = self.get_campaign_exo_list(self.campaign_alpha_list)
+
         self.signalapp_exo = SignalApp('V2 calcs', APPCLASS_EXO, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
         self.signalapp_alpha = SignalApp('V2 calcs', APPCLASS_ALPHA, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
 
-    def run_all_instruments(self):
-        self.run_main_index_alpha_script(INSTRUMENT_LIST_TO_RUN_INDEXES)
+    # def run(self):
+    #     self.run_main_index_alpha_script(self.instrument_list)
 
-    def run_selected_intruments(self, instrument):
-        instrument_list = []
-        instrument_list.append(instrument)
-        self.run_main_index_alpha_script(instrument_list)
 
-    def run_main_index_alpha_script(self, instrument_list):
+    # def run_selected_intruments(self, instrument):
+    #     instrument_list = []
+    #     instrument_list.append(instrument)
+    #     self.run_main_index_alpha_script(instrument_list)
+
+    def run_main_index_alpha_script(self):
         '''
         runs the script for all instruments and indexes in settings_index and associated alphas
         :param override_run: runs regardless of time
@@ -90,7 +114,7 @@ class IndexGenerationScript:
         for instrument in self.asset_info_collection.find({}):
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
-            if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in instrument_list:
+            if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
 
                 print(instrument['instrument'])
 
@@ -132,74 +156,76 @@ class IndexGenerationScript:
 
         ExoClass = exo_index['class']
 
-        try:
+        index_hedge_name = '{0}_{1}'.format(instrument, ExoClass._index_name)
 
-            index_hedge_name = '{0}_{1}'.format(instrument,ExoClass._index_name)
-
-            if self.date_end is None:
-                dm = DataManager(date_start=self.date_start)
-            else:
-                dm = DataManager(date_start=self.date_start, date_end=self.date_end)
-
-
-            if self.reset_exo_from_beginning:
-                index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
-
-                #current_time = datetime.utcnow()
-
-                #current_time_utc = datetime.utcnow()
-
-                ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
-
-                self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
-
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
-            else:
-
-                index = IndexBase.load(dm, index_hedge_name)
-
-                # current_time = datetime.now(index.session.tz)
-
-                # current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
-
-                ct = self.current_time_generate(index.session.tz)
-
-                sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(ct['current_time'],
-                                                                    decision_time_shift=index.decision_time_shift - 1)
-
-
-                index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name})
-
-                if index_from_db == None or not 'index_update_time' in index_from_db['context']:
-                    self.run_index(index, ct['current_time_utc'], index_hedge_name)
-                else:
-                    last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
-                    last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
-
-                    if self.override_run_exo or (ct['current_time'].weekday() < 5 and\
-                            ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
-                             or (ct['current_time'] >= sess_exec and last_index_update_time < sess_exec))):
-
-                        self.run_index(index, ct['current_time_utc'], index_hedge_name)
-
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
-
-
-        except (DataEngineNotFoundError, NotImplementedError) as e:
-            log.warn(f"ExoIndexError: '{e}'")
+        if self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list:
 
             try:
 
-                index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
+                if self.date_end is None:
+                    dm = DataManager(date_start=self.date_start)
+                else:
+                    dm = DataManager(date_start=self.date_start, date_end=self.date_end)
 
-                ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
 
-                self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
+                if self.reset_exo_from_beginning:
+                    index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
 
-                self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+                    #current_time = datetime.utcnow()
 
-            except Exception as e1:
-                log.warn(f"ExoIndexError: '{e1}'")
+                    #current_time_utc = datetime.utcnow()
+
+                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
+
+                    self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
+
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+                else:
+
+                    index = IndexBase.load(dm, index_hedge_name)
+
+                    # current_time = datetime.now(index.session.tz)
+
+                    # current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
+
+                    ct = self.current_time_generate(index.session.tz)
+
+                    sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(ct['current_time'],
+                                                                        decision_time_shift=index.decision_time_shift - 1)
+
+
+                    index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name})
+
+                    if index_from_db == None or not 'index_update_time' in index_from_db['context']:
+                        self.run_index(index, ct['current_time_utc'], index_hedge_name)
+                    else:
+                        last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
+                        last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
+
+                        if self.override_time_check_run_exo or (ct['current_time'].weekday() < 5 and\
+                                ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
+                                 or (ct['current_time'] >= sess_exec and last_index_update_time < sess_exec))):
+
+                            self.run_index(index, ct['current_time_utc'], index_hedge_name)
+
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+
+
+            except (DataEngineNotFoundError, NotImplementedError) as e:
+                log.warn(f"ExoIndexError: '{e}'")
+
+                try:
+
+                    index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
+
+                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
+
+                    self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
+
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+
+                except Exception as e1:
+                    log.warn(f"ExoIndexError: '{e1}'")
 
     def current_time_generate(self, tz):
         assert tz != None, 'no timezone passed to current_time_generate'
@@ -253,6 +279,8 @@ class IndexGenerationScript:
         :return: 
         '''
 
+
+
         # if not creating_index:
         try:
             self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
@@ -286,7 +314,7 @@ class IndexGenerationScript:
 
 
 
-        if self.reset_exo_from_beginning or self.override_run_exo or current_time >= alpha_sess_decision:
+        if self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision:
             alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
 
             v1_alpha_ok = True
@@ -327,7 +355,7 @@ class IndexGenerationScript:
                         last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
 
 
-                        if self.reset_exo_from_beginning or self.override_run_exo:
+                        if self.reset_exo_from_beginning or self.override_time_check_run_exo:
                             # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                             # t.start()
                             self.run_alpha(alpha['name'], current_time_utc)
@@ -379,8 +407,10 @@ class IndexGenerationScript:
         :return: the list of alphas that the campaigns use
         '''
 
-        mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
-        mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+        # mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
+        # mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+
+
 
         pipeline = [
             {
@@ -396,13 +426,27 @@ class IndexGenerationScript:
 
         ]
         final_alpha_list = []
-        for campaign_list in list(mongo_db_v1['accounts'].aggregate(pipeline)):
+        for campaign_list in list(self.mongo_db_v1['accounts'].aggregate(pipeline)):
 
             for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
                 alpha_list_replace = alpha_list.replace('!NEW_', "")
                 final_alpha_list.append(alpha_list_replace)
 
         return final_alpha_list
+
+    def get_campaign_exo_list(self, final_alpha_list):
+        '''
+        this gets the full list of exos that the current active campaigns use
+        :return: the list of exos that the campaigns use
+        '''
+
+        alpha_list_mongo = self.mongo_db_v2['alpha_data'].find({'name':{'$in':final_alpha_list}})
+
+        exo_list = []
+        for alpha in alpha_list_mongo:
+            exo_list.append(alpha['context']['index_hedge_name'])
+
+        return exo_list
 
     def run_account_positions_process(self):
         '''
@@ -441,7 +485,7 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript()
+    igs = IndexGenerationScript(override_run_exo=True)
     igs.run_all_instruments()
 
 
