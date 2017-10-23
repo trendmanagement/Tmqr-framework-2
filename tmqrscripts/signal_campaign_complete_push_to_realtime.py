@@ -79,10 +79,12 @@ class CampaignUpdateCheckPushToRealtime:
 
                         if alpha_v2_datetime.date() != current_date_utc:
                             campaign_ready = False
+                            break
                     else:
                         v1_alpha = self.db_v1['swarms'].find_one({'swarm_name': alpha})
                         if v1_alpha['last_date'].date() != current_date_local:
                             campaign_ready = False
+                            break
 
                 if campaign_ready:
 
