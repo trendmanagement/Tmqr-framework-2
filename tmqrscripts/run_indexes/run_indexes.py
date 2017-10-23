@@ -158,8 +158,7 @@ class IndexGenerationScript:
 
         index_hedge_name = '{0}_{1}'.format(instrument, ExoClass._index_name)
 
-        # if self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list:
-        if True:
+        if self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list:
 
             try:
 
