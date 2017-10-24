@@ -28,6 +28,11 @@ import pytz
 from tmqr.errors import DataEngineNotFoundError
 import threading
 
+import logging
+# logger = logging.getLogger('tmqr_framework2')
+# logger.propagate = False
+log.disabled = True
+
 import pymongo
 from pymongo import MongoClient
 
