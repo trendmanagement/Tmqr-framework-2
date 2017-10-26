@@ -23,7 +23,8 @@ from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs_lp import EXOSemiFutur
 from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts_lp import EXOSemiFuture_DynKel_80_20_shorts_lp
 
 
-INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC', 'US.NG', 'US.ZW', 'US.ZS']
+INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
+                                  'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE']
 
 INDEX_LIST = [
 
