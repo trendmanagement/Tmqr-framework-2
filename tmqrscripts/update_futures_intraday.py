@@ -17,15 +17,13 @@ import pandas as pd
 import pymongo
 import pytz
 from pymongo import MongoClient
-
-from tmqr.settings import *
-from tmqr.serialization import *
-
-from tmqrfeed.manager import DataManager
-
 from tqdm import tqdm
 
 from tmqr.logs import log
+from tmqr.serialization import *
+from tmqr.settings import *
+from tmqrfeed.manager import DataManager
+
 
 class UpdateFuturesIntraday:
     def __init__(self):
