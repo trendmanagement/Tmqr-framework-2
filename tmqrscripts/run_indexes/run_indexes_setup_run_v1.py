@@ -1,4 +1,4 @@
-from tmqrscripts.run_indexes.run_indexes_debug import IndexGenerationScript
+from tmqrscripts.run_indexes.run_indexes_v1 import IndexGenerationScript
 from datetime import datetime
 
 import argparse
