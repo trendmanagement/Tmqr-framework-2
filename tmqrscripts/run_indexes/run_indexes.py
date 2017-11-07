@@ -26,7 +26,7 @@ from tmqr.logs import log
 from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
-import threading
+#import threading
 
 log.disabled = True
 
@@ -113,7 +113,7 @@ class IndexGenerationScript:
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
 
-        for instrument in self.asset_info_collection.find({}):
+        for instrument in self.asset_info_collection.find({},{'instrument':1}):
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
@@ -125,9 +125,9 @@ class IndexGenerationScript:
                     instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
 
                     if instrument_specific or not 'instrument' in exo:
-                        t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
-                        t.start()
-                        # self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+                        # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                        # t.start()
+                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
 
                     # if 'instrument' in exo:
                     #     # print(exo['instrument'])
@@ -196,7 +196,7 @@ class IndexGenerationScript:
                                                                         decision_time_shift=index.decision_time_shift - 1)
 
 
-                    index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name})
+                    index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name},{'context':1})
 
                     if index_from_db == None or not 'index_update_time' in index_from_db['context']:
                         self.run_index(index, ct['current_time_utc'], index_hedge_name)
@@ -317,7 +317,7 @@ class IndexGenerationScript:
 
 
         if self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision:
-            alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name}))
+            alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
 
             v1_alpha_ok = True
 
@@ -336,7 +336,7 @@ class IndexGenerationScript:
                             earliest_date = current_time.date()
                             for swarm in swarm_list:
 
-                                v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm})
+                                v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm},{'last_date':1})
 
                                 if v1_alpha['last_date'].date() < earliest_date:
                                     earliest_date = v1_alpha['last_date'].date()
@@ -386,9 +386,14 @@ class IndexGenerationScript:
         else:
             dm2 = DataManager(date_start=self.date_start, date_end=self.date_end)
         #print(alpha_name)
-        saved_alpha = StrategyBase.load(dm2, alpha_name)
-        saved_alpha.run()
-        saved_alpha.save()
+
+        try:
+            '''C - compiled code, will not run on local machine'''
+            saved_alpha = StrategyBase.load(dm2, alpha_name)
+            saved_alpha.run()
+            saved_alpha.save()
+        except:
+            pass
 
         #print('running finished ' + alpha_name)
 
@@ -442,7 +447,7 @@ class IndexGenerationScript:
         :return: the list of exos that the campaigns use
         '''
 
-        alpha_list_mongo = self.mongo_db_v2['alpha_data'].find({'name':{'$in':final_alpha_list}})
+        alpha_list_mongo = self.mongo_db_v2['alpha_data'].find({'name':{'$in':final_alpha_list}},{'context':1})
 
         exo_list = []
         for alpha in alpha_list_mongo:

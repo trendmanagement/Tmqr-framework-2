@@ -115,19 +115,33 @@ class IndexGenerationScript:
 
                 print(instrument['instrument'])
 
-                for exo_index, exo in enumerate(INDEX_LIST):
+                process = multiprocessing.Process(target=self.run_through_each_instrument,
+                                                  args=(instrument['instrument']))
+                process.start()
 
-                    instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
+                # for exo_index, exo in enumerate(INDEX_LIST):
+                #
+                #     instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
+                #
+                #     if instrument_specific or not 'instrument' in exo:
+                #         # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                #         # t.start()
+                #         #                         self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+                #
+                #         process = multiprocessing.Process(target=self.run_through_each_index_threads,
+                #                                           args=(
+                #                                           instrument['instrument'], exo_index, instrument_specific))
+                #         process.start()
 
-                    if instrument_specific or not 'instrument' in exo:
-                        # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
-                        # t.start()
-                        #                         self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+    def run_through_each_instrument(self, instrument):
 
-                        process = multiprocessing.Process(target=self.run_through_each_index_threads,
-                                                          args=(
-                                                          instrument['instrument'], exo_index, instrument_specific))
-                        process.start()
+        for exo_index, exo in enumerate(INDEX_LIST):
+
+            instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
+
+            if instrument_specific or not 'instrument' in exo:
+                self.run_through_each_index_threads(instrument, exo_index, instrument_specific)
+
 
     def run_through_each_index_threads(self, instrument, exo_index, instrument_specific=False):
         '''
