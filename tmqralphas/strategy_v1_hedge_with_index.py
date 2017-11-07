@@ -7,6 +7,7 @@ from tmqrfeed.quotes import QuoteIndex
 from tmqr.errors import PositionNotFoundError
 from tmqrfeed import DataManager
 from tmqr.logs import log
+import warnings
 
 #
 # Using some of V1 libs
@@ -29,7 +30,13 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
         HEDGE_IDX_NAME = self.context['index_hedge_name']
         self.dm.series_extra_set('index_hedge', QuoteIndex, HEDGE_IDX_NAME, set_session=True, check_session=True)
 
-        self.dm.costs_set('US', Costs())
+        if 'costs_per_option' not in self.context:
+            warnings.warn("You must set 'costs_per_option' in 'context' kwarg, using default 3.0!")
+        if 'costs_per_contract' not in self.context:
+            warnings.warn("You must set 'costs_per_contract' in 'context' kwarg, using default 3.0!")
+
+        self.dm.costs_set('US', Costs(per_option=self.context.get('costs_per_option', 3.0),
+                                      per_contract=self.context.get('costs_per_contract', 3.0)))
 
         # Getting Framework v1 alpha data
         storage = EXOStorage(MONGO_CONNSTR, MONGO_EXO_DB)
