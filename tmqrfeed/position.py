@@ -684,6 +684,11 @@ class Position:
                     # Skip zero-transactions (they are used only for PnL calculation)
                     continue
 
+                if asset.ctype in ('P', 'C'):
+                    tick_size = self.dm.instrument_info_get(asset.instrument).ticksize_options
+                else:
+                    tick_size = self.dm.instrument_info_get(asset.instrument).ticksize
+
                 result.append({
                     'dt': dt,
                     'asset': asset,
@@ -692,6 +697,7 @@ class Position:
                     'qty': asset_rec[2],
                     'costs': asset_rec[5],
                     'pos_action': asset_rec[6],
+                    'execution_px_ticks': round(asset_rec[1] / tick_size),
                 })
             prev_pos = pos_list
 
