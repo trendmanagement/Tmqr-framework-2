@@ -567,8 +567,9 @@ class Position:
                 costs_value = self.dm.costs_get(asset, curr_values[iQTY])
                 pnl_decision = 0.0
                 pnl_execution = 0.0
+                position_action = 1  # 1 - open new position, -1 - close old position, 0 - hold position
                 result[asset] = (curr_values[iDPX], curr_values[iEPX], curr_values[iQTY],
-                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
             elif curr_values is None:
                 # Skip old closed positions
                 if prev_values[iQTY] != 0:
@@ -584,9 +585,10 @@ class Position:
 
                     pnl_decision = asset.dollar_pnl(prev_values[iDPX], decision_price, prev_values[iQTY])
                     pnl_execution = asset.dollar_pnl(prev_values[iEPX], exec_price, prev_values[iQTY])
+                    position_action = -1  # 1 - open new position, -1 - close old position, 0 - hold position
 
                     result[asset] = (decision_price, exec_price, -prev_values[iQTY],
-                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
 
                     # Add closed asset record to the position to keep all prices in the position
                     #   and decrease DB calls => increases performance
@@ -601,8 +603,15 @@ class Position:
                 pnl_decision = asset.dollar_pnl(prev_values[iDPX], curr_values[iDPX], prev_values[iQTY])
                 pnl_execution = asset.dollar_pnl(prev_values[iEPX], curr_values[iEPX], prev_values[iQTY])
 
+                position_action = 0  # 1 - open new position, -1 - close old position, 0 - hold position
+                abs_pos_chg = abs(curr_values[iQTY]) - abs(prev_values[iQTY])
+                if abs_pos_chg > 0:
+                    position_action = 1
+                elif abs_pos_chg < 0:
+                    position_action = -1
+
                 result[asset] = (curr_values[iDPX], curr_values[iEPX], trans_qty,
-                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
 
         #
         # Add closed contracts records to current_pos
@@ -615,7 +624,7 @@ class Position:
 
         return result
 
-    def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float]]):
+    def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float, float]]):
         """
         Calculate transactions stats
 
@@ -682,6 +691,7 @@ class Position:
                     'execution_px': asset_rec[1],
                     'qty': asset_rec[2],
                     'costs': asset_rec[5],
+                    'pos_action': asset_rec[6],
                 })
             prev_pos = pos_list
 
