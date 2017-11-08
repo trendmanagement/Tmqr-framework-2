@@ -567,8 +567,9 @@ class Position:
                 costs_value = self.dm.costs_get(asset, curr_values[iQTY])
                 pnl_decision = 0.0
                 pnl_execution = 0.0
+                position_action = 1  # 1 - open new position, -1 - close old position, 0 - hold position
                 result[asset] = (curr_values[iDPX], curr_values[iEPX], curr_values[iQTY],
-                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
             elif curr_values is None:
                 # Skip old closed positions
                 if prev_values[iQTY] != 0:
@@ -584,9 +585,10 @@ class Position:
 
                     pnl_decision = asset.dollar_pnl(prev_values[iDPX], decision_price, prev_values[iQTY])
                     pnl_execution = asset.dollar_pnl(prev_values[iEPX], exec_price, prev_values[iQTY])
+                    position_action = -1  # 1 - open new position, -1 - close old position, 0 - hold position
 
                     result[asset] = (decision_price, exec_price, -prev_values[iQTY],
-                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
 
                     # Add closed asset record to the position to keep all prices in the position
                     #   and decrease DB calls => increases performance
@@ -601,8 +603,15 @@ class Position:
                 pnl_decision = asset.dollar_pnl(prev_values[iDPX], curr_values[iDPX], prev_values[iQTY])
                 pnl_execution = asset.dollar_pnl(prev_values[iEPX], curr_values[iEPX], prev_values[iQTY])
 
+                position_action = 0  # 1 - open new position, -1 - close old position, 0 - hold position
+                abs_pos_chg = abs(curr_values[iQTY]) - abs(prev_values[iQTY])
+                if abs_pos_chg > 0:
+                    position_action = 1
+                elif abs_pos_chg < 0:
+                    position_action = -1
+
                 result[asset] = (curr_values[iDPX], curr_values[iEPX], trans_qty,
-                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+                                 pnl_decision + costs_value, pnl_execution + costs_value, costs_value, position_action)
 
         #
         # Add closed contracts records to current_pos
@@ -615,7 +624,7 @@ class Position:
 
         return result
 
-    def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float]]):
+    def _transactions_stats(self, trans_dict: Dict[ContractBase, Tuple[float, float, float, float, float, float, float]]):
         """
         Calculate transactions stats
 
@@ -626,6 +635,9 @@ class Position:
         pnl_change_execution = 0.0
         ncontracts_executed = 0.0
         noptions_executed = 0.0
+
+        ncontracts_trades = 0.0
+        noptions_trades = 0.0
         costs = 0.0
 
         for asset, trans in trans_dict.items():
@@ -634,8 +646,10 @@ class Position:
 
             if asset.ctype in ('P', 'C'):
                 noptions_executed += abs(trans[2])
+                noptions_trades += 1.0
             else:
                 ncontracts_executed += abs(trans[2])
+                ncontracts_trades += 1.0
 
             costs += trans[5]
 
@@ -645,8 +659,49 @@ class Position:
             'pnl_change_execution': pnl_change_execution,
             'ncontracts_executed': ncontracts_executed,
             'noptions_executed': noptions_executed,
-            'costs': costs
+            'ncontracts_trades': ncontracts_trades,
+            'noptions_trades': noptions_trades,
+            'costs': costs,
         }
+
+    def get_transaction_series(self) -> pd.DataFrame:
+        """
+        Calculates position transaction series
+        :return: pandas.DataFrame
+        """
+        result = []
+        prev_pos = None
+
+        for dt, pos_list in self._position.items():
+            transactions = self._calc_transactions(dt, pos_list, prev_pos)
+            """
+            transaction = Dict[ContractBase, Tuple[float, float, float, float, float, float]]
+            result[asset] = (decision_price, exec_price, -prev_values[iQTY],
+                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+            """
+            for asset, asset_rec in transactions.items():
+                if asset_rec[2] == 0:
+                    # Skip zero-transactions (they are used only for PnL calculation)
+                    continue
+
+                if asset.ctype in ('P', 'C'):
+                    tick_size = self.dm.instrument_info_get(asset.instrument).ticksize_options
+                else:
+                    tick_size = self.dm.instrument_info_get(asset.instrument).ticksize
+
+                result.append({
+                    'dt': dt,
+                    'asset': asset,
+                    'decision_px': asset_rec[0],
+                    'execution_px': asset_rec[1],
+                    'qty': asset_rec[2],
+                    'costs': asset_rec[5],
+                    'pos_action': asset_rec[6],
+                    'execution_px_ticks': round(asset_rec[1] / tick_size),
+                })
+            prev_pos = pos_list
+
+        return pd.DataFrame(result).set_index('dt')
 
     def get_pnl_series(self) -> pd.DataFrame:
         """
@@ -667,6 +722,8 @@ class Position:
             'pnl_change_execution': pnl_change_execution,
             'ncontracts_executed': ncontracts_executed,
             'noptions_executed': noptions_executed,
+            'ncontracts_trades': ncontracts_trades,
+            'noptions_trades': noptions_trades,
             'costs': costs
             }
             """
