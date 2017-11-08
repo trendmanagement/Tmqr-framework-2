@@ -26,7 +26,7 @@ from tmqr.logs import log
 from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
-#import threading
+import threading
 
 log.disabled = True
 
@@ -125,9 +125,9 @@ class IndexGenerationScript:
                     instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
 
                     if instrument_specific or not 'instrument' in exo:
-                        # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
-                        # t.start()
-                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+                        t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                        t.start()
+                        # self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
 
                     # if 'instrument' in exo:
                     #     # print(exo['instrument'])
@@ -492,8 +492,8 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript(override_run_exo=True)
-    igs.run_all_instruments()
+    igs = IndexGenerationScript(override_time_check_run_exo=True)
+    igs.run_main_index_alpha_script()
 
 
 
