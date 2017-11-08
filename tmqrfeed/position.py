@@ -671,14 +671,16 @@ class Position:
                                      pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
             """
             for asset, asset_rec in transactions.items():
+                if asset_rec[2] == 0:
+                    # Skip zero-transactions (they are used only for PnL calculation)
+                    continue
+
                 result.append({
                     'dt': dt,
                     'asset': asset,
                     'decision_px': asset_rec[0],
                     'execution_px': asset_rec[1],
                     'qty': asset_rec[2],
-                    'pnl_chg_decision': asset_rec[3],
-                    'pnl_chg_execution': asset_rec[4],
                     'costs': asset_rec[5],
                 })
             prev_pos = pos_list
