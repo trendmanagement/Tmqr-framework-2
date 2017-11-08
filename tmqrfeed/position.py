@@ -626,6 +626,9 @@ class Position:
         pnl_change_execution = 0.0
         ncontracts_executed = 0.0
         noptions_executed = 0.0
+
+        ncontracts_trades = 0.0
+        noptions_trades = 0.0
         costs = 0.0
 
         for asset, trans in trans_dict.items():
@@ -634,8 +637,10 @@ class Position:
 
             if asset.ctype in ('P', 'C'):
                 noptions_executed += abs(trans[2])
+                noptions_trades += 1.0
             else:
                 ncontracts_executed += abs(trans[2])
+                ncontracts_trades += 1.0
 
             costs += trans[5]
 
@@ -645,8 +650,40 @@ class Position:
             'pnl_change_execution': pnl_change_execution,
             'ncontracts_executed': ncontracts_executed,
             'noptions_executed': noptions_executed,
-            'costs': costs
+            'ncontracts_trades': ncontracts_trades,
+            'noptions_trades': noptions_trades,
+            'costs': costs,
         }
+
+    def get_transaction_series(self) -> pd.DataFrame:
+        """
+        Calculates position transaction series
+        :return: pandas.DataFrame
+        """
+        result = []
+        prev_pos = None
+
+        for dt, pos_list in self._position.items():
+            transactions = self._calc_transactions(dt, pos_list, prev_pos)
+            """
+            transaction = Dict[ContractBase, Tuple[float, float, float, float, float, float]]
+            result[asset] = (decision_price, exec_price, -prev_values[iQTY],
+                                     pnl_decision + costs_value, pnl_execution + costs_value, costs_value)
+            """
+            for asset, asset_rec in transactions.items():
+                result.append({
+                    'dt': dt,
+                    'asset': asset,
+                    'decision_px': asset_rec[0],
+                    'execution_px': asset_rec[1],
+                    'qty': asset_rec[2],
+                    'pnl_chg_decision': asset_rec[3],
+                    'pnl_chg_execution': asset_rec[4],
+                    'costs': asset_rec[5],
+                })
+            prev_pos = pos_list
+
+        return pd.DataFrame(result).set_index('dt')
 
     def get_pnl_series(self) -> pd.DataFrame:
         """
@@ -667,6 +704,8 @@ class Position:
             'pnl_change_execution': pnl_change_execution,
             'ncontracts_executed': ncontracts_executed,
             'noptions_executed': noptions_executed,
+            'ncontracts_trades': ncontracts_trades,
+            'noptions_trades': noptions_trades,
             'costs': costs
             }
             """
