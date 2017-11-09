@@ -30,6 +30,16 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
         HEDGE_IDX_NAME = self.context['index_hedge_name']
         self.dm.series_extra_set('index_hedge', QuoteIndex, HEDGE_IDX_NAME, set_session=True, check_session=True)
 
+        if 'index_passive_name' in self.context and self.context['index_passive_name'] not in (None, ''):
+            self.dm.series_extra_set('index_passive', QuoteIndex, self.context['index_passive_name'],
+                                     set_session=True,
+                                     check_session=True)
+
+            if 'index_passive_qty' not in self.context:
+                warnings.warn("'index_passive_qty' is not set in self.context, use default QTY 1.0")
+        else:
+            warnings.warn("'index_passive_name' is not set in context, skipping.")
+
         if 'costs_per_option' not in self.context:
             warnings.warn("You must set 'costs_per_option' in 'context' kwarg, using default 3.0!")
         if 'costs_per_contract' not in self.context:
@@ -71,6 +81,9 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
         # get net exposure for all members
         exposure = exposure_record['exposure'].sum()
 
+        # Clear current position for date
+        self.position.set_net_position(date, {})
+
         #
         # Do new position management magic here
         #
@@ -81,7 +94,20 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
             # NOTE: exposure - is a alpha's exporure of trade, when alpha is out of market
             #                  exposure equals 0, this means that means no position and hedge
             # NOTE: self.context['index_hedge_direction'] allowed 1, -1, or even 0 - i.e. no hedge
-            self.position.set_net_position(date, hedge_position_rec,
+            self.position.add_net_position(date, hedge_position_rec,
                                            qty=abs(exposure) * self.context['index_hedge_direction'])
         except PositionNotFoundError as exc:
             log.error(f"Couldn't find hedged index position! {exc}")
+
+
+        try:
+            passive_leg_position = self.dm.position('index_passive')
+            passive_leg_position_rec = passive_leg_position.get_net_position(date)
+            # Add index position as hedge
+            # NOTE: exposure - is a alpha's exporure of trade, when alpha is out of market
+            #                  exposure equals 0, this means that means no position and hedge
+            # NOTE: self.context['index_hedge_direction'] allowed 1, -1, or even 0 - i.e. no hedge
+            self.position.add_net_position(date, passive_leg_position_rec,
+                                           qty=self.context.get('index_passive_qty', 1.0))
+        except PositionNotFoundError as exc:
+            pass
