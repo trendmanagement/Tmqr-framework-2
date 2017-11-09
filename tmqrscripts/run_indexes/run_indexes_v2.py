@@ -125,9 +125,9 @@ class IndexGenerationScript:
                     instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
 
                     if instrument_specific or not 'instrument' in exo:
-                        # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
-                        # t.start()
-                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+                        t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                        t.start()
+                        # self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
 
                     # if 'instrument' in exo:
                     #     # print(exo['instrument'])
@@ -492,8 +492,22 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript(override_time_check_run_exo=True)
-    igs.run_main_index_alpha_script()
+
+    mongo_client_v2 = MongoClient(MONGO_CONNSTR)
+    mongo_db_v2 = mongo_client_v2[MONGO_DB]
+
+    asset_info_collection = mongo_db_v2['asset_info']
+
+    #         instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
+    #         self.instrument_list = ['US.6C', 'US.6E', 'US.6B']
+
+    for instrument in asset_info_collection.find({}, {'instrument': 1}):
+
+        if not 'DEFAULT' in instrument['instrument']: #and instrument['instrument'] in self.instrument_list:
+            print(instrument['instrument'])
+
+        igs = IndexGenerationScript(override_time_check_run_exo=True, instrument=instrument['instrument'])
+        igs.run_main_index_alpha_script()
 
 
 
