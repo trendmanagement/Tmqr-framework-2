@@ -22,6 +22,13 @@ from tmqrindex.deployed.exo_putspread_dynkel_longs_lp import EXOPutSpread_DynKel
 from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs_lp import EXOSemiFuture_DynKel_20_80_longs_lp
 from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts_lp import EXOSemiFuture_DynKel_80_20_shorts_lp
 
+from tmqrindex.deployed.exo_active_leg_short_call import EXO_Active_leg_Short_Call
+from tmqrindex.deployed.exo_active_leg_short_put import EXO_Active_leg_Short_Put
+from tmqrindex.deployed.exo_passive_leg_long_call import EXO_Passive_leg_Long_Call
+from tmqrindex.deployed.exo_passive_leg_long_put import EXO_Passive_leg_Long_Put
+from tmqrindex.deployed.exo_riskreversal_active_calls_for_longs_dynkel_20_80_longs import EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_longs
+from tmqrindex.deployed.exo_riskreversal_passive_puts_for_longs import EXO_RiskReversal_Passive_Puts_For_Longs
+
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
                                   'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE']
@@ -58,8 +65,6 @@ INDEX_LIST = [
     {
         'class': EXOPutSpread_DynKel_Longs
     },
-
-
     {
         'class': EXOCallSpread_DynKel_shorts_lp
     },
@@ -71,6 +76,25 @@ INDEX_LIST = [
     },
     {
         'class': EXOSemiFuture_DynKel_80_20_shorts_lp
+    },
+
+    {
+        'class': EXO_Active_leg_Short_Call
+    },
+    {
+        'class': EXO_Active_leg_Short_Put
+    },
+    {
+        'class': EXO_Passive_leg_Long_Call
+    },
+    {
+        'class': EXO_Passive_leg_Long_Put
+    },
+    {
+        'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_longs
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Puts_For_Longs
     },
 
 
