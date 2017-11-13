@@ -285,17 +285,21 @@ class IndexGenerationScript:
 
         # if not creating_index:
         try:
+            # self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
+            #                                           {'$set': {'context.index_update_time': update_time}})
+
+
+
+            index.run()
+            index.save()
+
+            # if creating_index:
             self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
                                                       {'$set': {'context.index_update_time': update_time}})
+
         except:
-            pass
-
-        index.run()
-        index.save()
-
-        # if creating_index:
-        self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
-                                                  {'$set': {'context.index_update_time': update_time}})
+            # pass
+            log.warn("Failed Index {0}".formate(index_hedge_name) )
 
         # self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
@@ -393,7 +397,7 @@ class IndexGenerationScript:
             saved_alpha.run()
             saved_alpha.save()
         except:
-            pass
+            log.warn("Failed Alpha {0}".format(alpha_name))
 
         #print('running finished ' + alpha_name)
 
