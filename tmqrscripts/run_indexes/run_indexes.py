@@ -299,7 +299,7 @@ class IndexGenerationScript:
 
         except:
             # pass
-            log.warn("Failed Index {0}".formate(index_hedge_name) )
+            log.warn("Failed Index {0}".format(index_hedge_name) )
 
         # self.signalapp_exo.send(MsgStatus('V2_Index', 'V2 Index finished {0}'.format(index_hedge_name), notify=True))
         #pass
