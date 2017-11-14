@@ -1,5 +1,5 @@
 from tmqrstrategy.strategy_base import StrategyBase
-from tmqr.errors import StrategyError
+from tmqr.errors import StrategyError, NotFoundError
 from tmqrfeed.quotes import QuoteIndex
 from tmqrfeed.costs import Costs
 import pandas as pd
@@ -41,7 +41,10 @@ class StrategyAlpha(StrategyBase):
 
         for i, dt in enumerate(series.index):
             # Calculate position delta
-            position_delta[i] = self.position.delta(dt)
+            try:
+                position_delta[i] = self.position.delta(dt)
+            except NotFoundError:
+                pass
 
         series['delta'] = position_delta
 

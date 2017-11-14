@@ -642,7 +642,7 @@ class StrategyBase:
                 for exp_df in exposure_df_list:
                     exposure_series.append(exp_df.loc[dt])
 
-                exposure_df = pd.DataFrame(exposure_series)
+                exposure_df = pd.DataFrame(exposure_series).fillna(0.0)
                 try:
                     # Run strategy position management
                     self.calculate_position(dt, exposure_df)
