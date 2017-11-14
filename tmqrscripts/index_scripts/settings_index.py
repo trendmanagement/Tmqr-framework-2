@@ -40,48 +40,48 @@ INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', '
 
 INDEX_LIST = [
 
-    # {
-    #     'class': EXOLongEnhance_DT
-    # },
-    # {
-    #     'class': EXOLongEnhance_DT_PutSpread
-    # },
-    # {
-    #     'class': EXOShortEnhance_DT_2
-    # },
-    # {
-    #     'class': EXOShortEnhance_DT_2_CallSpread
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_20_60_longs
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_20_80_longs
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_60_20_shorts
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_80_20_shorts
-    # },
-    # {
-    #     'class': EXOCallSpread_DynKel_Shorts
-    # },
-    # {
-    #     'class': EXOPutSpread_DynKel_Longs
-    # },
-    # {
-    #     'class': EXOCallSpread_DynKel_shorts_lp
-    # },
-    # {
-    #     'class': EXOPutSpread_DynKel_longs_lp
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_20_80_longs_lp
-    # },
-    # {
-    #     'class': EXOSemiFuture_DynKel_80_20_shorts_lp
-    # },
+    {
+        'class': EXOLongEnhance_DT
+    },
+    {
+        'class': EXOLongEnhance_DT_PutSpread
+    },
+    {
+        'class': EXOShortEnhance_DT_2
+    },
+    {
+        'class': EXOShortEnhance_DT_2_CallSpread
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_60_longs
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_80_longs
+    },
+    {
+        'class': EXOSemiFuture_DynKel_60_20_shorts
+    },
+    {
+        'class': EXOSemiFuture_DynKel_80_20_shorts
+    },
+    {
+        'class': EXOCallSpread_DynKel_Shorts
+    },
+    {
+        'class': EXOPutSpread_DynKel_Longs
+    },
+    {
+        'class': EXOCallSpread_DynKel_shorts_lp
+    },
+    {
+        'class': EXOPutSpread_DynKel_longs_lp
+    },
+    {
+        'class': EXOSemiFuture_DynKel_20_80_longs_lp
+    },
+    {
+        'class': EXOSemiFuture_DynKel_80_20_shorts_lp
+    },
 
 
     #new separate legs
@@ -128,30 +128,30 @@ INDEX_LIST = [
     },
 
 
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOSemiFuture_DynKel_20_80_Longs
-    # },
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOSemiFuture_DynKel_80_20_Longs
-    # },
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOWeeklyCalendarRiskRestrictionShorts
-    # },
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOWeeklyCalendarRiskRestrictionLongs
-    # },
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOWeeklyCalendarPutSpread
-    # },
-    # {
-    #     'instrument':'US.ES',
-    #     'class': ES_EXOWeeklyCalendarRiskReversalLong
-    # }
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOSemiFuture_DynKel_20_80_Longs
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOSemiFuture_DynKel_80_20_Longs
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOWeeklyCalendarRiskRestrictionShorts
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOWeeklyCalendarRiskRestrictionLongs
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOWeeklyCalendarPutSpread
+    },
+    {
+        'instrument':'US.ES',
+        'class': ES_EXOWeeklyCalendarRiskReversalLong
+    }
 ]
 
 INSTRUMENT_OPT_CODE_LIST = [
