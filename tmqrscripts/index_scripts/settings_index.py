@@ -90,42 +90,42 @@ INDEX_LIST = [
     {
         'class': EXO_Active_leg_Short_Put_For_Bullish_PutSpread
     },
-    # {
-    #     'class': EXO_Passive_leg_Long_Put_For_Bullish_PutSpread
-    # },
-    #
-    # #PAIRED
-    # {
-    #     'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_Longs
-    # },
-    # {
-    #     'class': EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_20_80_Longs
-    # },
-    #
-    # #Shorts
-    # #PAIRED
-    # {
-    #     'class': EXO_Active_leg_Short_Call_For_Bearish_CallSpread
-    # },
-    # {
-    #     'class': EXO_Passive_leg_Long_Call_For_Bearish_CallSpread
-    # },
-    #
-    # #PAIRED
-    # {
-    #     'class': EXO_RiskReversal_Active_Calls_For_Shorts_DynKel_80_20_Shorts
-    # },
-    # {
-    #     'class': EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts
-    # },
-    #
-    # #PAIRED
-    # {
-    #     'class': EXO_RiskReversal_Active_Puts_For_Shorts_DynKel_80_20_Shorts
-    # },
-    # {
-    #     'class': EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
-    # },
+    {
+        'class': EXO_Passive_leg_Long_Put_For_Bullish_PutSpread
+    },
+
+    #PAIRED
+    {
+        'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_Longs
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_20_80_Longs
+    },
+
+    #Shorts
+    #PAIRED
+    {
+        'class': EXO_Active_leg_Short_Call_For_Bearish_CallSpread
+    },
+    {
+        'class': EXO_Passive_leg_Long_Call_For_Bearish_CallSpread
+    },
+
+    #PAIRED
+    {
+        'class': EXO_RiskReversal_Active_Calls_For_Shorts_DynKel_80_20_Shorts
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts
+    },
+
+    #PAIRED
+    {
+        'class': EXO_RiskReversal_Active_Puts_For_Shorts_DynKel_80_20_Shorts
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
+    },
 
 
     # {
