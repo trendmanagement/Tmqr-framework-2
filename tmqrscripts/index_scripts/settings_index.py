@@ -22,14 +22,17 @@ from tmqrindex.deployed.exo_putspread_dynkel_longs_lp import EXOPutSpread_DynKel
 from tmqrindex.deployed.exo_semifuture_dynkel_20_80_longs_lp import EXOSemiFuture_DynKel_20_80_longs_lp
 from tmqrindex.deployed.exo_semifuture_dynkel_80_20_shorts_lp import EXOSemiFuture_DynKel_80_20_shorts_lp
 
-from tmqrindex.deployed.exo_active_leg_short_call import EXO_Active_leg_Short_Call
-from tmqrindex.deployed.exo_active_leg_short_put import EXO_Active_leg_Short_Put
-from tmqrindex.deployed.exo_passive_leg_long_call import EXO_Passive_leg_Long_Call
-from tmqrindex.deployed.exo_passive_leg_long_put import EXO_Passive_leg_Long_Put
-from tmqrindex.deployed.exo_riskreversal_active_calls_for_longs_dynkel_20_80_longs import EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_longs
-from tmqrindex.deployed.exo_riskreversal_passive_puts_for_longs import EXO_RiskReversal_Passive_Puts_For_Longs
+from tmqrindex.deployed.exo_active_leg_short_put_for_bullish_putspread import EXO_Active_leg_Short_Put_For_Bullish_PutSpread
+from tmqrindex.deployed.exo_passive_leg_long_put_for_bullish_putspread import EXO_Passive_leg_Long_Put_For_Bullish_PutSpread
+from tmqrindex.deployed.exo_riskreversal_active_calls_for_longs_dynkel_20_80_longs import EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_Longs
+from tmqrindex.deployed.exo_riskreversal_passive_puts_for_longs_dynkel_20_80_longs import EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_20_80_Longs
+from tmqrindex.deployed.exo_active_leg_short_call_for_bearish_callspread import EXO_Active_leg_Short_Call_For_Bearish_CallSpread
+from tmqrindex.deployed.exo_passive_leg_long_call_for_bearish_callspread import EXO_Passive_leg_Long_Call_For_Bearish_CallSpread
 from tmqrindex.deployed.exo_riskreversal_active_calls_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Active_Calls_For_Shorts_DynKel_80_20_Shorts
-from tmqrindex.deployed.exo_riskreversal_passive_puts_for_shorts import EXO_RiskReversal_Passive_Puts_For_Shorts
+from tmqrindex.deployed.exo_riskreversal_passive_puts_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts
+
+from tmqrindex.deployed.exo_riskreversal_active_puts_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Active_Puts_For_Shorts_DynKel_80_20_Shorts
+from tmqrindex.deployed.exo_riskreversal_passive_calls_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
 
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
@@ -82,30 +85,46 @@ INDEX_LIST = [
 
 
     #new separate legs
+    #Longs
+    #PAIRED
     {
-        'class': EXO_Active_leg_Short_Call
+        'class': EXO_Active_leg_Short_Put_For_Bullish_PutSpread
     },
     {
-        'class': EXO_Active_leg_Short_Put
-    },
-    {
-        'class': EXO_Passive_leg_Long_Call
-    },
-    {
-        'class': EXO_Passive_leg_Long_Put
-    },
-    {
-        'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_longs
-    },
-    {
-        'class': EXO_RiskReversal_Passive_Puts_For_Longs
+        'class': EXO_Passive_leg_Long_Put_For_Bullish_PutSpread
     },
 
+    #PAIRED
+    {
+        'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_20_80_Longs
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_20_80_Longs
+    },
+
+    #Shorts
+    #PAIRED
+    {
+        'class': EXO_Active_leg_Short_Call_For_Bearish_CallSpread
+    },
+    {
+        'class': EXO_Passive_leg_Long_Call_For_Bearish_CallSpread
+    },
+
+    #PAIRED
     {
         'class': EXO_RiskReversal_Active_Calls_For_Shorts_DynKel_80_20_Shorts
     },
     {
-        'class': EXO_RiskReversal_Passive_Puts_For_Shorts
+        'class': EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts
+    },
+
+    #PAIRED
+    {
+        'class': EXO_RiskReversal_Active_Puts_For_Shorts_DynKel_80_20_Shorts
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
     },
 
 

@@ -7,11 +7,11 @@ from tmqrindex.index_exo_base import IndexEXOBase
 # from datetime import datetime
 
 
-class EXO_Active_leg_Short_Put(IndexEXOBase):
-    _description_short = "EXO_Active_leg_Short_Put_"
+class EXO_Active_leg_Short_Put_For_Bullish_PutSpread(IndexEXOBase):
+    _description_short = "EXO_Active_leg_Short_Put_For_Bullish_PutSpread"
     _description_long = ""
 
-    _index_name = "EXO_Active_leg_Short_Put_"
+    _index_name = "EXO_Active_leg_Short_Put_For_Bullish_PutSpread"
 
     def calc_exo_logic(self):
         """
