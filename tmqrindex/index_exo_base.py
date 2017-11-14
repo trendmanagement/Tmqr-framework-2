@@ -2,6 +2,7 @@ from tmqrindex.index_base import IndexBase, INSTRUMENT_NA
 from tmqr.settings import QDATE_MIN
 from tmqr.errors import ArgumentError, ChainNotFoundError, QuoteNotFoundError, SettingsError, PositionNotFoundError
 from tmqrfeed.quotes.quote_contfut import QuoteContFut
+from tmqr.errors import NotFoundError
 from tmqrfeed.costs import Costs
 from tmqr.logs import log
 from tmqrfeed.position import Position
@@ -109,7 +110,11 @@ class IndexEXOBase(IndexBase):
             # Adding delta series to the EXO dataframe
             delta_series = pd.Series(0.0, index=self.data.index)
             for i, dt in enumerate(self.data.index):
-                delta_series[i] = pos.delta(dt)
+                try:
+                    delta_series[i] = pos.delta(dt)
+                except NotFoundError:
+                    pass
+
         else:
             # Updating delta series
             delta_series = pd.Series(0.0, index=self.data.index)
@@ -120,7 +125,10 @@ class IndexEXOBase(IndexBase):
                 if dt < old_delta_series.index[-1]:
                     # just update recent days
                     break
-                delta_series[-(i + 1)] = pos.delta(dt)
+                try:
+                    delta_series[-(i + 1)] = pos.delta(dt)
+                except NotFoundError:
+                    pass
 
 
         self.data['delta'] = delta_series
