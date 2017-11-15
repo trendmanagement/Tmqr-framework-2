@@ -7,11 +7,11 @@ from tmqrindex.index_exo_base import IndexEXOBase
 # from datetime import datetime
 
 
-class EXO_Passive_leg_Long_Call_For_Bearish_CallSpread(IndexEXOBase):
-    _description_short = "EXO_Passive_leg_Long_Call_For_Bearish_CallSpread"
+class EXO_Passive_leg_Long_Put_For_Bullish_PutSpread(IndexEXOBase):
+    _description_short = "EXO_Passive_leg_Long_Put_For_Bullish_PutSpread"
     _description_long = ""
 
-    _index_name = "EXO_Passive_leg_Long_Call_For_Bearish_CallSpread"
+    _index_name = "EXO_Passive_leg_Long_Put_For_Bullish_PutSpread"
 
     def calc_exo_logic(self):
         """
@@ -50,7 +50,7 @@ class EXO_Passive_leg_Long_Call_For_Bearish_CallSpread(IndexEXOBase):
             #    # Avoid following checks
             return
 
-def construct_position(self, dt, pos, logic_df):
+    def construct_position(self, dt, pos, logic_df):
         """
         EXO position construction method
 
@@ -68,4 +68,4 @@ def construct_position(self, dt, pos, logic_df):
 
         fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=opt_codes_in)
 
-        pos.add_transaction(dt, opt_chain.find(dt, 0.025, 'C', how='delta'), 1.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.015, 'P', how='delta'), 1.0)

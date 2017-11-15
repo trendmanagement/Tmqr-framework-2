@@ -71,7 +71,7 @@ class EXO_RiskReversal_Active_Calls_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
             #    # Avoid following checks
             return
 
-def construct_position(self, dt, pos, logic_df):
+    def construct_position(self, dt, pos, logic_df):
         """
         EXO position construction method
 

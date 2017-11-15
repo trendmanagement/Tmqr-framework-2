@@ -7,11 +7,11 @@ from tmqrindex.index_exo_base import IndexEXOBase
 # from datetime import datetime
 
 
-class EXO_Passive_leg_Long_Put_For_Bullish_PutSpread(IndexEXOBase):
-    _description_short = "EXO_Passive_leg_Long_Put_For_Bullish_PutSpread"
+class EXO_Active_leg_Short_Call_For_Bearish_CallSpread(IndexEXOBase):
+    _description_short = "EXO_Active_leg_Short_Call_For_Bearish_CallSpread"
     _description_long = ""
 
-    _index_name = "EXO_Passive_leg_Long_Put_For_Bullish_PutSpread"
+    _index_name = "EXO_Active_leg_Short_Call_For_Bearish_CallSpread"
 
     def calc_exo_logic(self):
         """
@@ -43,14 +43,14 @@ class EXO_Passive_leg_Long_Put_For_Bullish_PutSpread(IndexEXOBase):
         # log.debug("Last transaction date: {0}".format(pos_last_transaction_date))
         days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
 
-        if days_after_last_trans > 5:
-            log.debug("Business days > 5, closing position")
+        if days_after_last_trans > 10:
+            log.debug("Business days > 10, closing position")
             #    # Close the position
             pos.close(dt)
             #    # Avoid following checks
             return
 
-def construct_position(self, dt, pos, logic_df):
+    def construct_position(self, dt, pos, logic_df):
         """
         EXO position construction method
 
@@ -68,4 +68,4 @@ def construct_position(self, dt, pos, logic_df):
 
         fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=opt_codes_in)
 
-        pos.add_transaction(dt, opt_chain.find(dt, 0.015, 'P', how='delta'), 1.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.35, 'C', how='delta'), -1.0)
