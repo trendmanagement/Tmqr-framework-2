@@ -134,20 +134,6 @@ class IndexGenerationScript:
                         # t.start()
                         self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
 
-                    # if 'instrument' in exo:
-                    #     # print(exo['instrument'])
-                    #     if instrument['instrument'] == exo['instrument']:
-                    #         t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, True))
-                    #         t.start()
-                    #         # self.run_through_each_index_threads(instrument['instrument'], exo, True)
-                    #         # pass
-                    # else:
-                    #     t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo))
-                    #     t.start()
-                    #     # self.run_through_each_index_threads(instrument['instrument'], exo)
-                    #     # pass
-
-
 
     def run_through_each_index_threads(self,instrument, exo_index, instrument_specific = False):
         '''
@@ -165,7 +151,8 @@ class IndexGenerationScript:
 
         index_hedge_name = '{0}_{1}'.format(instrument, ExoClass._index_name)
 
-        if (self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list) or (self.run_only_test_exos and index_hedge_name not in self.campaign_exo_list):
+        if not self.run_only_test_exos and (self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list) \
+                or (self.run_only_test_exos and index_hedge_name not in self.campaign_exo_list):
 
             try:
 
@@ -325,7 +312,7 @@ class IndexGenerationScript:
 
 
 
-        if self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision:
+        if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision):
             alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
 
             v1_alpha_ok = True
