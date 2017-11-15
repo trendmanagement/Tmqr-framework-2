@@ -43,7 +43,7 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 
 class IndexGenerationScript:
     def __init__(self, override_time_check_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False, try_run_all_exos_live_and_test = False,
-                 instrument=None):
+                 instrument=None, run_only_test_exos = False):
 
         if override_time_check_run_exo == None:
             self.override_time_check_run_exo = False
@@ -64,6 +64,11 @@ class IndexGenerationScript:
             self.try_run_all_exos_live_and_test = False
         else:
             self.try_run_all_exos_live_and_test = try_run_all_exos_live_and_test
+
+        if run_only_test_exos == None:
+            self.run_only_test_exos = False
+        else:
+            self.run_only_test_exos = run_only_test_exos
 
         if instrument == None:
             self.instrument_list = INSTRUMENT_LIST_TO_RUN_INDEXES
@@ -160,7 +165,7 @@ class IndexGenerationScript:
 
         index_hedge_name = '{0}_{1}'.format(instrument, ExoClass._index_name)
 
-        if self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list:
+        if (self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list) or (self.run_only_test_exos and index_hedge_name not in self.campaign_exo_list):
 
             try:
 
@@ -502,7 +507,7 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript(override_time_check_run_exo=True)
+    igs = IndexGenerationScript()
     igs.run_main_index_alpha_script()
 
 

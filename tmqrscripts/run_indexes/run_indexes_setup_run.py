@@ -38,7 +38,13 @@ parser.add_argument("-r",
                     type=bool)
 parser.add_argument("-o",
                     "--override_time_check_run_exo",
-                    help="Over",
+                    help="Override time check of exos and alphas",
+                    required=False,
+                    type=bool)
+
+parser.add_argument("-te",
+                    "--run_only_test_exos",
+                    help="Run test exos only No production",
                     required=False,
                     type=bool)
 
@@ -47,7 +53,8 @@ args = parser.parse_args()
 indexGenerationScript = IndexGenerationScript(
     override_time_check_run_exo = args.override_time_check_run_exo,
     reset_exo_from_beginning=args.reset_exo_from_beginning,
-    date_end=args.date_end, override_run_alpha=args.alphas, try_run_all_exos_live_and_test=args.try_run_all_exos_live_and_test, instrument=args.instrument)
+    date_end=args.date_end, override_run_alpha=args.alphas, try_run_all_exos_live_and_test=args.try_run_all_exos_live_and_test, instrument=args.instrument,
+    run_only_test_exos=args.run_only_test_exos)
 
 indexGenerationScript.run_main_index_alpha_script()
 
