@@ -6,13 +6,12 @@ from tmqrindex.index_exo_base import IndexEXOBase
 
 # from datetime import datetime
 
-# fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
 
-class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase):
-    _description_short = "EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts"
+class EXO_Passive_leg_Long_Call_For_Bearish_Futures(IndexEXOBase):
+    _description_short = "EXO_Passive_leg_Long_Call_For_Bearish_Futures"
     _description_long = ""
 
-    _index_name = "EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts"
+    _index_name = "EXO_Passive_leg_Long_Call_For_Bearish_Futures"
 
     def calc_exo_logic(self):
         """
@@ -21,19 +20,7 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
               calculate SmartEXO logic
         :return: Pandas.DataFrame with index like in dm.quotes() (i.e. primary quotes)
         """
-
-        # Get primary instrument quotes (typically continuous futures quotes)
-        ohlc = self.dm.quotes()
-
-        # https://en.wikipedia.org/wiki/Keltner_channel
-        typical_px = (ohlc.h + ohlc.l + ohlc.c) / 3.0
-        typical_avg = typical_px.rolling(30).mean()
-
-        keltner_direction = typical_avg > typical_avg.shift()
-
-        return pd.DataFrame({'keltner_direction_current': keltner_direction,
-                             'keltner_direction_prev': keltner_direction.shift(),
-                             })
+        pass
 
     def manage_position(self, dt, pos, logic_df):
         """
@@ -50,22 +37,14 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
             pos.close(dt)
 
         #
-        # Smart EXO Keltner channel logic
-        #
-        if logic_df['keltner_direction_current'] != logic_df['keltner_direction_prev']:
-            log.debug(f"Keltner channel direction changed")
-            # Close the position
-            pos.close(dt)
-
-        #
         # Check business days after last transaction
         #
         pos_last_transaction_date = pos.last_transaction_date(dt)
         # log.debug("Last transaction date: {0}".format(pos_last_transaction_date))
         days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
 
-        if days_after_last_trans > 20:
-            log.debug("Business days > 20, closing position")
+        if days_after_last_trans > 10:
+            log.debug("Business days > 10, closing position")
             #    # Close the position
             pos.close(dt)
             #    # Avoid following checks
@@ -89,9 +68,4 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
 
         fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=opt_codes_in)
 
-        if logic_df['keltner_direction_current'] == True:
-            # Open the position when keltner channel is up
-            pos.add_transaction(dt, opt_chain.find(dt, 0.30, 'P', how='delta'), -1.0)
-        else:
-            # Open the position when keltner channel is down
-            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), -1.0)
+        pos.add_transaction(dt, opt_chain.find(dt, 0.25, 'C', how='delta'), 1.0)

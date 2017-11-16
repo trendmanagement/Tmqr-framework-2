@@ -65,7 +65,7 @@ class EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_20_80_Longs(IndexEXOBase):
         days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
 
         if days_after_last_trans > 20:
-            log.debug("Business days > 3, closing position")
+            log.debug("Business days > 20, closing position")
             #    # Close the position
             pos.close(dt)
             #    # Avoid following checks

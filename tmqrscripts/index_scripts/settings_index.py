@@ -34,6 +34,11 @@ from tmqrindex.deployed.v5_exo_riskreversal_passive_puts_for_shorts_dynkel_80_20
 from tmqrindex.deployed.v5_exo_riskreversal_active_puts_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Active_Puts_For_Shorts_DynKel_80_20_Shorts
 from tmqrindex.deployed.v5_exo_riskreversal_passive_calls_for_shorts_dynkel_80_20_shorts import EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
 
+from tmqrindex.deployed.v5_exo_passive_leg_long_call_for_bearish_futures import EXO_Passive_leg_Long_Call_For_Bearish_Futures
+from tmqrindex.deployed.v5_exo_passive_leg_long_put_for_bullish_futures import EXO_Passive_leg_Long_Put_For_Bullish_Futures
+from tmqrindex.deployed.v5_exo_riskreversal_active_calls_for_longs_dynkel_10_40_longs import EXO_RiskReversal_Active_Calls_For_Longs_DynKel_10_40_longs
+from tmqrindex.deployed.v5_exo_riskreversal_passive_puts_for_longs_dynkel_10_40_longs import EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_10_40_Longs
+
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
                                   'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE']
@@ -83,7 +88,7 @@ INDEX_LIST = [
         'class': EXOSemiFuture_DynKel_80_20_shorts_lp
     },
 
-
+    #V5
     #new separate legs
     #Longs
     #PAIRED
@@ -125,6 +130,21 @@ INDEX_LIST = [
     },
     {
         'class': EXO_RiskReversal_Passive_Calls_For_Shorts_DynKel_80_20_Shorts
+    },
+
+    #V5
+    {
+        'class': EXO_Passive_leg_Long_Call_For_Bearish_Futures
+    },
+    {
+        'class': EXO_Passive_leg_Long_Put_For_Bullish_Futures
+    },
+
+    {
+        'class': EXO_RiskReversal_Active_Calls_For_Longs_DynKel_10_40_longs
+    },
+    {
+        'class': EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_10_40_Longs
     },
 
 

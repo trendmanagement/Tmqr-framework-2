@@ -8,11 +8,11 @@ from tmqrindex.index_exo_base import IndexEXOBase
 
 # fut, opt_chain = self.dm.chains_options_get(self.instrument, dt, opt_codes=self.opt_codes)
 
-class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase):
-    _description_short = "EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts"
+class EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_10_40_Longs(IndexEXOBase):
+    _description_short = "EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_10_40_Longs"
     _description_long = ""
 
-    _index_name = "EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts"
+    _index_name = "EXO_RiskReversal_Passive_Puts_For_Longs_DynKel_10_40_Longs"
 
     def calc_exo_logic(self):
         """
@@ -27,7 +27,7 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
 
         # https://en.wikipedia.org/wiki/Keltner_channel
         typical_px = (ohlc.h + ohlc.l + ohlc.c) / 3.0
-        typical_avg = typical_px.rolling(30).mean()
+        typical_avg = typical_px.rolling(90).mean()
 
         keltner_direction = typical_avg > typical_avg.shift()
 
@@ -64,8 +64,8 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
         # log.debug("Last transaction date: {0}".format(pos_last_transaction_date))
         days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
 
-        if days_after_last_trans > 20:
-            log.debug("Business days > 20, closing position")
+        if days_after_last_trans > 30:
+            log.debug("Business days > 30, closing position")
             #    # Close the position
             pos.close(dt)
             #    # Avoid following checks
@@ -91,7 +91,9 @@ class EXO_RiskReversal_Passive_Puts_For_Shorts_DynKel_80_20_Shorts(IndexEXOBase)
 
         if logic_df['keltner_direction_current'] == True:
             # Open the position when keltner channel is up
-            pos.add_transaction(dt, opt_chain.find(dt, 0.30, 'P', how='delta'), -1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), 1.0)
+            #             pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'C', how='delta'), -1.0)
         else:
             # Open the position when keltner channel is down
-            pos.add_transaction(dt, opt_chain.find(dt, 0.05, 'P', how='delta'), -1.0)
+            pos.add_transaction(dt, opt_chain.find(dt, 0.20, 'P', how='delta'), 1.0)
+            #             pos.add_transaction(dt, opt_chain.find(dt, 0.20, 'C', how='delta'), -1.0)
