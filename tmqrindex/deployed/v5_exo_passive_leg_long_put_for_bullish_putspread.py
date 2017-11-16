@@ -43,8 +43,8 @@ class EXO_Passive_leg_Long_Put_For_Bullish_PutSpread(IndexEXOBase):
         # log.debug("Last transaction date: {0}".format(pos_last_transaction_date))
         days_after_last_trans = relativedelta(dt, pos_last_transaction_date).bdays
 
-        if days_after_last_trans > 5:
-            log.debug("Business days > 5, closing position")
+        if days_after_last_trans > 30:
+            log.debug("Business days > 30, closing position")
             #    # Close the position
             pos.close(dt)
             #    # Avoid following checks
