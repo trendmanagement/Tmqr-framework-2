@@ -23,6 +23,8 @@ from tmqr.logs import log
 from tmqr.serialization import *
 from tmqr.settings import *
 from tmqrfeed.manager import DataManager
+import bdateutil
+import holidays
 
 
 class UpdateFuturesIntraday:
@@ -36,8 +38,21 @@ class UpdateFuturesIntraday:
         utc_dt = local_dt.astimezone(pytz.utc)
         return utc_dt
 
+    def time_to_utc_check_if_has_tzone(self, naive, timezone):
+        if naive.tzinfo is None:
+            local = pytz.timezone(timezone)
+            local_dt = local.localize(naive, is_dst=None)
+            utc_dt = local_dt.astimezone(pytz.utc)
+            return utc_dt
+        else:
+            return naive
+
     def utc_to_time(self, naive, timezone):
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
+
+    def check_if_holiday(self, check_date):
+        return bdateutil.isbday(check_date, holidays=holidays.US())
+
 
     def fill_framework2_db(self, data, future_id, instrument, quotes_intraday_collection_v2):
 
@@ -115,9 +130,9 @@ class UpdateFuturesIntraday:
         realtime_contract_id_df = pd.DataFrame(realtime_contract_id_list)
         realtime_contract_id_df.set_index('_id', inplace=True)
 
-        for instrument in asset_info_collection_v2.find({}):
+        for instrument_asset_info_collection_v2 in asset_info_collection_v2.find({}):
 
-            if not 'DEFAULT' in instrument['instrument']:
+            if not 'DEFAULT' in instrument_asset_info_collection_v2['instrument']:
             # if 'US.6J' in instrument['instrument']:
 
 
@@ -127,7 +142,7 @@ class UpdateFuturesIntraday:
                 for future_id in tqdm(asset_index_collection_v2.find({'$and':[{'exp':{'$gte':datetime.now()}},
                                                                           {'exp':{'$lte': datetime.now() + timedelta(days=365)}}],
                                                                    'type': 'F',
-                                                                   'instr':instrument['instrument']})): #fut['_id']
+                                                                   'instr':instrument_asset_info_collection_v2['instrument']})): #fut['_id']
                     try:
 
                         if future_id['extra_data']['sqlid'] in realtime_contract_id_df.index:
@@ -228,14 +243,25 @@ class UpdateFuturesIntraday:
 
                                 if not df_for_update.empty:
 
+                                    #update asset_info with latest time of update for instrument
+
+                                    try:
+                                        if 'last_bar_update' not in instrument_asset_info_collection_v2 or self.time_to_utc_check_if_has_tzone(instrument_asset_info_collection_v2['last_bar_update'],'UTC') <  df_for_update.index.max():
+                                            instrument_asset_info_collection_v2['last_bar_update'] = df_for_update.index.max()
+                                            self.db_v2['asset_info'].update_one({'instrument':instrument_asset_info_collection_v2['instrument']},{'$set':{'last_bar_update':df_for_update.index.max()}})
+                                    except Exception as e:
+                                        log.warn(f"ExoIndexError: '{e}'")
+
                                     for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
                                         dt = datetime.combine(idx_dt, time(0, 0, 0))
-                                        rec = {
-                                            'dt': dt,
-                                            'tckr': future_id['tckr'],
-                                            'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
-                                        }
-                                        quotes_intraday_collection_v2.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+
+                                        if not self.check_if_holiday(dt):
+                                            rec = {
+                                                'dt': dt,
+                                                'tckr': future_id['tckr'],
+                                                'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
+                                            }
+                                            quotes_intraday_collection_v2.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
                     except Exception as e:
                         log.warn(f"ExoIndexError: '{e}' '{future_id['tckr']}'")
                         print(f"ExoIndexError: '{e}' '{future_id['tckr']}'")

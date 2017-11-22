@@ -35,6 +35,9 @@ import pytz
 from pymongo import MongoClient
 from tqdm import tqdm
 
+import bdateutil
+import holidays
+
 from tmqr.serialization import *
 from tmqr.settings import *
 
@@ -55,6 +58,9 @@ def time_to_utc(naive, timezone):
 
 def utc_to_time(naive, timezone):
     return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
+
+def check_if_holiday(self, check_date):
+    return bdateutil.isbday(check_date, holidays=holidays.US())
 
 
 def import_futures_from_v1(instrument, all_contracts = True):
@@ -123,12 +129,14 @@ def import_futures_from_v1(instrument, all_contracts = True):
 
             for idx_dt, df_value in df.groupby(by=df.index.date):
                 dt = datetime.combine(idx_dt, time(0, 0, 0))
-                rec = {
-                    'dt': dt,
-                    'tckr': fut.ticker,
-                    'ohlc': object_save_compress(df_value)  #lz4.block.compress(pickle.dumps(df_value))
-                }
-                quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
+
+                if not check_if_holiday(dt):
+                    rec = {
+                        'dt': dt,
+                        'tckr': fut.ticker,
+                        'ohlc': object_save_compress(df_value)  #lz4.block.compress(pickle.dumps(df_value))
+                    }
+                    quotes_collection.replace_one({'dt': dt, 'tckr': fut.ticker}, rec, upsert=True)
 
             #datetime(data[-1]['datetime']).date()
 
