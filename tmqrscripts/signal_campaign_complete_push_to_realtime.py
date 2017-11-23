@@ -12,6 +12,7 @@ from tradingcore.messages import *
 from tradingcore.signalapp import SignalApp, APPCLASS_SIGNALS
 
 from tmqr.settings import *
+from tmqr.logs import log
 
 
 class CampaignUpdateCheckPushToRealtime:
@@ -60,43 +61,48 @@ class CampaignUpdateCheckPushToRealtime:
 
         for campaign_list in list(self.db_v1['accounts'].aggregate(pipeline)):
 
-            if not ('context' in campaign_list['alphas_list'][0][0] \
-                            and 'update_time' in campaign_list['alphas_list'][0][0]['context']) or \
-                            current_date_utc != campaign_list['alphas_list'][0][0]['context']['update_time'].date():
-                # pass
-            # else:
+            try:
+                if not ('context' in campaign_list['alphas_list'][0][0] \
+                                and 'update_time' in campaign_list['alphas_list'][0][0]['context']) or \
+                                current_date_utc != campaign_list['alphas_list'][0][0]['context']['update_time'].date():
+                    # pass
+                # else:
 
-                campaign_ready = True
-                # print(campaign_list['alphas_list'][0][0]['name'])
+                    campaign_ready = True
+                    # print(campaign_list['alphas_list'][0][0]['name'])
 
-                for alpha in list(campaign_list['alphas_list'][0][0]['alphas']):
-                    if "!NEW_" in alpha:
-                        alpha_v2 = alpha.replace('!NEW_',"")
+                    for alpha in list(campaign_list['alphas_list'][0][0]['alphas']):
+                        if "!NEW_" in alpha:
+                            alpha_v2 = alpha.replace('!NEW_',"")
 
-                        alpha_v2_obj = self.db_v2['alpha_data'].find_one({'name':alpha_v2})
+                            alpha_v2_obj = self.db_v2['alpha_data'].find_one({'name':alpha_v2})
 
-                        alpha_v2_datetime = alpha_v2_obj['context']['alpha_end_update_time']
+                            alpha_v2_datetime = alpha_v2_obj['context']['alpha_end_update_time']
 
-                        if alpha_v2_datetime.date() != current_date_utc:
-                            campaign_ready = False
-                            break
-                    else:
-                        v1_alpha = self.db_v1['swarms'].find_one({'swarm_name': alpha})
-                        if v1_alpha['last_date'].date() != current_date_local:
-                            campaign_ready = False
-                            break
+                            if alpha_v2_datetime.date() != current_date_utc:
+                                campaign_ready = False
+                                break
+                        else:
+                            v1_alpha = self.db_v1['swarms'].find_one({'swarm_name': alpha})
 
-                if campaign_ready:
+                            if v1_alpha is None or v1_alpha['last_date'].date() != current_date_local:
+                                campaign_ready = False
+                                break
 
-                    self.signalapp_exo.send(
-                        MsgStatus('Campaign Status', 'Ready {0}'.format(campaign_list['alphas_list'][0][0]['name']), notify=True))
+                    if campaign_ready:
 
-                    self.db_v1['campaigns'].update_one({'name': campaign_list['alphas_list'][0][0]['name']},
-                                                     {'$set': {'context.update_time': current_time_utc}})
+                        self.signalapp_exo.send(
+                            MsgStatus('Campaign Status', 'Ready {0}'.format(campaign_list['alphas_list'][0][0]['name']), notify=True))
 
-                    campaign_ready_to_push_to_realtime = True
+                        self.db_v1['campaigns'].update_one({'name': campaign_list['alphas_list'][0][0]['name']},
+                                                         {'$set': {'context.update_time': current_time_utc}})
 
-                    print('campaign ready', campaign_list['alphas_list'][0][0]['name'])
+                        campaign_ready_to_push_to_realtime = True
+
+                        print('campaign ready', campaign_list['alphas_list'][0][0]['name'])
+
+            except Exception as e:
+                log.warning(e)
 
         if campaign_ready_to_push_to_realtime:
             assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
