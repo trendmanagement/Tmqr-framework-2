@@ -50,7 +50,7 @@ class UpdateFuturesIntraday:
     def utc_to_time(self, naive, timezone):
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
-    def check_if_holiday(self, check_date):
+    def check_if_business_day(self, check_date):
         return bdateutil.isbday(check_date, holidays=holidays.US())
 
 
@@ -255,7 +255,7 @@ class UpdateFuturesIntraday:
                                     for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
                                         dt = datetime.combine(idx_dt, time(0, 0, 0))
 
-                                        if not self.check_if_holiday(dt):
+                                        if self.check_if_business_day(dt):
                                             rec = {
                                                 'dt': dt,
                                                 'tckr': future_id['tckr'],

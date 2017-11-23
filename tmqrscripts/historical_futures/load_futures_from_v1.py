@@ -59,7 +59,7 @@ def time_to_utc(naive, timezone):
 def utc_to_time(naive, timezone):
     return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
-def check_if_holiday(self, check_date):
+def check_if_business_day(self, check_date):
     return bdateutil.isbday(check_date, holidays=holidays.US())
 
 
@@ -130,7 +130,7 @@ def import_futures_from_v1(instrument, all_contracts = True):
             for idx_dt, df_value in df.groupby(by=df.index.date):
                 dt = datetime.combine(idx_dt, time(0, 0, 0))
 
-                if not check_if_holiday(dt):
+                if check_if_business_day(dt):
                     rec = {
                         'dt': dt,
                         'tckr': fut.ticker,

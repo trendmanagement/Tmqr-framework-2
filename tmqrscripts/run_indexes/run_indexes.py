@@ -118,7 +118,7 @@ class IndexGenerationScript:
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
 
-        for instrument in self.asset_info_collection.find({},{'instrument':1}):
+        for instrument in self.asset_info_collection.find({},{'instrument':1,'last_bar_update':1}):
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
@@ -132,15 +132,20 @@ class IndexGenerationScript:
                     if instrument_specific or not 'instrument' in exo:
                         # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
                         # t.start()
-                        self.run_through_each_index_threads(instrument['instrument'], exo, instrument_specific)
+
+                        last_bar_update = None
+                        if 'last_bar_update' in instrument:
+                            last_bar_update = instrument['last_bar_update']
+
+                        self.run_through_each_index_threads(instrument['instrument'], last_bar_update, exo, instrument_specific)
 
 
-    def run_through_each_index_threads(self,instrument, exo_index, instrument_specific = False):
+    def run_through_each_index_threads(self, instrument_symbol, last_bar_update, exo_index, instrument_specific = False):
         '''
         runs through the creation and saving logic for each index and alpha
         only runs indexes on Mon-Fri
         runs alphas Mon-Sun
-        :param instrument: 
+        :param instrument_symbol: 
         :param exo_index: 
         :return: 
         '''
@@ -149,7 +154,7 @@ class IndexGenerationScript:
 
         ExoClass = exo_index['class']
 
-        index_hedge_name = '{0}_{1}'.format(instrument, ExoClass._index_name)
+        index_hedge_name = '{0}_{1}'.format(instrument_symbol, ExoClass._index_name)
 
         if not self.run_only_test_exos and (self.try_run_all_exos_live_and_test or index_hedge_name in self.campaign_exo_list) \
                 or (self.run_only_test_exos and index_hedge_name not in self.campaign_exo_list):
@@ -163,13 +168,9 @@ class IndexGenerationScript:
 
 
                 if self.reset_exo_from_beginning:
-                    index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
+                    index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
 
-                    #current_time = datetime.utcnow()
-
-                    #current_time_utc = datetime.utcnow()
-
-                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
+                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
                     self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
@@ -178,15 +179,10 @@ class IndexGenerationScript:
 
                     index = IndexBase.load(dm, index_hedge_name)
 
-                    # current_time = datetime.now(index.session.tz)
-
-                    # current_time_utc = self.time_to_utc_from_local_tz(current_time, index.session.tz.zone)
-
-                    ct = self.current_time_generate(index.session.tz)
+                    ct = self.current_time_generate(index.session.tz, last_bar_update)
 
                     sess_start, sess_decision, sess_exec, next_sess_date = index.session.get(ct['current_time'],
                                                                         decision_time_shift=index.decision_time_shift - 1)
-
 
                     index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name},{'context':1})
 
@@ -195,6 +191,9 @@ class IndexGenerationScript:
                     else:
                         last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                         last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
+
+
+
 
                         if self.override_time_check_run_exo or (ct['current_time'].weekday() < 5 and\
                                 ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
@@ -210,9 +209,9 @@ class IndexGenerationScript:
 
                 try:
 
-                    index = self.create_index_class(instrument, ExoClass, dm, instrument_specific)
+                    index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
 
-                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE))
+                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
                     self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
 
@@ -221,14 +220,24 @@ class IndexGenerationScript:
                 except Exception as e1:
                     log.warn(f"ExoIndexError: '{e1}'")
 
-    def current_time_generate(self, tz):
+    def current_time_generate(self, tz, last_bar_update=None):
+
         assert tz != None, 'no timezone passed to current_time_generate'
 
         ct = {}
 
-        ct['current_time'] = datetime.now(tz)
+        if last_bar_update is None:
 
-        ct['current_time_utc'] = self.time_to_utc_from_local_tz(ct['current_time'], tz.zone)
+            ct['current_time'] = datetime.now(tz)
+
+            ct['current_time_utc'] = self.time_to_utc_from_local_tz(ct['current_time'], tz.zone)
+
+        else:
+            ct['current_time_utc'] = self.time_to_utc_from_none(last_bar_update)
+
+            ct['current_time'] = self.utc_to_time(last_bar_update,tz.zone)
+
+
 
         return ct
 
@@ -277,8 +286,8 @@ class IndexGenerationScript:
 
         # if not creating_index:
         try:
-            self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
-                                                      {'$set': {'context.index_update_time': update_time}})
+            # self.mongo_db_v2['index_data'].update_one({'name': index_hedge_name},
+            #                                           {'$set': {'context.index_update_time': update_time}})
 
             index.run()
             index.save()
@@ -361,6 +370,9 @@ class IndexGenerationScript:
                             #check V1 alpha update
                             # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                             # t.start()
+
+
+
                             self.run_alpha(alpha['name'], current_time_utc)
                             # print('running 3 ' + alpha['name'])
 
@@ -494,7 +506,7 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript()
+    igs = IndexGenerationScript() #instrument='US.ZC')
     igs.run_main_index_alpha_script()
 
 
