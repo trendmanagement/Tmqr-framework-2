@@ -174,7 +174,7 @@ class IndexGenerationScript:
 
                     self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
 
-                    self.checking_alpha_then_run(index, ct['last_bar_time_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
                 else:
 
                     index = IndexBase.load(dm, index_hedge_name)
@@ -201,7 +201,7 @@ class IndexGenerationScript:
 
                             self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
 
-                    self.checking_alpha_then_run(index, ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
 
             except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -215,7 +215,7 @@ class IndexGenerationScript:
 
                     self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
 
-                    self.checking_alpha_then_run(index, ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
                 except Exception as e1:
                     log.warning(f"ExoIndexError: '{e1}'")
