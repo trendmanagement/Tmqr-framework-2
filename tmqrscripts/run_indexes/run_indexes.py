@@ -172,9 +172,9 @@ class IndexGenerationScript:
 
                     ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
-                    self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
+                    self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
 
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['last_bar_time_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
                 else:
 
                     index = IndexBase.load(dm, index_hedge_name)
@@ -187,7 +187,7 @@ class IndexGenerationScript:
                     index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name},{'context':1})
 
                     if index_from_db == None or not 'index_update_time' in index_from_db['context']:
-                        self.run_index(index, ct['current_time_utc'], index_hedge_name)
+                        self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
                     else:
                         last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
                         last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
@@ -195,13 +195,13 @@ class IndexGenerationScript:
 
 
 
-                        if self.override_time_check_run_exo or (ct['current_time'].weekday() < 5 and\
-                                ((ct['current_time'] >= sess_decision and last_index_update_time < sess_decision)
-                                 or (ct['current_time'] >= sess_exec and last_index_update_time < sess_exec))):
+                        if self.override_time_check_run_exo or (ct['last_bar_time'].weekday() < 5 and\
+                                ((ct['last_bar_time'] >= sess_decision and last_index_update_time < sess_decision)
+                                 or (ct['last_bar_time'] >= sess_exec and last_index_update_time < sess_exec))):
 
-                            self.run_index(index, ct['current_time_utc'], index_hedge_name)
+                            self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
 
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
 
             except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -213,9 +213,9 @@ class IndexGenerationScript:
 
                     ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
-                    self.run_index(index, ct['current_time_utc'], index_hedge_name, creating_index=True)
+                    self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
 
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
+                    self.checking_alpha_then_run(index, ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
                 except Exception as e1:
                     log.warning(f"ExoIndexError: '{e1}'")
@@ -226,16 +226,20 @@ class IndexGenerationScript:
 
         ct = {}
 
+        ct['current_time'] = datetime.now(tz)
+
+        ct['current_time_utc'] = self.time_to_utc_from_local_tz(ct['current_time'], tz.zone)
+
         if last_bar_update is None:
 
-            ct['current_time'] = datetime.now(tz)
+            ct['last_bar_time'] = ct['current_time']
 
-            ct['current_time_utc'] = self.time_to_utc_from_local_tz(ct['current_time'], tz.zone)
+            ct['last_bar_time_utc'] = ct['current_time_utc']
 
         else:
-            ct['current_time_utc'] = self.time_to_utc_from_none(last_bar_update)
+            ct['last_bar_time'] = self.time_to_utc_from_none(last_bar_update)
 
-            ct['current_time'] = self.utc_to_time(last_bar_update,tz.zone)
+            ct['last_bar_time_utc'] = self.utc_to_time(last_bar_update,tz.zone)
 
 
 
@@ -307,24 +311,25 @@ class IndexGenerationScript:
 
 
 
-    def checking_alpha_then_run(self,index,current_time, current_time_utc, index_hedge_name, mongo_db_v1):
+    def checking_alpha_then_run(self, index, current_time, last_bar_time, last_bar_time_utc, index_hedge_name, mongo_db_v1):
         '''
         This runs the alphas based on time and if the V1 alphas have run
         :param index: 
-        :param current_time: 
-        :param current_time_utc: 
+        :param last_bar_time: 
+        :param last_bar_time_utc: 
         :param index_hedge_name: 
         :return: 
         '''
 
         try:
 
+            # must use current time to calculate session time because has current date
             alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
                 current_time, 0)
 
 
 
-            if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision):
+            if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or last_bar_time >= alpha_sess_decision):
                 alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
 
                 v1_alpha_ok = True
@@ -341,7 +346,7 @@ class IndexGenerationScript:
                             swarm_list = alpha['context']['v1_alphas']
 
                             if swarm_list:
-                                earliest_date = current_time.date()
+                                earliest_date = last_bar_time.date()
                                 for swarm in swarm_list:
 
                                     v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm},{'last_date':1})
@@ -351,14 +356,11 @@ class IndexGenerationScript:
                                         v1_alpha_ok = False
 
                                     if not v1_alpha_ok:
-                                        current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
+                                        last_bar_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
 
 
                         if not 'alpha_update_time' in alpha['context']:
-                            # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                            # t.start()
-                            self.run_alpha(alpha['name'], current_time_utc)
-                            # print('running 2 ' + alpha['name'])
+                            self.run_alpha(alpha['name'], last_bar_time_utc)
 
                         else:
                             last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
@@ -366,17 +368,10 @@ class IndexGenerationScript:
 
 
                             if self.reset_exo_from_beginning or self.override_time_check_run_exo:
-                                # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                                # t.start()
-                                self.run_alpha(alpha['name'], current_time_utc)
+                                self.run_alpha(alpha['name'], last_bar_time_utc)
                             elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
                                 #check V1 alpha update
-                                # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                                # t.start()
-
-
-
-                                self.run_alpha(alpha['name'], current_time_utc)
+                                self.run_alpha(alpha['name'], last_bar_time_utc)
                                 # print('running 3 ' + alpha['name'])
         except Exception as e:
             log.warning("Failed Alpha Check {0}".format(e))
