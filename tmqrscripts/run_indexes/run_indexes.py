@@ -218,7 +218,7 @@ class IndexGenerationScript:
                     self.checking_alpha_then_run(index, ct['current_time'], ct['current_time_utc'], index_hedge_name, mongo_db_v1)
 
                 except Exception as e1:
-                    log.warn(f"ExoIndexError: '{e1}'")
+                    log.warning(f"ExoIndexError: '{e1}'")
 
     def current_time_generate(self, tz, last_bar_update=None):
 
@@ -297,7 +297,7 @@ class IndexGenerationScript:
                                                       {'$set': {'context.index_update_time': update_time}})
 
         except Exception as e:
-            log.warn("Failed Index {0}".format(index_hedge_name) )
+            log.warning("Failed Index {0}".format(index_hedge_name) )
             log.exception(e)
             self.signalapp_exo.send(
                 MsgStatus('V2_Index', 'V2 Index Error {0}'.format(index_hedge_name), notify=True))
@@ -316,65 +316,71 @@ class IndexGenerationScript:
         :param index_hedge_name: 
         :return: 
         '''
-        alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
-            current_time, 0)
+
+        try:
+
+            alpha_sess_start, alpha_sess_decision, alpha_sess_exec, alpha_next_sess_date = index.session.get(
+                current_time, 0)
 
 
 
-        if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision):
-            alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
+            if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or current_time >= alpha_sess_decision):
+                alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
 
-            v1_alpha_ok = True
+                v1_alpha_ok = True
 
-            for alpha in alphas_list:
-                # print('running 1 ' + alpha['name'])
+                for alpha in alphas_list:
+                    # print('running 1 ' + alpha['name'])
 
-                if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha :
+                    if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha :
 
-                    '''
-                    below checks if v1 alpha has been calculated                    
-                    '''
-                    if 'v1_alphas' in alpha['context']:
-                        swarm_list = alpha['context']['v1_alphas']
+                        '''
+                        below checks if v1 alpha has been calculated                    
+                        '''
+                        if 'v1_alphas' in alpha['context']:
+                            swarm_list = alpha['context']['v1_alphas']
 
-                        if swarm_list:
-                            earliest_date = current_time.date()
-                            for swarm in swarm_list:
+                            if swarm_list:
+                                earliest_date = current_time.date()
+                                for swarm in swarm_list:
 
-                                v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm},{'last_date':1})
+                                    v1_alpha = mongo_db_v1['swarms'].find_one({'swarm_name': swarm},{'last_date':1})
 
-                                if v1_alpha['last_date'].date() < earliest_date:
-                                    earliest_date = v1_alpha['last_date'].date()
-                                    v1_alpha_ok = False
+                                    if v1_alpha['last_date'].date() < earliest_date:
+                                        earliest_date = v1_alpha['last_date'].date()
+                                        v1_alpha_ok = False
 
-                                if not v1_alpha_ok:
-                                    current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
-
-
-                    if not 'alpha_update_time' in alpha['context']:
-                        # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                        # t.start()
-                        self.run_alpha(alpha['name'], current_time_utc)
-                        # print('running 2 ' + alpha['name'])
-
-                    else:
-                        last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
-                        last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
+                                    if not v1_alpha_ok:
+                                        current_time_utc = self.time_to_utc_from_local_tz(datetime.combine(earliest_date, time(0, 0, 0)), index.session.tz.zone)
 
 
-                        if self.reset_exo_from_beginning or self.override_time_check_run_exo:
+                        if not 'alpha_update_time' in alpha['context']:
                             # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
                             # t.start()
                             self.run_alpha(alpha['name'], current_time_utc)
-                        elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
-                            #check V1 alpha update
-                            # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
-                            # t.start()
+                            # print('running 2 ' + alpha['name'])
+
+                        else:
+                            last_alpha_update_time = self.time_to_utc_from_none(alpha['context']['alpha_update_time'])
+                            last_alpha_update_time = self.utc_to_time(last_alpha_update_time, index.session.tz.zone)
+
+
+                            if self.reset_exo_from_beginning or self.override_time_check_run_exo:
+                                # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                                # t.start()
+                                self.run_alpha(alpha['name'], current_time_utc)
+                            elif last_alpha_update_time < alpha_sess_decision and v1_alpha_ok:
+                                #check V1 alpha update
+                                # t = threading.Thread(target=self.run_alpha, args=(alpha['name'], current_time_utc))
+                                # t.start()
 
 
 
-                            self.run_alpha(alpha['name'], current_time_utc)
-                            # print('running 3 ' + alpha['name'])
+                                self.run_alpha(alpha['name'], current_time_utc)
+                                # print('running 3 ' + alpha['name'])
+        except Exception as e:
+            log.warning("Failed Alpha Check {0}".format(e))
+            log.exception(e)
 
 
     def run_alpha(self, alpha_name, update_time):
@@ -403,8 +409,8 @@ class IndexGenerationScript:
 
             self.mongo_db_v2['alpha_data'].update_one({'name': alpha_name},
                                                       {'$set': {'context.alpha_end_update_time': update_time}})
-        except:
-            log.warn("Failed Alpha {0}".format(alpha_name))
+        except Exception as e:
+            log.warning("Failed Alpha {0}".format(alpha_name))
             log.exception(e)
             self.signalapp_exo.send(
                 MsgStatus('V2_Alpha', 'V2 Alpha Error {0}'.format(alpha_name), notify=True))
@@ -447,11 +453,15 @@ class IndexGenerationScript:
 
         ]
         final_alpha_list = []
-        for campaign_list in list(self.mongo_db_v1['accounts'].aggregate(pipeline)):
 
-            for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
-                alpha_list_replace = alpha_list.replace('!NEW_', "")
-                final_alpha_list.append(alpha_list_replace)
+        try:
+            for campaign_list in list(self.mongo_db_v1['accounts'].aggregate(pipeline)):
+
+                for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
+                    alpha_list_replace = alpha_list.replace('!NEW_', "")
+                    final_alpha_list.append(alpha_list_replace)
+        except Exception as e:
+            log.warning(e)
 
         return final_alpha_list
 
@@ -461,11 +471,16 @@ class IndexGenerationScript:
         :return: the list of exos that the campaigns use
         '''
 
-        alpha_list_mongo = self.mongo_db_v2['alpha_data'].find({'name':{'$in':final_alpha_list}},{'context':1})
-
         exo_list = []
-        for alpha in alpha_list_mongo:
-            exo_list.append(alpha['context']['index_hedge_name'])
+
+        try:
+            alpha_list_mongo = self.mongo_db_v2['alpha_data'].find({'name': {'$in': final_alpha_list}}, {'context': 1})
+
+            for alpha in alpha_list_mongo:
+                exo_list.append(alpha['context']['index_hedge_name'])
+
+        except Exception as e:
+            log.warning(e)
 
         return exo_list
 
@@ -484,7 +499,7 @@ class IndexGenerationScript:
             exmgr = ExecutionManager(MONGO_CONNSTR_V1, datasource, MONGO_EXO_DB_V1)
             exmgr.account_positions_process(write_to_db=True)
         except Exception as e:
-            print(e)
+            log.warning(e)
             #pass
 
     def time_to_utc_from_none(self, naive):
