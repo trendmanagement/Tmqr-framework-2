@@ -31,7 +31,7 @@ import pytz
 from tmqr.errors import DataEngineNotFoundError
 # import threading
 
-log.disabled = True
+# log.disabled = True
 
 import pymongo
 from pymongo import MongoClient
