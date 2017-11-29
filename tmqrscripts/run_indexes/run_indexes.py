@@ -9,6 +9,9 @@ from exobuilder.data.exostorage import EXOStorage
 from tradingcore.signalapp import SignalApp, APPCLASS_EXO, APPCLASS_ALPHA
 from tradingcore.messages import *
 
+'''smartcampaign import'''
+from smartcampaign import SmartCampaignBase
+
 try:
     '''C - compiled code, will not run on local machine'''
     from tmqrstrategy.strategy_base import StrategyBase
@@ -90,6 +93,9 @@ class IndexGenerationScript:
 
         mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
         self.mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
+        # self.mongo_db_v1['alpha_data'].create_index(
+        #     [('name', pymongo.ASCENDING)],
+        #     unique=False)
 
         self.campaign_alpha_list = self.get_campaign_alpha_list()
 
@@ -434,31 +440,46 @@ class IndexGenerationScript:
 
 
 
-        pipeline = [
-            {
-                '$lookup':
-                    {
-                        'from': 'campaigns',
-                        'localField': 'campaign_name',
-                        'foreignField': 'name',
-                        'as': 'alphas'
-                    }
-            },
-            {'$group': {'_id': '$campaign_name', 'alphas_list': {'$push': '$alphas'}}}
+        # pipeline = [
+        #     {
+        #         '$lookup':
+        #             {
+        #                 'from': 'campaigns',
+        #                 'localField': 'campaign_name',
+        #                 'foreignField': 'name',
+        #                 'as': 'alphas'
+        #             }
+        #     },
+        #     {'$group': {'_id': '$campaign_name', 'alphas_list': {'$push': '$alphas'}}}
+        #
+        # ]
+        # final_alpha_list = []
+        #
+        # try:
+        #     for campaign_list in list(self.mongo_db_v1['accounts'].aggregate(pipeline)):
+        #
+        #         for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
+        #             alpha_list_replace = alpha_list.replace('!NEW_', "")
+        #             final_alpha_list.append(alpha_list_replace)
+        # except Exception as e:
+        #     log.warning(e)
 
-        ]
-        final_alpha_list = []
+        full_alpha_list = []
 
         try:
-            for campaign_list in list(self.mongo_db_v1['accounts'].aggregate(pipeline)):
+            campaign_names = list(self.mongo_db_v1['accounts'].distinct('campaign_name'))
+            campaign_list = list(self.mongo_db_v1['campaigns_smart'].find({'name': {'$in': campaign_names}}))
 
-                for alpha_list in list(campaign_list['alphas_list'][0][0]['alphas']):
-                    alpha_list_replace = alpha_list.replace('!NEW_', "")
-                    final_alpha_list.append(alpha_list_replace)
+            for campaign in campaign_list:
+                alpha_list = SmartCampaignBase.get_alphas_list_from_settings(campaign)
+                full_alpha_list = list(set(full_alpha_list) | set(alpha_list))
+
         except Exception as e:
             log.warning(e)
 
-        return final_alpha_list
+        # full_alpha_list
+
+        return full_alpha_list
 
     def get_campaign_exo_list(self, final_alpha_list):
         '''
