@@ -474,6 +474,8 @@ class IndexGenerationScript:
                 alpha_list = SmartCampaignBase.get_alphas_list_from_settings(campaign)
                 full_alpha_list = list(set(full_alpha_list) | set(alpha_list))
 
+            full_alpha_list = [word.replace('!NEW_', "") for word in full_alpha_list]
+
         except Exception as e:
             log.warning(e)
 
@@ -537,7 +539,7 @@ class IndexGenerationScript:
 
 
 if __name__ == "__main__":
-    igs = IndexGenerationScript() #instrument='US.ZC')
+    igs = IndexGenerationScript(instrument='US.CL')
     igs.run_main_index_alpha_script()
 
 
