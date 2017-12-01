@@ -496,6 +496,8 @@ class IndexGenerationScript:
 
             for alpha in alpha_list_mongo:
                 exo_list.append(alpha['context']['index_hedge_name'])
+                if 'index_passive_name' in alpha['context']:
+                    exo_list.append(alpha['context']['index_passive_name'])
 
         except Exception as e:
             log.warning(e)
