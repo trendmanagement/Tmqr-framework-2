@@ -22,6 +22,7 @@ from tqdm import tqdm
 from tmqr.logs import log
 from tmqr.serialization import *
 from tmqr.settings import *
+from scripts.tmqrholidays import TMQRHolidays
 from tmqrfeed.manager import DataManager
 import bdateutil
 import holidays
@@ -51,7 +52,7 @@ class UpdateFuturesIntraday:
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
     def check_if_business_day(self, check_date):
-        return bdateutil.isbday(check_date, holidays=holidays.US())
+        return bdateutil.isbday(check_date, holidays=TMQRHolidays)
 
 
     def fill_framework2_db(self, data, future_id, instrument, quotes_intraday_collection_v2):

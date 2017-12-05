@@ -11,6 +11,7 @@ Where ‘ohlc’ is a compressed and pickled Pandas.DataFrame of minutes bars. T
 Probably it’s better to build online updater script for old DB[‘tmldb_test’][‘futurebarcol’] which will cache daily data and write it when new bar is arrived.
 '''
 import os, sys, inspect
+from scripts.tmqrholidays import TMQRHolidays
 
 # realpath() will make your script run, even if you symlink it :)
 cmd_folder = os.path.realpath(os.path.abspath(os.path.split(inspect.getfile(inspect.currentframe()))[0]))
@@ -60,7 +61,7 @@ def utc_to_time(naive, timezone):
     return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
 def check_if_business_day(check_date):
-    return bdateutil.isbday(check_date, holidays=holidays.US())
+    return bdateutil.isbday(check_date, holidays=TMQRHolidays())
 
 
 def import_futures_from_v1(instrument, all_contracts = True):
