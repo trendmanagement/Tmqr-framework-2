@@ -59,7 +59,7 @@ def time_to_utc(naive, timezone):
 def utc_to_time(naive, timezone):
     return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
-def check_if_business_day(self, check_date):
+def check_if_business_day(check_date):
     return bdateutil.isbday(check_date, holidays=holidays.US())
 
 

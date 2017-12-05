@@ -41,7 +41,7 @@ from tmqrindex.deployed.v5_exo_riskreversal_passive_puts_for_longs_dynkel_10_40_
 
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
-                                  'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE']
+                                  'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE', 'US.SI']
 
 INDEX_LIST = [
 
