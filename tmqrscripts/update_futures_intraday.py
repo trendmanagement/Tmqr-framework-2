@@ -52,7 +52,7 @@ class UpdateFuturesIntraday:
         return naive.replace(tzinfo=pytz.utc).astimezone(pytz.timezone(timezone))
 
     def check_if_business_day(self, check_date):
-        return bdateutil.isbday(check_date, holidays=TMQRHolidays)
+        return bdateutil.isbday(check_date, holidays=TMQRHolidays())
 
 
     def fill_framework2_db(self, data, future_id, instrument, quotes_intraday_collection_v2):
@@ -140,133 +140,133 @@ class UpdateFuturesIntraday:
                 #chain = dm.datafeed.get_fut_chain(instrument['instrument'], date_start=datetime.now().date())
                 #futures = chain.get_all()
 
-                for future_id in tqdm(asset_index_collection_v2.find({'$and':[{'exp':{'$gte':datetime.now()}},
+                for future_id in (asset_index_collection_v2.find({'$and':[{'exp':{'$gte':datetime.now()}},
                                                                           {'exp':{'$lte': datetime.now() + timedelta(days=365)}}],
                                                                    'type': 'F',
                                                                    'instr':instrument_asset_info_collection_v2['instrument']})): #fut['_id']
-                    try:
+                    # try:
 
-                        if future_id['extra_data']['sqlid'] in realtime_contract_id_df.index:
-                            #print(future_id['tckr'])
+                    if future_id['extra_data']['sqlid'] in realtime_contract_id_df.index:
+                        #print(future_id['tckr'])
 
-                            #get latest
-                            #extra_data.eod_update_time
+                        #get latest
+                        #extra_data.eod_update_time
 
-                            instrument = dm.datafeed.get_instrument_info(future_id['instr'])
+                        instrument = dm.datafeed.get_instrument_info(future_id['instr'])
 
-                            stored_data = list(quotes_intraday_collection_v2.find(
-                                {'tckr': future_id['tckr']}).sort([('dt', -1)]).limit(1))
+                        stored_data = list(quotes_intraday_collection_v2.find(
+                            {'tckr': future_id['tckr']}).sort([('dt', -1)]).limit(1))
 
-                            if len(stored_data) == 0:
-
-
-                            #if not 'eod_update_time' in future_id['extra_data']:
-                                '''this is where the future is updated from the historical contracts_bars'''
-
-                                data = list(future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'], 'errorbar':False}).sort(
-                                    [('bartime', 1)]))
+                        if len(stored_data) == 0:
 
 
-                                previous_date_quotes_intraday_utc = self.fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2,)
+                        #if not 'eod_update_time' in future_id['extra_data']:
+                            '''this is where the future is updated from the historical contracts_bars'''
 
+                            data = list(future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'], 'errorbar':False}).sort(
+                                [('bartime', 1)]))
+
+
+                            previous_date_quotes_intraday_utc = self.fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2,)
+
+                        else:
+                            '''below checks the last date of update and if falls outside the acceptable update days will pull data from the historical list of bars'''
+                            ohlc = object_load_decompress(stored_data[0]['ohlc'])
+
+                            previous_date_quotes_intraday_utc = ohlc.index[-1]
+
+                            previous_date_time_in_local_timezone = self.utc_to_time(previous_date_quotes_intraday_utc,
+                                                                                instrument.timezone.zone)
+
+                            #python weekdays 0 Mon, 6 Sun
+                            acceptable_offset = 1
+                            if datetime.now(instrument.timezone).weekday() == 0:
+                                acceptable_offset = 3
+
+                            if datetime.now(instrument.timezone) - previous_date_time_in_local_timezone > timedelta(days=acceptable_offset):
+                                data = list(
+                                    future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'],'errorbar':False,
+                                                           'bartime': {'$gt': previous_date_time_in_local_timezone.replace(tzinfo=None)}}).sort(
+                                        [('bartime', 1)]))
+
+                                previous_date_quotes_intraday_utc = self.fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2)
+
+
+                        if previous_date_quotes_intraday_utc != None:
+
+                            previous_date_time_in_local_timezone = self.utc_to_time(previous_date_quotes_intraday_utc,
+                                                                               instrument.timezone.zone)
+
+                        else:
+
+                            previous_date_time_in_local_timezone = datetime.combine(datetime.now(instrument.timezone).date() - timedelta(days=1), time(0, 0, 0))
+                            previous_date_quotes_intraday_utc = self.time_to_utc(previous_date_time_in_local_timezone, instrument.timezone.zone)
+
+
+                        stored_data = quotes_intraday_collection_v2.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
+
+                        if stored_data == None:
+                            ohlc = pd.DataFrame()
+                        else:
+                            ohlc = object_load_decompress(stored_data['ohlc'])
+
+                        #print(ohlc)
+
+                        realtime_data = list(future_bar_collection.find({'idcontract':future_id['extra_data']['sqlid'],'errorbar':False,
+                                                                         'bartime':{'$gte':previous_date_time_in_local_timezone.replace(tzinfo=None)}})
+                                        .sort([('bartime', 1)]))
+
+                        realtime_df = pd.DataFrame(realtime_data)
+
+                        if not realtime_df.empty:
+                            realtime_df = realtime_df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
+
+                            #print(realtime_data)
+
+                            realtime_df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
+                                      inplace=True)
+                            realtime_df.set_index('dt', inplace=True)
+                            realtime_df.index = realtime_df.index.tz_localize(instrument.timezone).tz_convert('UTC')
+
+
+                            '''this eliminates 0s in the pandas dataframe'''
+                            realtime_df = realtime_df.loc[(realtime_df['o'] != 0) | (realtime_df['h'] != 0) | (realtime_df['l'] != 0) | (realtime_df['c'] != 0)]
+                            # realtime_df = realtime_df[(realtime_df.T != 0).any()]
+                            # g = ohlc.loc[(ohlc != 0).all(axis=1)]
+
+                            if ohlc.empty:
+                                df_for_update = realtime_df
                             else:
-                                '''below checks the last date of update and if falls outside the acceptable update days will pull data from the historical list of bars'''
-                                ohlc = object_load_decompress(stored_data[0]['ohlc'])
-
-                                previous_date_quotes_intraday_utc = ohlc.index[-1]
-
-                                previous_date_time_in_local_timezone = self.utc_to_time(previous_date_quotes_intraday_utc,
-                                                                                    instrument.timezone.zone)
-
-                                #python weekdays 0 Mon, 6 Sun
-                                acceptable_offset = 1
-                                if datetime.now(instrument.timezone).weekday() == 0:
-                                    acceptable_offset = 3
-
-                                if datetime.now(instrument.timezone) - previous_date_time_in_local_timezone > timedelta(days=acceptable_offset):
-                                    data = list(
-                                        future_bar_collection.find({'idcontract': future_id['extra_data']['sqlid'],'errorbar':False,
-                                                               'bartime': {'$gt': previous_date_time_in_local_timezone.replace(tzinfo=None)}}).sort(
-                                            [('bartime', 1)]))
-
-                                    previous_date_quotes_intraday_utc = self.fill_framework2_db(data, future_id, instrument, quotes_intraday_collection_v2)
-
-
-                            if previous_date_quotes_intraday_utc != None:
-
-                                previous_date_time_in_local_timezone = self.utc_to_time(previous_date_quotes_intraday_utc,
-                                                                                   instrument.timezone.zone)
-
-                            else:
-
-                                previous_date_time_in_local_timezone = datetime.combine(datetime.now(instrument.timezone).date() - timedelta(days=1), time(0, 0, 0))
-                                previous_date_quotes_intraday_utc = self.time_to_utc(previous_date_time_in_local_timezone, instrument.timezone.zone)
-
-
-                            stored_data = quotes_intraday_collection_v2.find_one({'dt': datetime.combine(previous_date_quotes_intraday_utc.date(), time(0, 0, 0)), 'tckr': future_id['tckr']})
-
-                            if stored_data == None:
-                                ohlc = pd.DataFrame()
-                            else:
-                                ohlc = object_load_decompress(stored_data['ohlc'])
-
-                            #print(ohlc)
-
-                            realtime_data = list(future_bar_collection.find({'idcontract':future_id['extra_data']['sqlid'],'errorbar':False,
-                                                                             'bartime':{'$gte':previous_date_time_in_local_timezone.replace(tzinfo=None)}})
-                                            .sort([('bartime', 1)]))
-
-                            realtime_df = pd.DataFrame(realtime_data)
-
-                            if not realtime_df.empty:
-                                realtime_df = realtime_df[['bartime', 'open', 'high', 'low', 'close', 'volume']]
-
-                                #print(realtime_data)
-
-                                realtime_df.rename(columns={'bartime': 'dt', 'open': 'o', 'high': 'h', 'low': 'l', 'close': 'c', 'volume': 'v'},
-                                          inplace=True)
-                                realtime_df.set_index('dt', inplace=True)
-                                realtime_df.index = realtime_df.index.tz_localize(instrument.timezone).tz_convert('UTC')
-
-
-                                '''this eliminates 0s in the pandas dataframe'''
-                                realtime_df = realtime_df.loc[(realtime_df['o'] != 0) | (realtime_df['h'] != 0) | (realtime_df['l'] != 0) | (realtime_df['c'] != 0)]
-                                # realtime_df = realtime_df[(realtime_df.T != 0).any()]
-                                # g = ohlc.loc[(ohlc != 0).all(axis=1)]
-
-                                if ohlc.empty:
-                                    df_for_update = realtime_df
+                                if realtime_df.empty:
+                                    df_for_update = ohlc
                                 else:
-                                    if realtime_df.empty:
-                                        df_for_update = ohlc
-                                    else:
-                                        df_for_update = pd.concat([ohlc[ohlc.index < realtime_df.index[0]], realtime_df])#.reset_index(drop=True)
+                                    df_for_update = pd.concat([ohlc[ohlc.index < realtime_df.index[0]], realtime_df])#.reset_index(drop=True)
 
-                                if not df_for_update.empty:
+                            if not df_for_update.empty:
 
-                                    #update asset_info with latest time of update for instrument
+                                #update asset_info with latest time of update for instrument
 
-                                    try:
-                                        if 'last_bar_update' not in instrument_asset_info_collection_v2 or self.time_to_utc_check_if_has_tzone(instrument_asset_info_collection_v2['last_bar_update'],'UTC') <  df_for_update.index.max():
-                                            instrument_asset_info_collection_v2['last_bar_update'] = df_for_update.index.max()
-                                            self.db_v2['asset_info'].update_one({'instrument':instrument_asset_info_collection_v2['instrument']},{'$set':{'last_bar_update':df_for_update.index.max()}})
-                                    except Exception as e:
-                                        log.warn(f"ExoIndexError: '{e}'")
+                                try:
+                                    if 'last_bar_update' not in instrument_asset_info_collection_v2 or self.time_to_utc_check_if_has_tzone(instrument_asset_info_collection_v2['last_bar_update'],'UTC') <  df_for_update.index.max():
+                                        instrument_asset_info_collection_v2['last_bar_update'] = df_for_update.index.max()
+                                        self.db_v2['asset_info'].update_one({'instrument':instrument_asset_info_collection_v2['instrument']},{'$set':{'last_bar_update':df_for_update.index.max()}})
+                                except Exception as e:
+                                    log.warn(f"Update Live Data Error: '{e}'")
 
-                                    for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
-                                        dt = datetime.combine(idx_dt, time(0, 0, 0))
+                                for idx_dt, df_value in df_for_update.groupby(by=df_for_update.index.date):
+                                    dt = datetime.combine(idx_dt, time(0, 0, 0))
 
-                                        if self.check_if_business_day(dt):
-                                            rec = {
-                                                'dt': dt,
-                                                'tckr': future_id['tckr'],
-                                                'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
-                                            }
-                                            quotes_intraday_collection_v2.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
-                    except Exception as e:
-                        log.warn(f"ExoIndexError: '{e}' '{future_id['tckr']}'")
-                        print(f"ExoIndexError: '{e}' '{future_id['tckr']}'")
-                        # pass
+                                    if self.check_if_business_day(dt):
+                                        rec = {
+                                            'dt': dt,
+                                            'tckr': future_id['tckr'],
+                                            'ohlc': object_save_compress(df_value)#lz4.block.compress(pickle.dumps(df_value))
+                                        }
+                                        quotes_intraday_collection_v2.replace_one({'dt': dt, 'tckr': future_id['tckr']}, rec, upsert=True)
+                    # except Exception as e:
+                    #     log.warn(f"Update Live Data Error: '{e}' '{future_id['tckr']}'")
+                    #     print(f"Update Live Data Error: '{e}' '{future_id['tckr']}'")
+                    #     # pass
 
 
 
