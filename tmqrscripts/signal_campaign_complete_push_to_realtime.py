@@ -116,7 +116,7 @@ class CampaignUpdateCheckPushToRealtime:
                         if campaign_ready:
 
                             self.signalapp_exo.send(
-                                MsgStatus('Campaign Status', 'Ready {0}'.format(smart_campaign['name']), notify=True))
+                                MsgStatus('Campaign Status', 'Ready {0} {1}'.format(smart_campaign['name'], product), notify=True))
 
                             self.db_v1['campaigns'].update_one({'name': smart_campaign['name']},
                                                              {'$set': {'context.update_time_instrument.{}'.format(product): current_time_utc}})
