@@ -24,12 +24,22 @@ from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
 
-
 # from tmqr.logs import log
 import os
-import logging as log
+import logging
+
 filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'exo_alpha.log')
-log.basicConfig(filename=filename,level=log.DEBUG, format='%(asctime)s %(message)s')
+
+log = logging.getLogger()
+handler = logging.FileHandler(filename)
+formatter = logging.Formatter(
+        '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+handler.setFormatter(formatter)
+log.addHandler(handler)
+log.setLevel(logging.DEBUG)
+
+# log.debug(log.handlers)
+
 
 from datetime import datetime, time
 import pytz
@@ -53,7 +63,7 @@ class IndexGenerationScript:
     def __init__(self, override_time_check_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False, try_run_all_exos_live_and_test = False,
                  instrument=None, run_only_test_exos = False):
 
-        log.debug('Running exo alpha update')
+        log.warning('Running exo alpha update')
 
         if override_time_check_run_exo == None:
             self.override_time_check_run_exo = False
@@ -136,7 +146,7 @@ class IndexGenerationScript:
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
 
-                log.debug(instrument['instrument'])
+                log.warning(instrument['instrument'])
 
                 for exo in INDEX_LIST:
 
