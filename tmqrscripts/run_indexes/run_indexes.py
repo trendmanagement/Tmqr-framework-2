@@ -25,7 +25,12 @@ from tmqrindex import IndexBase
 
 
 
-from tmqr.logs import log
+# from tmqr.logs import log
+import os
+import logging as log
+filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'exo_alpha.log')
+log.basicConfig(filename=filename,level=log.DEBUG, format='%(asctime)s %(message)s')
+
 from datetime import datetime, time
 import pytz
 from tmqr.errors import DataEngineNotFoundError
@@ -47,6 +52,8 @@ https://10.0.1.2:8889/notebooks/indexes/index_deployment_samples/Step%203%20-%20
 class IndexGenerationScript:
     def __init__(self, override_time_check_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False, try_run_all_exos_live_and_test = False,
                  instrument=None, run_only_test_exos = False):
+
+        log.debug('Running exo alpha update')
 
         if override_time_check_run_exo == None:
             self.override_time_check_run_exo = False
@@ -129,7 +136,7 @@ class IndexGenerationScript:
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
 
-                print(instrument['instrument'])
+                log.debug(instrument['instrument'])
 
                 for exo in INDEX_LIST:
 
@@ -211,7 +218,7 @@ class IndexGenerationScript:
 
 
             except (DataEngineNotFoundError, NotImplementedError) as e:
-                log.warn(f"ExoIndexError: '{e}'")
+                log.warning(f"ExoIndexError: '{e}'")
 
                 try:
 
