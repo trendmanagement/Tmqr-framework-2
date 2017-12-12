@@ -63,7 +63,7 @@ class DataFeed:
             self._cache_instrument_info[instrument] = ainfo
             return ainfo
 
-    def get_fut_chain(self, instrument, **kwargs):
+    def get_fut_chain(self, instrument, **kwargs) -> FutureChain:
         """
         Fetch futures chain for particular instrument
         :param instrument: Full-qualified instrument name <Market>.<Name>
@@ -134,7 +134,7 @@ class DataFeed:
 
         return self._cache_opt_chain[underlying_asset]
 
-    def get_contract_info(self, tckr):
+    def get_contract_info(self, tckr) -> ContractInfo:
         """
         Fetch contract info for full qualified ticker name
         :param tckr: full qualified ticker
@@ -173,6 +173,25 @@ class DataFeed:
             return dfseries
         else:
             raise NotImplementedError("Quote type is not implemented yet.")
+
+    def get_last_quote_date(self, tckr, source_type, **kwargs):
+        """
+        Fetch last quote date from the DB and return datetime of the last quote
+        :param tckr: full qualified ticker
+        :param source_type: datasource type
+        :param kwargs:
+            - 'timezone' - pytz.timezone instance or (str) pytz timezone name
+        """
+        tz = kwargs.get('timezone', None)
+        if type(tz) == str:
+            tz = pytz.timezone(tz)
+
+        quote_date = self.data_engine.db_get_last_quote_date(tckr, source_type, **kwargs)
+
+        if tz is not None:
+            return tz.convert(quote_date)
+        else:
+            return quote_date
 
     def get_riskfreerate_series(self, market):
         rfr_series = self._cache_riskfreerate.get(market, None)

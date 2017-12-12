@@ -117,6 +117,51 @@ class DataEngineMongo(DataEngineBase):
 
         return result
 
+    def db_get_last_quote_date(self, tckr, source_type, **kwargs):
+        if source_type == SRC_INTRADAY:
+            return self._source_intraday_get_last_quote(tckr, **kwargs)
+        if source_type == SRC_OPTIONS_EOD:
+            return self._source_options_eod_get_last_quote(tckr, **kwargs)
+        raise DataSourceNotFoundError("Unknown 'datasource' type")
+
+    def _source_intraday_get_last_quote(self, tckr, **kwargs):
+        """
+        Returns raw series dataframe from intraday mongo data base
+        :param tckr: full qualified ticker name
+        :param kwargs: db_get_raw_series kwargs
+        :return: (tuple) pandas DataFrame, QTYPE
+        """
+        for data in self.db[SRC_INTRADAY].find({'tckr': tckr}).sort([('dt', -1)]).limit(1):
+            df = object_load_decompress(data['ohlc'])
+            if not isinstance(df, pd.DataFrame):
+                raise DBDataCorruptionError(
+                    f"{tckr} data is corrupted in {SRC_INTRADAY} collection at {data['dt']}, "
+                    f"expected pd.DataFrame, got {type(data['ohlc'])}")
+
+            if len(df) == 0:
+                raise IntradayQuotesNotFoundError(f"Empty data record for {tckr} ")
+
+            return df.index[-1]
+
+        raise IntradayQuotesNotFoundError(f"No data found for {tckr}")
+
+    def _source_options_eod_get_last_quote(self, tckr, **kwargs):
+        data = self.db[SRC_OPTIONS_EOD].find_one({'_id': tckr})
+        if data is None:
+            raise OptionsEODQuotesNotFoundError(f"No data found for {tckr} in options EOD database")
+
+        data['data'] = object_load_decompress(data['data'])
+
+        if not isinstance(data['data'], pd.DataFrame):
+            raise DBDataCorruptionError(
+                f"{tckr} data is corrupted in {SRC_OPTIONS_EOD} collection, expected pd.DataFrame, got {type(data['data'])}")
+
+        if len(data['data']) == 0:
+            raise OptionsEODQuotesNotFoundError(f"No data found for {tckr} in options EOD database")
+
+        return data['data'].index[-1]
+
+
     def db_get_raw_series(self, tckr, source_type, **kwargs):
         if source_type == SRC_INTRADAY:
             return self._source_intraday_get_series(tckr, **kwargs)
@@ -124,6 +169,41 @@ class DataEngineMongo(DataEngineBase):
             return self._source_options_eod_get_series(tckr, **kwargs)
 
         raise DataSourceNotFoundError("Unknown 'datasource' type")
+
+    def _source_intraday_get_series(self, tckr, **kwargs):
+        """
+        Returns raw series dataframe from intraday mongo data base
+        :param tckr: full qualified ticker name
+        :param kwargs: db_get_raw_series kwargs
+        :return: (tuple) pandas DataFrame, QTYPE
+        """
+        date_start = kwargs.get('date_start', None)
+        date_end = kwargs.get('date_end', None)
+
+        dt_filter = {}
+        if date_start is not None:
+            dt_filter['$gte'] = datetime.combine(date_start, time(0, 0, 0))
+        if date_end is not None:
+            dt_filter['$lte'] = datetime.combine(date_end, time(0, 0, 0))
+
+        request = {'tckr': tckr}
+        if len(dt_filter) > 0:
+            request['dt'] = dt_filter
+
+        dframes_list = []
+        for data in self.db[SRC_INTRADAY].find(request):
+            df = object_load_decompress(data['ohlc'])
+            if not isinstance(df, pd.DataFrame):
+                raise DBDataCorruptionError(
+                    f"{tckr} data is corrupted in {SRC_INTRADAY} collection at {data['dt']}, "
+                    f"expected pd.DataFrame, got {type(data['ohlc'])}")
+
+            dframes_list.append(df)
+
+        if len(dframes_list) == 0:
+            raise IntradayQuotesNotFoundError(f"No data found for {tckr} in period {date_start}-{date_end}")
+
+        return pd.concat(dframes_list), QTYPE_INTRADAY
 
     def _source_options_eod_get_series(self, tckr, **kwargs):
         data = self.db[SRC_OPTIONS_EOD].find_one({'_id': tckr})
@@ -165,7 +245,7 @@ class DataEngineMongo(DataEngineBase):
         :return:
         """
         self.db[COLLECTION_ALPHA_DATA].create_index([('name', pymongo.ASCENDING)])
-        self.db[COLLECTION_ALPHA_DATA].replace_one({'name': alpha_data['name']}, alpha_data, upsert=True)
+        self.db[COLLECTION_ALPHA_DATA].replace_one({'name': alpha_data['name'].replace('.', '_')}, alpha_data, upsert=True)
 
     def db_load_alpha(self, alpha_name):
         """
@@ -173,7 +253,7 @@ class DataEngineMongo(DataEngineBase):
         :param alpha_name:
         :return:
         """
-        idx = self.db[COLLECTION_ALPHA_DATA].find_one({'name': alpha_name})
+        idx = self.db[COLLECTION_ALPHA_DATA].find_one({'name': alpha_name.replace('.', '_')})
         if idx is None:
             raise DataEngineNotFoundError(f"Alpha '{alpha_name}' is not found in the DB")
         return idx
@@ -190,37 +270,4 @@ class DataEngineMongo(DataEngineBase):
         return object_load_decompress(rfr['rfr_series'])
 
 
-    def _source_intraday_get_series(self, tckr, **kwargs):
-        """
-        Returns raw series dataframe from intraday mongo data base
-        :param tckr: full qualified ticker name
-        :param kwargs: db_get_raw_series kwargs
-        :return: (tuple) pandas DataFrame, QTYPE
-        """
-        date_start = kwargs.get('date_start', None)
-        date_end = kwargs.get('date_end', None)
 
-        dt_filter = {}
-        if date_start is not None:
-            dt_filter['$gte'] = datetime.combine(date_start, time(0, 0, 0))
-        if date_end is not None:
-            dt_filter['$lte'] = datetime.combine(date_end, time(0, 0, 0))
-
-        request = {'tckr': tckr}
-        if len(dt_filter) > 0:
-            request['dt'] = dt_filter
-
-        dframes_list = []
-        for data in self.db[SRC_INTRADAY].find(request):
-            df = object_load_decompress(data['ohlc'])
-            if not isinstance(df, pd.DataFrame):
-                raise DBDataCorruptionError(
-                    f"{tckr} data is corrupted in {SRC_INTRADAY} collection at {data['dt']}, "
-                    f"expected pd.DataFrame, got {type(data['ohlc'])}")
-
-            dframes_list.append(df)
-
-        if len(dframes_list) == 0:
-            raise IntradayQuotesNotFoundError(f"No data found for {tckr} in period {date_start}-{date_end}")
-
-        return pd.concat(dframes_list), QTYPE_INTRADAY
