@@ -24,22 +24,8 @@ from tmqrfeed.manager import DataManager
 from tmqrindex import IndexBase
 
 
-# from tmqr.logs import log
+from tmqr.logs import log
 import os
-import logging
-
-filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'exo_alpha.log')
-
-log = logging.getLogger()
-handler = logging.FileHandler(filename)
-formatter = logging.Formatter(
-        '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
-handler.setFormatter(formatter)
-log.addHandler(handler)
-log.setLevel(logging.DEBUG)
-
-# log.debug(log.handlers)
-
 
 from datetime import datetime, time
 import pytz
@@ -63,7 +49,8 @@ class IndexGenerationScript:
     def __init__(self, override_time_check_run_exo=False, reset_exo_from_beginning = False, date_end = None, override_run_alpha=False, try_run_all_exos_live_and_test = False,
                  instrument=None, run_only_test_exos = False):
 
-        log.warning('Running exo alpha update')
+        log.setup('scripts', 'IndexGenerationScript', to_file=True)
+        log.info('Running exo alpha update')
 
         if override_time_check_run_exo == None:
             self.override_time_check_run_exo = False
@@ -145,8 +132,8 @@ class IndexGenerationScript:
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
-
-                log.warning(instrument['instrument'])
+                log.setup('scripts', 'IndexGenerationScript', to_file=True)
+                log.info(f"{instrument['instrument']} Last bar update: {instrument['last_bar_update']}")
 
                 for exo in INDEX_LIST:
 
@@ -192,6 +179,7 @@ class IndexGenerationScript:
 
                 if self.reset_exo_from_beginning:
                     index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
+                    log.setup('index', index.index_name, to_file=True)
 
                     ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
@@ -201,6 +189,7 @@ class IndexGenerationScript:
                 else:
 
                     index = IndexBase.load(dm, index_hedge_name)
+                    log.setup('index', index.index_name, to_file=True)
 
                     ct = self.current_time_generate(index.session.tz, last_bar_update)
 
@@ -228,11 +217,12 @@ class IndexGenerationScript:
 
 
             except (DataEngineNotFoundError, NotImplementedError) as e:
-                log.warning(f"ExoIndexError: '{e}'")
+                log.exception(f"ExoIndexError: '{e}'")
 
                 try:
 
                     index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
+                    log.setup('index', index.index_name, to_file=True)
 
                     ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
@@ -241,7 +231,7 @@ class IndexGenerationScript:
                     self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
                 except Exception as e1:
-                    log.warning(f"ExoIndexError: '{e1}'")
+                    log.exception(f"ExoIndexError: '{e1}'")
 
     def current_time_generate(self, tz, last_bar_update=None):
 
@@ -360,7 +350,9 @@ class IndexGenerationScript:
                 for alpha in alphas_list:
                     # print('running 1 ' + alpha['name'])
 
-                    if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha :
+                    if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha:
+                        log.setup('alpha', alpha['name'], to_file=True)
+                        log.info('Start processing of alpha: ' + alpha['name'])
 
                         '''
                         below checks if v1 alpha has been calculated                    
