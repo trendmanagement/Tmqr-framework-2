@@ -135,22 +135,24 @@ class IndexGenerationScript:
                 log.setup('scripts', 'IndexGenerationScript', to_file=True)
                 log.info(f"{instrument['instrument']} Last bar update: {instrument['last_bar_update']}")
 
-                for exo in INDEX_LIST:
+                for exo_alpha_run in ['exo','alpha']:
 
-                    instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
+                    for exo in INDEX_LIST:
 
-                    if instrument_specific or not 'instrument' in exo:
-                        # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
-                        # t.start()
+                        instrument_specific = 'instrument' in exo and instrument['instrument'] == exo['instrument']
 
-                        last_bar_update = None
-                        if 'last_bar_update' in instrument:
-                            last_bar_update = instrument['last_bar_update']
+                        if instrument_specific or not 'instrument' in exo:
+                            # t = threading.Thread(target=self.run_through_each_index_threads, args=(instrument['instrument'], exo, instrument_specific))
+                            # t.start()
 
-                        self.run_through_each_index_threads(instrument['instrument'], last_bar_update, exo, instrument_specific)
+                            last_bar_update = None
+                            if 'last_bar_update' in instrument:
+                                last_bar_update = instrument['last_bar_update']
+
+                            self.run_through_each_index_threads(instrument['instrument'], last_bar_update, exo, exo_alpha_run, instrument_specific)
 
 
-    def run_through_each_index_threads(self, instrument_symbol, last_bar_update, exo_index, instrument_specific = False):
+    def run_through_each_index_threads(self, instrument_symbol, last_bar_update, exo_index, exo_alpha_run, instrument_specific = False):
         '''
         runs through the creation and saving logic for each index and alpha
         only runs indexes on Mon-Fri
@@ -183,9 +185,10 @@ class IndexGenerationScript:
 
                     ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
-                    self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
-
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+                    if exo_alpha_run == 'exo':
+                        self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
+                    else:
+                        self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
                 else:
 
                     index = IndexBase.load(dm, index_hedge_name)
@@ -198,22 +201,26 @@ class IndexGenerationScript:
 
                     index_from_db = self.mongo_db_v2['index_data'].find_one({'name': index_hedge_name},{'context':1})
 
-                    if index_from_db == None or not 'index_update_time' in index_from_db['context']:
-                        self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
-                    else:
-                        last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
-                        last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
+                    if exo_alpha_run == 'exo':
 
-
-
-
-                        if self.override_time_check_run_exo or (ct['last_bar_time'].weekday() < 5 and\
-                                ((ct['last_bar_time'] >= sess_decision and last_index_update_time < sess_decision)
-                                 or (ct['last_bar_time'] >= sess_exec and last_index_update_time < sess_exec))):
-
+                        if index_from_db == None or not 'index_update_time' in index_from_db['context']:
                             self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
+                        else:
+                            last_index_update_time = self.time_to_utc_from_none(index_from_db['context']['index_update_time'])
+                            last_index_update_time = self.utc_to_time(last_index_update_time,index.session.tz.zone)
 
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+
+
+
+                            if self.override_time_check_run_exo or (ct['last_bar_time'].weekday() < 5 and\
+                                    ((ct['last_bar_time'] >= sess_decision and last_index_update_time < sess_decision)
+                                     or (ct['last_bar_time'] >= sess_exec and last_index_update_time < sess_exec))):
+
+                                self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
+
+                    else:
+
+                        self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
 
             except (DataEngineNotFoundError, NotImplementedError) as e:
@@ -221,14 +228,15 @@ class IndexGenerationScript:
 
                 try:
 
-                    index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
-                    log.setup('index', index.index_name, to_file=True)
+                    if exo_alpha_run == 'exo':
+                        index = self.create_index_class(instrument_symbol, ExoClass, dm, instrument_specific)
+                        log.setup('index', index.index_name, to_file=True)
 
-                    ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
+                        ct = self.current_time_generate(pytz.timezone(DEFAULT_TIMEZONE), last_bar_update)
 
-                    self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
+                        self.run_index(index, ct['last_bar_time_utc'], index_hedge_name, creating_index=True)
 
-                    self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
+                    # self.checking_alpha_then_run(index, ct['current_time'], ct['last_bar_time'], ct['last_bar_time_utc'], index_hedge_name, mongo_db_v1)
 
                 except Exception as e1:
                     log.exception(f"ExoIndexError: '{e1}'")
