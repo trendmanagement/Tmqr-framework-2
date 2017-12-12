@@ -352,7 +352,7 @@ class IndexGenerationScript:
 
                     if alpha['name'] in self.campaign_alpha_list or self.override_run_alpha:
                         log.setup('alpha', alpha['name'], to_file=True)
-                        log.info('Start processing of alpha: ' + alpha['name'])
+
 
                         '''
                         below checks if v1 alpha has been calculated                    
@@ -400,6 +400,7 @@ class IndexGenerationScript:
         :param update_time: 
         :return: 
         '''
+        log.info('Start processing of alpha: ' + alpha_name)
         # try:
 
         self.mongo_db_v2['alpha_data'].update_one({'name': alpha_name},
