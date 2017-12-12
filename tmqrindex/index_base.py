@@ -9,6 +9,7 @@ import pytz
 import lz4
 import pickle
 import warnings
+from tmqr.logs import log
 
 INSTRUMENT_NA = "N/A"
 
@@ -70,8 +71,6 @@ class IndexBase:
             self.data.set_index(self.data.index + timedelta(minutes=self.decision_time_shift),
                                 inplace=True)
 
-
-
     def setup(self):
         """
         Initiate index algorithm
@@ -98,6 +97,7 @@ class IndexBase:
         Run index calculation or update
         :return: 
         """
+        log.info(f"Run index {self.index_name}")
         if self.as_readonly:
             raise IndexReadOnlyError("Only property and attribute access allowed when index in read-only mode")
 
@@ -105,6 +105,15 @@ class IndexBase:
         self.setup()
 
         self.set_data_and_position()
+
+        if self.data is None or len(self.data) == 0 or not isinstance(self.data, pd.DataFrame):
+            log.warn("Index.data field is empty or None or not a Pandas.DataFrame")
+        else:
+            log.info(f"Last index quote date: {self.data.index[-1]}")
+
+        log.info(f"Last index position: \n {self.position}")
+
+        log.info(f"{self.index_name} run completed.")
 
     @property
     def decision_time_shift(self):
@@ -226,6 +235,8 @@ class IndexBase:
             raise IndexReadOnlyError("Only property and attribute access allowed when index in read-only mode")
 
         self.dm.datafeed.data_engine.db_save_index(self.serialize())
+
+        log.debug("Index has been saved.")
 
     @classmethod
     def load(cls, datamanager: DataManager, index_name):

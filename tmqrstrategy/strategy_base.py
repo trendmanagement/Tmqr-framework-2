@@ -435,14 +435,12 @@ class StrategyBase:
             'series': stats_series[['equity', 'costs', 'exposure']]
         }
 
-
-
     def run(self):
         """
         Run strategy instance and walk-forward optimization
         :return: 
         """
-        log.info(f'Starting strategy {self}. Date now: {datetime.now()}')
+        log.info(f'Running alpha {self.name}')
         total_time_begin = time.time()
 
         # Initialize quotes
@@ -541,6 +539,7 @@ class StrategyBase:
         time_process_stats = time.time()
         self.stats = self.process_stats()
 
+        log.info(f"Last alpha position: \n {self.position}")
 
         log.info(
             f'Finished in {time.time() - total_time_begin:0.2f} seconds. '
@@ -676,6 +675,8 @@ class StrategyBase:
         :return: 
         """
         self.dm.datafeed.data_engine.db_save_alpha(self.serialize())
+
+        log.debug("Alpha has been saved.")
 
     def serialize(self):
         """
