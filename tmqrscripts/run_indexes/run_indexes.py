@@ -213,8 +213,8 @@ class IndexGenerationScript:
 
 
                                 if self.override_time_check_run_exo or (ct['last_bar_time'].weekday() < 5 and\
-                                        ((ct['last_bar_time'] >= sess_decision and last_index_update_time < sess_decision)
-                                         or (ct['last_bar_time'] >= sess_exec and last_index_update_time < sess_exec))):
+                                        ((ct['last_bar_time'] > sess_decision and last_index_update_time < sess_decision)
+                                         or (ct['last_bar_time'] > sess_exec and last_index_update_time < sess_exec))):
 
                                     self.run_index(index, ct['last_bar_time_utc'], index_hedge_name)
 
@@ -357,7 +357,7 @@ class IndexGenerationScript:
 
 
 
-            if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or last_bar_time >= alpha_sess_decision):
+            if not self.run_only_test_exos and (self.reset_exo_from_beginning or self.override_time_check_run_exo or last_bar_time > alpha_sess_decision):
                 alphas_list = list(self.mongo_db_v2['alpha_data'].find({'context.index_hedge_name': index_hedge_name},{'name':1,'context':1}))
 
                 v1_alpha_ok = True
