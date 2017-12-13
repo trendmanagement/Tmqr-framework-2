@@ -2,6 +2,8 @@ from pymongo import MongoClient
 from tmqr.settings import *
 from tmqrfeed import DataManager
 from datetime import timedelta
+from tmqr.errors import QuoteNotFoundError
+import pytz
 
 
 def get_futures_tickers_for_live(instrument_record, dm):
@@ -21,11 +23,18 @@ def get_futures_tickers_for_live(instrument_record, dm):
     futures_records = []
 
     for fut, dt_start, dt_end in futures_tuple:
+        try:
+            last_quote_date = dm.datafeed.get_last_quote_date(fut.ticker, fut.data_source)
+        except QuoteNotFoundError:
+            last_quote_date = datetime.now().astimezone(pytz.utc) - timedelta(days=60)
+
+        assert last_quote_date.tzinfo == pytz.utc
+
         futures_records.append({
             'contract': fut,
             'v1_contract_id': fut.contract_info.extra('sqlid'),
             'iqfeed_ticker': f"{instrument_record['iqfeed_ticker']}{fut.month_year_code}",
-            'last_date_utc': dm.datafeed.get_last_quote_date(fut.ticker, fut.data_source),
+            'last_date_utc':  last_quote_date,
             'instrument': instrument_record['name'],
             }
         )

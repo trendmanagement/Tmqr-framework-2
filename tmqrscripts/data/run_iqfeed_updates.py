@@ -38,31 +38,223 @@ import argparse
 import pyiqfeed as iq
 from tmqrscripts.data.common import get_futures_tickers_for_live, get_instruments_list
 from tmqrfeed import DataManager
+from tmqr.logs import log
+from tmqr.settings import *
+from tmqr.serialization import object_save_compress, object_load_decompress
 import pytz
 import numpy as np
+import pandas as pd
+from pymongo import MongoClient
+import datetime
 
 dtn_product_id = 'NIKOLAS_JOYCE_13424'
 dtn_login = '470998'
 dtn_password = '43354519'
 
 timezone_est = pytz.timezone('US/Eastern')
+timezone_pst = pytz.timezone('US/Pacific')
+
+IQFEED_V2_COLLECTION = 'quotes_intraday_iq'
+#IQFEED_V2_COLLECTION = 'quotes_intraday' # TODO: replace after production deployment
+
+IQFEED_V1_COLLECTION = 'futurebarcol_iq'
+#IQFEED_V1_COLLECTION = 'futurebarcol'  # TODO: replace after production deployment
+
+
 
 class TMQRIQFeedBarListener(iq.VerboseBarListener):
+    def __init__(self, name: str, symbol_map):
+        super().__init__(name)
+        self.symbol_map = symbol_map
+
+        client_v1 = MongoClient(MONGO_CONNSTR_V1_LIVE)
+        self.db_v1 = client_v1[MONGO_DB_V1_LIVE]
+
+        client_v2 = MongoClient(MONGO_CONNSTR)
+        self.db_v2 = client_v2[MONGO_DB]
+
+    def _bar_v1_process(self, iq_ticker, date_utc, bar_array):
+        ticker_dict = self.symbol_map[iq_ticker]
+        # Make the datetime tz-aware (PST) and replace tz-info
+        date_pst = date_utc.astimezone(timezone_pst).replace(tzinfo=None)
+
+        req_dict = {
+            "bartime": date_pst,
+            "idcontract": ticker_dict['v1_contract_id'],
+            "open": bar_array[3],
+            "high": bar_array[4],
+            "low": bar_array[5],
+            "close": bar_array[6],
+            "volume": float(bar_array[8]),
+            "errorbar": False,
+        }
+
+        self.db_v1[IQFEED_V1_COLLECTION].replace_one({'idcontract': req_dict['idcontract'], 'bartime': req_dict['bartime']},
+                                                     req_dict, upsert=True
+                                                     )
+
+
+    def _history_v2_flush(self, v2_ticker, date_utc, df_quotes):
+
+        dt = datetime.datetime.combine(date_utc, datetime.time(0, 0, 0))
+        merged_df = df_quotes
+
+        v2_quotes_data = self.db_v2[IQFEED_V2_COLLECTION].find_one({'tckr': v2_ticker, 'dt': dt})
+
+        if v2_quotes_data:
+            df_old = object_load_decompress(v2_quotes_data['ohlc'])
+            merged_df = df_quotes.combine_first(df_old)
+
+        self.db_v2[IQFEED_V2_COLLECTION].replace_one(
+            {'tckr': v2_ticker, 'dt': dt},
+            {'tckr': v2_ticker, 'dt': dt, 'ohlc': object_save_compress(merged_df)}, upsert=True
+            )
+
+
+    def _history_v2_process(self, iq_ticker, bar_time_utc, bar_array):
+        ticker_dict = self.symbol_map[iq_ticker]
+        history_cache_last_date = ticker_dict.get('history_v2_last_date', None)
+
+        if history_cache_last_date != bar_time_utc.date():
+            if history_cache_last_date:
+                # Flush the cache to the DB
+                df_cache = ticker_dict['history_cache']
+                df_cache.sort_index(inplace=True)
+                # Writing the history to v2 DB
+                self._history_v2_flush(ticker_dict['contract'].ticker, history_cache_last_date, df_cache)
+                log.debug(f"HIST V2 Update: {ticker_dict['contract'].ticker} at {history_cache_last_date} #{len(df_cache)} bars")
+
+
+            # Re-initiate the cache
+            # Create new dataframe
+            df_cache = pd.DataFrame([{'dt': bar_time_utc,
+                                     'o': bar_array[3],
+                                     'h': bar_array[4],
+                                     'l': bar_array[5],
+                                     'c': bar_array[6],
+                                     'v': float(bar_array[8])}]).set_index('dt')
+
+            ticker_dict['history_v2_last_date'] = bar_time_utc.date()
+            ticker_dict['history_cache'] = df_cache
+        else:
+            # It's the same day, just update the historical dataframe
+            df_cache = ticker_dict['history_cache']
+            df_cache.at[bar_time_utc, 'o'] = bar_array[3]
+            df_cache.at[bar_time_utc, 'h'] = bar_array[4]
+            df_cache.at[bar_time_utc, 'l'] = bar_array[5]
+            df_cache.at[bar_time_utc, 'c'] = bar_array[6]
+            df_cache.at[bar_time_utc, 'v'] = float(bar_array[8])
+
+    def _bar_v2_process(self, iq_ticker, bar_time_utc, bar_array):
+        ticker_dict = self.symbol_map[iq_ticker]
+
+        df_cache = pd.DataFrame([{
+                                 'dt': bar_time_utc,
+                                 'o': bar_array[3],
+                                 'h': bar_array[4],
+                                 'l': bar_array[5],
+                                 'c': bar_array[6],
+                                 'v': float(bar_array[8])}]).set_index('dt')
+
+        self._history_v2_flush(ticker_dict['contract'].ticker, bar_time_utc.date(), df_cache)
+
 
     def process_latest_bar_update(self, bar_data: np.array):
         for bar in bar_data:
-            bar_time = iq.date_us_to_datetime(bar[1], bar[2])
-            print(f"UPD  {bar_time}: {bar}")
+            bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]))
+            bar_time_utc = bar_time_est.astimezone(pytz.utc)
+
+            ticker_rec = self.symbol_map[bar[0]]
+
+            ticker_rec['live_bar'] = {
+                'dt_utc': bar_time_utc,
+                'bar_array': bar,
+            }
+
+            #
+            # Once new live bar arrives, flush the history cache to the DB
+            #
+            df_cache = ticker_rec.get('history_cache', None)
+            if df_cache is not None:
+                if len(df_cache) > 0:
+                    # Flush the cache to the DB
+                    df_cache.sort_index(inplace=True)
+                    # Writing the history to v2 DB
+                    self._history_v2_flush(ticker_rec['contract'].ticker, ticker_rec['history_v2_last_date'], df_cache)
+
+                    log.debug(f"HIST V2 Live Flush: {ticker_rec['contract'].ticker} at {ticker_rec['history_v2_last_date']}"
+                              f" #{len(df_cache)} bars")
+
+                    log.info(
+                        f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished. Last quote: {df_cache.index[-1]}")
+                else:
+                    log.info(
+                        f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished.")
+
+                del ticker_rec['history_cache']
+                del ticker_rec['history_v2_last_date']
+
+
+
+
+            self._bar_v2_process(bar[0], bar_time_utc, bar)
+            self._bar_v1_process(bar[0], bar_time_utc, bar)
+
 
     def process_live_bar(self, bar_data: np.array):
         for bar in bar_data:
             bar_time = iq.date_us_to_datetime(bar[1], bar[2])
-            print(f"LIVE {bar_time}: {bar}")
+            #print(f"LIVE {bar_time}: {bar}")
+            ticker_rec = self.symbol_map[bar[0]]
+
+            if 'live_bar' in ticker_rec:
+                if not np.all(bar == ticker_rec['live_bar']['bar_array']):
+                    log.warning(f"{bar[0]} live bar prices mismatch: New: {bar} Old: {ticker_rec['live_bar']['bar_array']}")
+
+
 
     def process_history_bar(self, bar_data: np.array):
         for bar in bar_data:
-            bar_time = iq.date_us_to_datetime(bar[1], bar[2])
-            print(f"HIST {bar_time}: {bar}")
+            bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]))
+            bar_time_utc = bar_time_est.astimezone(pytz.utc)
+
+            self._history_v2_process(bar[0], bar_time_utc, bar)
+
+            self._bar_v1_process(bar[0], bar_time_utc, bar)
+
+            #print(f"HIST {bar_time_est}: {bar}")
+
+    def process_invalid_symbol(self, bad_symbol: str):
+        log.error(f"Invalid Symbol: {bad_symbol}")
+
+    def process_symbol_limit_reached(self, symbol: str):
+        log.error(f"Symbol limit reached: {symbol}")
+
+    def process_replaced_previous_watch(self, symbol: str):
+        log.warning(f"Replaced previous watch: {symbol}")
+
+    def process_error(self, fields):
+        log.error(f"{self._name} Process Error: \n {fields}")
+
+    def feed_is_stale(self) -> None:
+        log.error("%s: Feed Disconnected" % self._name)
+
+    def feed_is_fresh(self) -> None:
+        log.info("%s: Feed Connected" % self._name)
+
+    def feed_has_error(self) -> None:
+        log.error("%s: Feed Reconnect Failed" % self._name)
+
+    def process_conn_stats(self, stats) -> None:
+        #print("%s: Connection Stats:" % self._name)
+        #print(stats)
+
+        # Skip information about connection stats
+        pass
+
+
+
+
 
 
 
@@ -78,7 +270,31 @@ if __name__ == "__main__":
     parser.add_argument('--control_file', action='store',
                         dest='ctrl_file', default="/tmp/stop_iqfeed.ctrl",
                         help='Stop running if this file exists.')
+    parser.add_argument('--live_update_seconds', action='store',
+                        dest='live_update_sec', default=5,
+                        help='Update live bars every N seconds. If 0 updates with every tick (expect performance issues!)')
+
     arguments = parser.parse_args()
+
+    log.setup('scripts', "IQFeedDataFeed", to_file=True)
+    log.info('Launching IQFeed datascript')
+
+    #
+    # Get watchlist of tickers for live updates
+    #
+    dm = DataManager()
+    instruments = {}
+    iq_watchlist = {}
+    log.info("Getting symbols for live updates...")
+    for instr in get_instruments_list():
+        instruments[instr['name']] = instr
+        ticker_update_rec = get_futures_tickers_for_live(instr, dm)
+
+        for tckr_rec in ticker_update_rec:
+            # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
+            encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
+            iq_watchlist[encoded_ticker] = tckr_rec
+    log.info(f"{len(iq_watchlist)} symbols to watch")
 
     IQ_FEED = iq.FeedService(product=dtn_product_id,
                              version="IQFEED_LAUNCHER",
@@ -101,23 +317,8 @@ if __name__ == "__main__":
     admin.add_listener(admin_listener)
 
     bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
-    bar_listener = TMQRIQFeedBarListener("Bar Listener")
+    bar_listener = TMQRIQFeedBarListener("Bar Listener", iq_watchlist)
     bar_conn.add_listener(bar_listener)
-
-    #
-    # Get watchlist of tickers for live updates
-    #
-    dm = DataManager()
-    instruments = {}
-    iq_watchlist = {}
-    for instr in get_instruments_list():
-        instruments[instr['name']] = instr
-        ticker_update_rec = get_futures_tickers_for_live(instr, dm)
-
-        for tckr_rec in ticker_update_rec:
-            # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
-            encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
-            iq_watchlist[encoded_ticker] = tckr_rec
 
 
 
@@ -125,11 +326,18 @@ if __name__ == "__main__":
         for iq_ticker, watch_rec in iq_watchlist.items():
             data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
 
-            print(f"Subscribing {iq_ticker} from {data_start}")
-            bar_conn.watch(symbol=iq_ticker, interval_len=60,
-                           interval_type='s', update=10, lookback_bars=10) #, bgn_bars=data_start)
+            log.info(f"Subscribing {iq_ticker} from {data_start} {watch_rec['contract']}")
+            bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
+                           interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
 
-        while not os.path.isfile(ctrl_file):
-            time.sleep(10)
+        try:
+            while not os.path.isfile(ctrl_file):
+                time.sleep(10)
 
-    os.remove(ctrl_file)
+            log.info("Stopping service due to stop signal")
+
+            os.remove(ctrl_file)
+        except KeyboardInterrupt:
+            log.info("Service stopped via Ctrl+C")
+        except:
+            log.exception("Unhandled exception: \n")
