@@ -6,7 +6,7 @@ from tmqr.errors import QuoteNotFoundError
 import pytz
 
 
-def get_futures_tickers_for_live(instrument_record, dm):
+def get_futures_tickers_for_live(instrument_record, dm, nfuture_contracts=6):
     """
     Create metadata for live futures tickers for updates
     :param instrument_record: record of instrument dict produced by get_instruments_list()
@@ -18,7 +18,7 @@ def get_futures_tickers_for_live(instrument_record, dm):
     #
     fut_chain = dm.datafeed.get_fut_chain(instrument_record['name'], futures_months=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 
-    futures_tuple = fut_chain.get_list(datetime.now() - timedelta(days=7), offset=0, limit=4)
+    futures_tuple = fut_chain.get_list(datetime.now() - timedelta(days=7), offset=0, limit=nfuture_contracts)
 
     futures_records = []
 
