@@ -331,6 +331,7 @@ if __name__ == "__main__":
                 log.info(f"Subscribing {iq_ticker} from {data_start} {watch_rec['contract']}")
                 bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
                                interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
+                time.sleep(0.05)
 
 
             while not os.path.isfile(ctrl_file):
