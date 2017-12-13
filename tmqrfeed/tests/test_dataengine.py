@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import patch
-
+from tmqr.serialization import *
 from tmqrfeed.contracts import FutureContract
 from tmqrfeed.dataengines import *
 import lz4
+import pytz
 
 
 class DataEngineTestCase(unittest.TestCase):
@@ -62,6 +63,48 @@ class DataEngineTestCase(unittest.TestCase):
         self.assertEqual(ci['tckr'], 'US.C.F-ZB-H11-110322.110121@89.0')
 
         self.assertRaises(DataEngineNotFoundError, deng.db_get_contract_info, 'NON_EXISTING_TICKER')
+
+    def test_get_last_quotes_intraday(self):
+        deng = DataEngineMongo()
+        dt = deng.db_get_last_quote_date('US.F.CL.Q12.120720', SRC_INTRADAY)
+        self.assertEqual(dt, pd.Timestamp('2012-07-20 18:29:00+00:00'))
+        self.assertEqual(dt.tz, pytz.utc)
+
+    def test_get_last_quotes_intraday_errs(self):
+        deng = DataEngineMongo()
+        self.assertRaises(IntradayQuotesNotFoundError, deng.db_get_last_quote_date, 'US.F.CL.Q12.120720__', SRC_INTRADAY)
+
+    def test_get_last_quotes_eod_options(self):
+        deng = DataEngineMongo()
+
+        with patch('pymongo.collection.Collection.find_one') as mock_find_one:
+            mock_find_one.return_value = None
+            self.assertRaises(OptionsEODQuotesNotFoundError, deng.db_get_last_quote_date, 'US.F.CL.Q12.120720',
+                              SRC_OPTIONS_EOD)
+
+            mock_find_one.reset_mock()
+            mock_find_one.return_value = {'data': lz4.block.compress(pickle.dumps('NON_DATAFRAME_OBJECT'))}
+
+            self.assertRaises(DBDataCorruptionError, deng.db_get_last_quote_date, 'US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
+
+            mock_find_one.reset_mock()
+            mock_find_one.return_value = {
+                'data': lz4.block.compress(
+                    pickle.dumps(pd.DataFrame([{'iv': 0.1, 'dt': datetime(2011, 1, 1)}]).set_index('dt')))}
+
+            dt = deng.db_get_last_quote_date('US.F.CL.Q12.120720', SRC_OPTIONS_EOD)
+            self.assertEqual(dt, pd.Timestamp("2011-01-01 00:00:00"))
+
+            mock_find_one.reset_mock()
+            mock_find_one.return_value = {
+                'data': lz4.block.compress(
+                    pickle.dumps(pd.DataFrame([])))
+            }
+
+            self.assertRaises(OptionsEODQuotesNotFoundError, deng.db_get_last_quote_date, 'US.F.CL.Q12.120720',
+                              SRC_OPTIONS_EOD)
+
+
 
     def test_get_raw_series_intraday(self):
         deng = DataEngineMongo()

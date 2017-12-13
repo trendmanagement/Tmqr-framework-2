@@ -260,6 +260,10 @@ class FutureContract(ContractBase):
         self.expiration_month = self._get_month_by_code(self._toks[3][0])
 
     @property
+    def month_year_code(self):
+        return self._toks[3]
+
+    @property
     def name(self):
         """
         Future contract name without market information, US.F.CL.M83.830520 -> CLM83
@@ -285,6 +289,10 @@ class FutureContract(ContractBase):
         :return:
         """
         return self.instrument
+
+    @property
+    def month_code(self):
+        return self._toks[3][0]
 
     @staticmethod
     def _get_month_by_code(month_letter):

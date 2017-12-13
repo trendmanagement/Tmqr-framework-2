@@ -97,7 +97,7 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
             self.position.add_net_position(date, hedge_position_rec,
                                            qty=abs(exposure) * self.context['index_hedge_direction'])
         except PositionNotFoundError as exc:
-            log.error(f"Couldn't find hedged index position! {exc}")
+            log.error(f"Couldn't find hedged index position for {self.context['index_hedge_name']} at {date}! {exc}")
 
 
         try:
@@ -110,4 +110,4 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
             self.position.add_net_position(date, passive_leg_position_rec,
                                            qty=self.context.get('index_passive_qty', 1.0))
         except PositionNotFoundError as exc:
-            pass
+            log.error(f"Couldn't find passive index position for {self.context['index_passive_name']} at {date}! {exc}")

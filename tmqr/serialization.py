@@ -2,6 +2,7 @@ from tmqr.errors import ArgumentError
 from pydoc import locate
 import pickle
 import lz4
+import sys
 
 
 def object_to_full_path(obj) -> str:
