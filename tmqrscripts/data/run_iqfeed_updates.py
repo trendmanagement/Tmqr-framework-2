@@ -46,7 +46,8 @@ import numpy as np
 import pandas as pd
 from pymongo import MongoClient
 import datetime
-
+import sys
+import _thread
 dtn_product_id = 'NIKOLAS_JOYCE_13424'
 dtn_login = '470998'
 dtn_password = '43354519'
@@ -55,11 +56,12 @@ timezone_est = pytz.timezone('US/Eastern')
 timezone_pst = pytz.timezone('US/Pacific')
 
 IQFEED_V2_COLLECTION = 'quotes_intraday_iq'
-#IQFEED_V2_COLLECTION = 'quotes_intraday' # TODO: replace after production deployment
+# IQFEED_V2_COLLECTION = 'quotes_intraday' # TODO: replace after production deployment
 
 IQFEED_V1_COLLECTION = 'futurebarcol_iq'
-#IQFEED_V1_COLLECTION = 'futurebarcol'  # TODO: replace after production deployment
 
+
+# IQFEED_V1_COLLECTION = 'futurebarcol'  # TODO: replace after production deployment
 
 
 class TMQRIQFeedBarListener(iq.VerboseBarListener):
@@ -89,10 +91,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             "errorbar": False,
         }
 
-        self.db_v1[IQFEED_V1_COLLECTION].replace_one({'idcontract': req_dict['idcontract'], 'bartime': req_dict['bartime']},
-                                                     req_dict, upsert=True
-                                                     )
-
+        self.db_v1[IQFEED_V1_COLLECTION].replace_one(
+            {'idcontract': req_dict['idcontract'], 'bartime': req_dict['bartime']},
+            req_dict, upsert=True
+            )
 
     def _history_v2_flush(self, v2_ticker, date_utc, df_quotes):
 
@@ -108,8 +110,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         self.db_v2[IQFEED_V2_COLLECTION].replace_one(
             {'tckr': v2_ticker, 'dt': dt},
             {'tckr': v2_ticker, 'dt': dt, 'ohlc': object_save_compress(merged_df)}, upsert=True
-            )
-
+        )
 
     def _history_v2_process(self, iq_ticker, bar_time_utc, bar_array):
         ticker_dict = self.symbol_map[iq_ticker]
@@ -122,17 +123,18 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 df_cache.sort_index(inplace=True)
                 # Writing the history to v2 DB
                 self._history_v2_flush(ticker_dict['contract'].ticker, history_cache_last_date, df_cache)
-                log.debug(f"HIST V2 Update: {ticker_dict['contract'].ticker} at {history_cache_last_date} #{len(df_cache)} bars")
-
+                log.debug(
+                    f"HIST V2 Update: {ticker_dict['contract'].ticker} at {history_cache_last_date} #{len(df_cache)} bars")
 
             # Re-initiate the cache
             # Create new dataframe
-            df_cache = pd.DataFrame([{'dt': bar_time_utc,
-                                     'o': bar_array[3],
-                                     'h': bar_array[4],
-                                     'l': bar_array[5],
-                                     'c': bar_array[6],
-                                     'v': float(bar_array[8])}]).set_index('dt')
+            df_cache = pd.DataFrame([{
+                                         'dt': bar_time_utc,
+                                         'o': bar_array[3],
+                                         'h': bar_array[4],
+                                         'l': bar_array[5],
+                                         'c': bar_array[6],
+                                         'v': float(bar_array[8])}]).set_index('dt')
 
             ticker_dict['history_v2_last_date'] = bar_time_utc.date()
             ticker_dict['history_cache'] = df_cache
@@ -149,80 +151,82 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         ticker_dict = self.symbol_map[iq_ticker]
 
         df_cache = pd.DataFrame([{
-                                 'dt': bar_time_utc,
-                                 'o': bar_array[3],
-                                 'h': bar_array[4],
-                                 'l': bar_array[5],
-                                 'c': bar_array[6],
-                                 'v': float(bar_array[8])}]).set_index('dt')
+            'dt': bar_time_utc,
+            'o': bar_array[3],
+            'h': bar_array[4],
+            'l': bar_array[5],
+            'c': bar_array[6],
+            'v': float(bar_array[8])}]).set_index('dt')
 
         self._history_v2_flush(ticker_dict['contract'].ticker, bar_time_utc.date(), df_cache)
 
-
     def process_latest_bar_update(self, bar_data: np.array):
-        for bar in bar_data:
-            bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
-            bar_time_utc = bar_time_est.astimezone(pytz.utc)
+        try:
+            for bar in bar_data:
+                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
+                bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-            ticker_rec = self.symbol_map[bar[0]]
+                ticker_rec = self.symbol_map[bar[0]]
 
-            ticker_rec['live_bar'] = {
-                'dt_utc': bar_time_utc,
-                'bar_array': bar,
-            }
+                ticker_rec['live_bar'] = {
+                    'dt_utc': bar_time_utc,
+                    'bar_array': bar,
+                }
 
-            #
-            # Once new live bar arrives, flush the history cache to the DB
-            #
-            df_cache = ticker_rec.get('history_cache', None)
-            if df_cache is not None:
-                if len(df_cache) > 0:
-                    # Flush the cache to the DB
-                    df_cache.sort_index(inplace=True)
-                    # Writing the history to v2 DB
-                    self._history_v2_flush(ticker_rec['contract'].ticker, ticker_rec['history_v2_last_date'], df_cache)
+                #
+                # Once new live bar arrives, flush the history cache to the DB
+                #
+                df_cache = ticker_rec.get('history_cache', None)
+                if df_cache is not None:
+                    if len(df_cache) > 0:
+                        # Flush the cache to the DB
+                        df_cache.sort_index(inplace=True)
+                        # Writing the history to v2 DB
+                        self._history_v2_flush(ticker_rec['contract'].ticker, ticker_rec['history_v2_last_date'], df_cache)
 
-                    log.debug(f"HIST V2 Live Flush: {ticker_rec['contract'].ticker} at {ticker_rec['history_v2_last_date']}"
-                              f" #{len(df_cache)} bars")
+                        log.debug(
+                            f"HIST V2 Live Flush: {ticker_rec['contract'].ticker} at {ticker_rec['history_v2_last_date']}"
+                            f" #{len(df_cache)} bars")
 
-                    log.info(
-                        f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished. Last quote: {df_cache.index[-1]}")
-                else:
-                    log.info(
-                        f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished.")
+                        log.info(
+                            f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished. Last quote: {df_cache.index[-1]}")
+                    else:
+                        log.info(
+                            f"LIVE {ticker_rec['contract'].ticker}: Backfill has been finished.")
 
-                del ticker_rec['history_cache']
-                del ticker_rec['history_v2_last_date']
+                    del ticker_rec['history_cache']
+                    del ticker_rec['history_v2_last_date']
 
-
-
-
-            self._bar_v2_process(bar[0], bar_time_utc, bar)
-            self._bar_v1_process(bar[0], bar_time_utc, bar)
-
+                self._bar_v2_process(bar[0], bar_time_utc, bar)
+                self._bar_v1_process(bar[0], bar_time_utc, bar)
+        except:
+            log.exception("Unhandled exception in process_history_bar()")
 
     def process_live_bar(self, bar_data: np.array):
-        for bar in bar_data:
-            bar_time = iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1)
-            #print(f"LIVE {bar_time}: {bar}")
-            ticker_rec = self.symbol_map[bar[0]]
+        try:
+            for bar in bar_data:
+                bar_time = iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1)
+                # print(f"LIVE {bar_time}: {bar}")
+                ticker_rec = self.symbol_map[bar[0]]
 
-            if 'live_bar' in ticker_rec:
-                if not np.all(bar == ticker_rec['live_bar']['bar_array']):
-                    log.warning(f"{bar[0]} live bar prices mismatch: New: {bar} Old: {ticker_rec['live_bar']['bar_array']}")
-
-
+                if 'live_bar' in ticker_rec:
+                    if not np.all(bar == ticker_rec['live_bar']['bar_array']):
+                        log.warning(
+                            f"{bar[0]} live bar prices mismatch: New: {bar} Old: {ticker_rec['live_bar']['bar_array']}")
+        except:
+            log.exception("Unhandled exception in process_live_bar()")
 
     def process_history_bar(self, bar_data: np.array):
-        for bar in bar_data:
-            bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
-            bar_time_utc = bar_time_est.astimezone(pytz.utc)
+        try:
+            for bar in bar_data:
+                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
+                bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-            self._history_v2_process(bar[0], bar_time_utc, bar)
+                self._history_v2_process(bar[0], bar_time_utc, bar)
 
-            self._bar_v1_process(bar[0], bar_time_utc, bar)
-
-            #print(f"HIST {bar_time_est}: {bar}")
+                self._bar_v1_process(bar[0], bar_time_utc, bar)
+        except:
+            log.exception("Unhandled exception in process_history_bar()")
 
     def process_invalid_symbol(self, bad_symbol: str):
         log.error(f"Invalid Symbol: {bad_symbol}")
@@ -246,16 +250,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         log.error("%s: Feed Reconnect Failed" % self._name)
 
     def process_conn_stats(self, stats) -> None:
-        #print("%s: Connection Stats:" % self._name)
-        #print(stats)
+        # print("%s: Connection Stats:" % self._name)
+        # print(stats)
 
         # Skip information about connection stats
         pass
-
-
-
-
-
 
 
 if __name__ == "__main__":
@@ -282,62 +281,64 @@ if __name__ == "__main__":
     #
     # Get watchlist of tickers for live updates
     #
-    dm = DataManager()
-    instruments = {}
-    iq_watchlist = {}
-    log.info("Getting symbols for live updates...")
-    for instr in get_instruments_list():
-        instruments[instr['name']] = instr
-        ticker_update_rec = get_futures_tickers_for_live(instr, dm)
+    try:
+        dm = DataManager()
+        instruments = {}
+        iq_watchlist = {}
+        log.info("Getting symbols for live updates...")
+        for instr in get_instruments_list():
+            instruments[instr['name']] = instr
+            ticker_update_rec = get_futures_tickers_for_live(instr, dm)
 
-        for tckr_rec in ticker_update_rec:
-            # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
-            encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
-            iq_watchlist[encoded_ticker] = tckr_rec
-    log.info(f"{len(iq_watchlist)} symbols to watch")
+            for tckr_rec in ticker_update_rec:
+                # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
+                encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
+                iq_watchlist[encoded_ticker] = tckr_rec
+        log.info(f"{len(iq_watchlist)} symbols to watch")
 
-    IQ_FEED = iq.FeedService(product=dtn_product_id,
-                             version="IQFEED_LAUNCHER",
-                             login=dtn_login,
-                             password=dtn_password)
+        IQ_FEED = iq.FeedService(product=dtn_product_id,
+                                 version="IQFEED_LAUNCHER",
+                                 login=dtn_login,
+                                 password=dtn_password)
 
-    nohup = arguments.nohup
-    headless = arguments.headless
-    ctrl_file = arguments.ctrl_file
-    IQ_FEED.launch(timeout=30,
-                   check_conn=True,
-                   headless=headless,
-                   nohup=nohup)
+        nohup = arguments.nohup
+        headless = arguments.headless
+        ctrl_file = arguments.ctrl_file
+        IQ_FEED.launch(timeout=30,
+                       check_conn=True,
+                       headless=headless,
+                       nohup=nohup)
 
-    # Modify code below to connect to the socket etc as described above
-    admin = iq.AdminConn(name="Launcher")
-    #
-    #admin_listener = iq.VerboseAdminListener("Launcher-listen")
-    admin_listener = iq.SilentAdminListener("Launcher-listen")
-    admin.add_listener(admin_listener)
+        # Modify code below to connect to the socket etc as described above
+        admin = iq.AdminConn(name="Launcher")
+        #
+        # admin_listener = iq.VerboseAdminListener("Launcher-listen")
+        admin_listener = iq.SilentAdminListener("Launcher-listen")
+        admin.add_listener(admin_listener)
 
-    bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
-    bar_listener = TMQRIQFeedBarListener("Bar Listener", iq_watchlist)
-    bar_conn.add_listener(bar_listener)
+        bar_conn = iq.BarConn(name='pyiqfeed-Example-interval-bars')
+        bar_listener = TMQRIQFeedBarListener("Bar Listener", iq_watchlist)
+        bar_conn.add_listener(bar_listener)
+
+        with iq.ConnConnector([bar_conn, admin]) as connector:
+            for iq_ticker, watch_rec in iq_watchlist.items():
+                data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
+
+                log.info(f"Subscribing {iq_ticker} from {data_start} {watch_rec['contract']}")
+                bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
+                               interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
 
 
-
-    with iq.ConnConnector([bar_conn, admin]) as connector:
-        for iq_ticker, watch_rec in iq_watchlist.items():
-            data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
-
-            log.info(f"Subscribing {iq_ticker} from {data_start} {watch_rec['contract']}")
-            bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
-                           interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
-
-        try:
             while not os.path.isfile(ctrl_file):
                 time.sleep(10)
 
             log.info("Stopping service due to stop signal")
 
             os.remove(ctrl_file)
-        except KeyboardInterrupt:
-            log.info("Service stopped via Ctrl+C")
-        except:
-            log.exception("Unhandled exception: \n")
+
+    except KeyboardInterrupt:
+        log.info("Service stopped via Ctrl+C")
+    except:
+        log.exception("Unhandled exception in main loop")
+        sys.exit(-1)
+
