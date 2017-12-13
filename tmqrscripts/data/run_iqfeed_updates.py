@@ -203,7 +203,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
     def process_live_bar(self, bar_data: np.array):
         for bar in bar_data:
-            bar_time = iq.date_us_to_datetime(bar[1], bar[2]  - datetime.timedelta(minutes=1))
+            bar_time = iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1)
             #print(f"LIVE {bar_time}: {bar}")
             ticker_rec = self.symbol_map[bar[0]]
 
