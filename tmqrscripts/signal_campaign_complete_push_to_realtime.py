@@ -54,7 +54,8 @@ class CampaignUpdateCheckPushToRealtime:
 
                 for stacked_alpha in alpha_settings['alphas'].keys():
                     #                 alphas.append(stacked_alpha)
-                    product_list[alpha_settings['product']]
+                    product_list[alpha_settings['product']].append(stacked_alpha)
+
 
         return product_list
 
@@ -62,7 +63,9 @@ class CampaignUpdateCheckPushToRealtime:
 
         campaign_names = list(self.db_v1['accounts'].distinct('campaign_name'))
 
-        campaign_list = list(self.db_v1['campaigns'].find({'name': {'$in': campaign_names}}))
+        # campaign_names = ['SmartCampaign_Diversified_Str_Concept_NO_GC']
+
+        # campaign_list = list(self.db_v1['campaigns'].find({'name': {'$in': campaign_names}}))
 
         smart_campaign_list = list(self.db_v1['campaigns_smart'].find({'name': {'$in': campaign_names}}))
 
@@ -88,30 +91,31 @@ class CampaignUpdateCheckPushToRealtime:
                                     and 'update_time_instrument' in campaign[0]['context']
                                     and product in campaign[0]['context']['update_time_instrument']) or \
                                     current_date_utc != campaign[0]['context']['update_time_instrument'][product].date():
-                        # pass
-                    # else:
 
-
-                        campaign_ready = True
                         # print(campaign_list['alphas_list'][0][0]['name'])
 
-                        for alpha in list(product_list[product]):
-                            if "!NEW_" in alpha:
-                                alpha_v2 = alpha.replace('!NEW_',"")
+                        campaign_ready = False
 
-                                alpha_v2_obj = self.db_v2['alpha_data'].find_one({'name':alpha_v2})
+                        if(product_list[product]): #checks if there are any alphas in campaign product list
+                            campaign_ready = True
 
-                                alpha_v2_datetime = alpha_v2_obj['context']['alpha_end_update_time']
+                            for alpha in list(product_list[product]):
+                                if "!NEW_" in alpha:
+                                    alpha_v2 = alpha.replace('!NEW_',"")
 
-                                if alpha_v2_datetime.date() != current_date_utc:
-                                    campaign_ready = False
-                                    break
-                            else:
-                                v1_alpha = self.db_v1['swarms'].find_one({'swarm_name': alpha})
+                                    alpha_v2_obj = self.db_v2['alpha_data'].find_one({'name':alpha_v2})
 
-                                if v1_alpha is None or v1_alpha['last_date'].date() != current_date_local:
-                                    campaign_ready = False
-                                    break
+                                    alpha_v2_datetime = alpha_v2_obj['context']['alpha_end_update_time']
+
+                                    if alpha_v2_datetime.date() != current_date_utc:
+                                        campaign_ready = False
+                                        break
+                                else:
+                                    v1_alpha = self.db_v1['swarms'].find_one({'swarm_name': alpha})
+
+                                    if v1_alpha is None or v1_alpha['last_date'].date() != current_date_local:
+                                        campaign_ready = False
+                                        break
 
                         if campaign_ready:
 
