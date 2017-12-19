@@ -204,7 +204,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                if self.check_bar_integrity(bar_time_est, bar):
+                if not self.check_bar_integrity(bar_time_est, bar):
                     return
 
                 log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
@@ -265,9 +265,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
-                if self.check_bar_integrity(bar_time_est, bar):
+                if not self.check_bar_integrity(bar_time_est, bar):
                     return
+
+                log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
 
                 self._history_v2_process(bar[0], bar_time_utc, bar)
 
