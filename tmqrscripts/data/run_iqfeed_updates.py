@@ -179,11 +179,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             self._last_bar_data[iqticker] = (bar_time_est, bar_data)
         else:
             # Do quotes integrity checks
-            if not (np.all(np.isfinite(bar_data[3:7])) and np.isfinite(bar_data[8])):
+            if not np.all(np.isfinite((bar_data[3], bar_data[4], bar_data[5], bar_data[6], bar_data[8]))):
                 log.error(f"{iqticker}: infinite data detected: {bar_data}")
                 return False
 
-            if not (np.all(bar_data[3:7] > 0) and bar_data[8] >= 0):
+            if not (bar_data[3] > 0 and bar_data[4] > 0 and bar_data[5] > 0 and bar_data[6] > 0 and bar_data[8] >= 0):
                 log.error(f"{iqticker}: negative OHLCV detected: {bar_data}")
                 return False
 
@@ -191,7 +191,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             recent_bar_ohlc = recent_bar[1]
 
             if (bar_time_est-recent_est_time).total_seconds() < 5*60:
-                if np.any(np.abs((bar_data[3:7] / recent_bar_ohlc[3:7]) - 1) > 0.01):
+                if np.any([np.abs((bar_data[i] / recent_bar_ohlc[i]) - 1) > 0.01 for i in range(3, 7)]):
                     log.warning(f"{iqticker}: Possible spike detected > +- 1%: OLD Bar {recent_bar_ohlc}, NEW Bar: {bar_data}")
 
             self._last_bar_data[iqticker] = (bar_time_est, bar_data)
