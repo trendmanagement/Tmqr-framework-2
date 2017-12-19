@@ -49,8 +49,12 @@ import datetime
 import sys
 import _thread
 dtn_product_id = 'NIKOLAS_JOYCE_13424'
-dtn_login = '470998'
-dtn_password = '43354519'
+
+#dtn_login = '470998'
+#dtn_password = '43354519'
+
+dtn_login = 'guest'
+dtn_password = 'auci0xun'
 
 timezone_est = pytz.timezone('US/Eastern')
 timezone_pst = pytz.timezone('US/Pacific')
