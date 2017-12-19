@@ -75,6 +75,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         client_v2 = MongoClient(MONGO_CONNSTR)
         self.db_v2 = client_v2[MONGO_DB]
 
+        self._last_bar_data = {}
+
     def _bar_v1_process(self, iq_ticker, date_utc, bar_array):
         ticker_dict = self.symbol_map[iq_ticker]
         # Make the datetime tz-aware (PST) and replace tz-info
@@ -168,11 +170,44 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
         self._history_v2_flush(ticker_dict['contract'].ticker, bar_time_utc.date(), df_cache)
 
+    def check_bar_integrity(self,  bar_time_est, bar_data):
+        iqticker = bar_data[0]
+
+        recent_bar = self._last_bar_data.get(iqticker)
+
+        if not recent_bar:
+            self._last_bar_data[iqticker] = (bar_time_est, bar_data)
+        else:
+            # Do quotes integrity checks
+            if not (np.all(np.isfinite(bar_data[3:7])) and np.isfinite(bar_data[8])):
+                log.error(f"{iqticker}: infinite data detected: {bar_data}")
+                return False
+
+            if not (np.all(bar_data[3:7] > 0) and bar_data[8] >= 0):
+                log.error(f"{iqticker}: negative OHLCV detected: {bar_data}")
+                return False
+
+            recent_est_time = recent_bar[0]
+            recent_bar_ohlc = recent_bar[1]
+
+            if (bar_time_est-recent_est_time).total_seconds() < 5*60:
+                if np.any(np.abs((bar_data[3:7] / recent_bar_ohlc[3:7]) - 1) > 0.01):
+                    log.warning(f"{iqticker}: Possible spike detected > +- 1%: OLD Bar {recent_bar_ohlc}, NEW Bar: {bar_data}")
+
+            self._last_bar_data[iqticker] = (bar_time_est, bar_data)
+
+        return True
+
+
     def process_latest_bar_update(self, bar_data: np.array):
         try:
             for bar in bar_data:
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
+
+
+                if self.check_bar_integrity(bar_time_est, bar):
+                    return
 
                 #print(f"UPD {bar[0]} {bar_time_est}: {bar}")
 
@@ -233,6 +268,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
                 #print(f"HIST {bar[0]} {bar_time_est}: {bar}")
+                if self.check_bar_integrity(bar_time_est, bar):
+                    return
 
                 self._history_v2_process(bar[0], bar_time_utc, bar)
 
