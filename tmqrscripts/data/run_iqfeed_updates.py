@@ -36,7 +36,7 @@ import os
 import time
 import argparse
 import pyiqfeed as iq
-from tmqrscripts.data.common import get_futures_tickers_for_live, get_instruments_list
+from tmqrscripts.data.common import get_futures_tickers_for_live, get_instruments_list, check_bday_or_holiday
 from tmqrfeed import DataManager
 from tmqr.logs import log
 from tmqr.settings import *
@@ -97,8 +97,12 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             )
 
     def _history_v2_flush(self, v2_ticker, date_utc, df_quotes):
-
         dt = datetime.datetime.combine(date_utc, datetime.time(0, 0, 0))
+
+        if not check_bday_or_holiday(dt):
+            # Filter holidays
+            return
+
         merged_df = df_quotes
 
         v2_quotes_data = self.db_v2[IQFEED_V2_COLLECTION].find_one({'tckr': v2_ticker, 'dt': dt})
@@ -148,6 +152,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             df_cache.at[bar_time_utc, 'v'] = float(bar_array[8])
 
     def _bar_v2_process(self, iq_ticker, bar_time_utc, bar_array):
+        if not check_bday_or_holiday(bar_time_utc):
+            # Filter holidays
+            return
+
         ticker_dict = self.symbol_map[iq_ticker]
 
         df_cache = pd.DataFrame([{
@@ -166,7 +174,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                print(f"UPD {bar[0]} {bar_time_est}: {bar}")
+                #print(f"UPD {bar[0]} {bar_time_est}: {bar}")
 
                 ticker_rec = self.symbol_map[bar[0]]
 
@@ -224,7 +232,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                print(f"HIST {bar[0]} {bar_time_est}: {bar}")
+                #print(f"HIST {bar[0]} {bar_time_est}: {bar}")
 
                 self._history_v2_process(bar[0], bar_time_utc, bar)
 
@@ -274,8 +282,11 @@ if __name__ == "__main__":
                         dest='ctrl_file', default="/tmp/stop_iqfeed.ctrl",
                         help='Stop running if this file exists.')
     parser.add_argument('--live_update_seconds', action='store',
-                        dest='live_update_sec', default=5,
+                        dest='live_update_sec', default=5, type=int,
                         help='Update live bars every N seconds. If 0 updates with every tick (expect performance issues!)')
+    parser.add_argument('--live_n_futures', action='store',
+                        dest='live_n_futures', default=6, type=int,
+                        help='Number of active futures to update in real-time')
 
     arguments = parser.parse_args()
 
@@ -292,7 +303,7 @@ if __name__ == "__main__":
         log.info("Getting symbols for live updates...")
         for instr in get_instruments_list():
             instruments[instr['name']] = instr
-            ticker_update_rec = get_futures_tickers_for_live(instr, dm)
+            ticker_update_rec = get_futures_tickers_for_live(instr, dm, nfuture_contracts=arguments.live_n_futures)
 
             for tckr_rec in ticker_update_rec:
                 # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)

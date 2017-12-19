@@ -1,9 +1,32 @@
 from pymongo import MongoClient
 from tmqr.settings import *
 from tmqrfeed import DataManager
-from datetime import timedelta
+from datetime import timedelta, date
 from tmqr.errors import QuoteNotFoundError
 import pytz
+from holidays import UnitedStates
+import bdateutil
+
+
+class TMQRHolidaysV2(UnitedStates):
+    """
+    Custom holidays for half-days in US exchanges
+    """
+
+    def _populate(self, year):
+        # Populate base list of the holidays
+        super()._populate(year)
+
+        if year == 2017:
+            self[date(year, 11, 24)] = 'Thanksgiving half-day'
+
+
+def check_bday_or_holiday(date):
+    if date.weekday() >= 5 or not bdateutil.isbday(date, holidays=TMQRHolidaysV2()):
+        # Skipping weekends and US holidays
+        # date.weekday() >= 5 - 5 is Saturday!
+        return False
+    return True
 
 
 def get_futures_tickers_for_live(instrument_record, dm, nfuture_contracts=6):
@@ -57,6 +80,9 @@ def get_instruments_list():
 
     for instr_dict in db_v2['asset_info'].find({}):
         if '$DEFAULT$' in instr_dict['instrument']:
+            continue
+
+        if 'CL' not in instr_dict['instrument'] and 'ES' not in instr_dict['instrument']:
             continue
 
         exchange_ticker_root = instr_dict['instrument'].split('.')[1]
