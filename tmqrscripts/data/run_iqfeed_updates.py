@@ -198,13 +198,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
         return True
 
-
     def process_latest_bar_update(self, bar_data: np.array):
         try:
             for bar in bar_data:
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
-
 
                 if self.check_bar_integrity(bar_time_est, bar):
                     return

@@ -82,9 +82,6 @@ def get_instruments_list():
         if '$DEFAULT$' in instr_dict['instrument']:
             continue
 
-        if 'CL' not in instr_dict['instrument'] and 'ES' not in instr_dict['instrument']:
-            continue
-
         exchange_ticker_root = instr_dict['instrument'].split('.')[1]
 
         v1_instrum_dict = db_v1['instruments'].find_one({'exchangesymbol': exchange_ticker_root})
