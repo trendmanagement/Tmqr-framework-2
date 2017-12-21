@@ -75,9 +75,7 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
 
         self.v1_alpha_exposure = exposure
 
-        passive_exposure = pd.Series(self.context.get('index_passive_qty', 0.0), index=exposure.index)
-
-        return pd.DataFrame({'exposure': exposure, 'passive_exposure': passive_exposure})
+        return pd.DataFrame({'exposure': exposure + self.context.get('index_passive_qty', 0.0)})
 
     def calculate_position(self, date: datetime, exposure_record: pd.DataFrame):
         # get net exposure for all members
@@ -97,7 +95,7 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
             #                  exposure equals 0, this means that means no position and hedge
             # NOTE: self.context['index_hedge_direction'] allowed 1, -1, or even 0 - i.e. no hedge
             self.position.add_net_position(date, hedge_position_rec,
-                                           qty=abs(exposure) * self.context['index_hedge_direction'])
+                                           qty=abs(exposure - self.context.get('index_passive_qty', 0.0)) * self.context['index_hedge_direction'])
         except PositionNotFoundError as exc:
             log.error(f"Couldn't find hedged index position for {self.context.get('index_hedge_name', 'N/A')} at {date}! {exc}")
 
