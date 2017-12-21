@@ -75,7 +75,9 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
 
         self.v1_alpha_exposure = exposure
 
-        return pd.DataFrame({'exposure': exposure})
+        passive_exposure = pd.Series(self.context.get('index_passive_qty', 0.0), index=exposure.index)
+
+        return pd.DataFrame({'exposure': exposure, 'passive_exposure': passive_exposure})
 
     def calculate_position(self, date: datetime, exposure_record: pd.DataFrame):
         # get net exposure for all members
