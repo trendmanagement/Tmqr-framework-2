@@ -108,6 +108,6 @@ class AlphaV1HedgeWithIndex(StrategyAlpha):
             #                  exposure equals 0, this means that means no position and hedge
             # NOTE: self.context['index_hedge_direction'] allowed 1, -1, or even 0 - i.e. no hedge
             self.position.add_net_position(date, passive_leg_position_rec,
-                                           qty=self.context.get('index_passive_qty', 1.0))
+                                           qty=self.context.get('index_passive_qty', 0.0))
         except PositionNotFoundError as exc:
             log.error(f"Couldn't find passive index position for {self.context.get('index_passive_name', 'N/A')} at {date}! {exc}")
