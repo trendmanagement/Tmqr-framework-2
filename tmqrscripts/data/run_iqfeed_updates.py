@@ -435,6 +435,7 @@ if __name__ == "__main__":
                     for iq_ticker_b, watch_rec in iq_watchlist.items():
                         iq_ticker = iq_ticker_b.decode()
                         data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
+                        date_now = (datetime.datetime.now() - datetime.timedelta(days=2)).astimezone(timezone_est)
                         is_delayed = watch_rec['iqfeed_is_delayed']
 
                         if is_delayed:
@@ -443,7 +444,7 @@ if __name__ == "__main__":
                                 if last_refresh_date is None:
                                     log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
                                     bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                                 bgn_prd=min(data_start, datetime.datetime.now() - datetime.timedelta(days=2)),
+                                                                                 bgn_prd=min(data_start, date_now),
                                                                                  end_prd=datetime.datetime.now() + datetime.timedelta(days=2),
                                                                                  ascend=True,
                                                                                  timeout=120)
