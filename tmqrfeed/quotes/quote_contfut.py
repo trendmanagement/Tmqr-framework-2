@@ -9,6 +9,7 @@ from tmqrfeed.quotes.compress_daily_ohlcv import compress_daily
 from tmqrfeed.quotes.dataframegetter import DataFrameGetter
 from tmqrfeed.position import Position
 from tmqr.settings import QDATE_MAX
+from datetime import datetime, timedelta
 
 
 class QuoteContFut(QuoteBase):
@@ -100,7 +101,8 @@ class QuoteContFut(QuoteBase):
             date_start = fut_chain_row[1]
             date_end = fut_chain_row[2]
 
-            if date_start > self.date_end.date():
+            if date_start > self.date_end.date() or date_start > datetime.now().date() + timedelta(days=2):
+                # Prevent loading too many contracts
                 break
 
             try:
@@ -114,13 +116,16 @@ class QuoteContFut(QuoteBase):
 
 
                 # 4. Append compressed series to continuous futures series
-                if len(df_data) == 0:
-                    df_data.append(series)
-                else:
-                    df_data.append(self._calculate_fut_offset_series(df_data[-1], series))
+                if len(series) > 0:
+                    # Fix: issue if last contract expired but new contract has not enough data (real-time)
 
-                # Make sure that we have closed futures after rollover
-                positions_list.append(self._apply_future_rollover(position, date_end))
+                    if len(df_data) == 0:
+                        df_data.append(series)
+                    else:
+                        df_data.append(self._calculate_fut_offset_series(df_data[-1], series))
+
+                    # Make sure that we have closed futures after rollover
+                    positions_list.append(self._apply_future_rollover(position, date_end))
 
             except IntradayQuotesNotFoundError:
                 continue

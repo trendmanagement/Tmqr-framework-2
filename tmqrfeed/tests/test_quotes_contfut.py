@@ -263,3 +263,15 @@ class QuoteContFutTestCase(unittest.TestCase):
         df, position = qcont_fut.build()
 
         self.assertEqual(datetime(2015, 12, 31).date(), df.index[-1].date())
+
+
+    def test_build_date2(self):
+        dm = DataManager()
+        dm.session_set('US.GC')
+        qcont_fut = QuoteContFut('US.GC', datamanager=dm, timeframe='D', date_start=datetime(2017, 6, 1))
+        df, position = qcont_fut.build()
+
+        self.assertEqual(True, False)
+
+
+
