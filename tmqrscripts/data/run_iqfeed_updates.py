@@ -181,8 +181,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
     def bar_format(self, bar):
         return f"OHLCV: {bar['open_p']}, {bar['high_p']}, {bar['low_p']}, {bar['close_p']}, {bar['prd_vlm']}"
 
-    def check_bar_integrity(self,  bar_time_est, bar_data):
-        iqticker = bar_data[0]
+    def check_bar_integrity(self,  bar_time_est, bar_data, iqticker):
+        #iqticker = bar_data[0]
 
         recent_bar = self._last_bar_data.get(iqticker)
 
@@ -215,7 +215,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                if not self.check_bar_integrity(bar_time_est, bar):
+                if not self.check_bar_integrity(bar_time_est, bar, bar[0]):
                     return
 
                 #log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
@@ -280,7 +280,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
-                if not self.check_bar_integrity(bar_time_est, bar):
+                if not self.check_bar_integrity(bar_time_est, bar, iqticker=iq_tckr):
                     log.debug(f"Historical bar integrity checks failed: {bar}")
                     return
 
