@@ -48,6 +48,7 @@ from pymongo import MongoClient
 import datetime
 import sys
 import _thread
+import logging
 dtn_product_id = 'NIKOLAS_JOYCE_13424'
 
 dtn_login = '470998'
@@ -89,11 +90,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         req_dict = {
             "bartime": date_pst,
             "idcontract": ticker_dict['v1_contract_id'],
-            "open": bar_array[3],
-            "high": bar_array[4],
-            "low": bar_array[5],
-            "close": bar_array[6],
-            "volume": float(bar_array[8]),
+            "open": bar_array['open_p'],
+            "high": bar_array['high_p'],
+            "low": bar_array['low_p'],
+            "close": bar_array['close_p'],
+            "volume": float(bar_array['prd_vlm']),
             "errorbar": False,
         }
 
@@ -122,7 +123,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             {'tckr': v2_ticker, 'dt': dt, 'ohlc': object_save_compress(merged_df)}, upsert=True
         )
 
-    def _history_v2_process(self, iq_ticker, bar_time_utc, bar_array, force_db_write):
+    def _history_v2_process(self, iq_ticker, bar_time_utc, bar_array):
         ticker_dict = self.symbol_map[iq_ticker]
         history_cache_last_date = ticker_dict.get('history_v2_last_date', None)
 
@@ -140,31 +141,24 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             # Create new dataframe
             df_cache = pd.DataFrame([{
                                          'dt': bar_time_utc,
-                                         'o': bar_array[3],
-                                         'h': bar_array[4],
-                                         'l': bar_array[5],
-                                         'c': bar_array[6],
-                                         'v': float(bar_array[8])}]).set_index('dt')
+                                         'o': bar_array['open_p'],
+                                         'h': bar_array['high_p'],
+                                         'l': bar_array['low_p'],
+                                         'c': bar_array['close_p'],
+                                         'v': float(bar_array['prd_vlm'])}]).set_index('dt')
 
             ticker_dict['history_v2_last_date'] = bar_time_utc.date()
             ticker_dict['history_cache'] = df_cache
         else:
             # It's the same day, just update the historical dataframe
             df_cache = ticker_dict['history_cache']
-            df_cache.at[bar_time_utc, 'o'] = bar_array[3]
-            df_cache.at[bar_time_utc, 'h'] = bar_array[4]
-            df_cache.at[bar_time_utc, 'l'] = bar_array[5]
-            df_cache.at[bar_time_utc, 'c'] = bar_array[6]
-            df_cache.at[bar_time_utc, 'v'] = float(bar_array[8])
+            df_cache.at[bar_time_utc, 'o'] = bar_array['open_p']
+            df_cache.at[bar_time_utc, 'h'] = bar_array['high_p']
+            df_cache.at[bar_time_utc, 'l'] = bar_array['low_p']
+            df_cache.at[bar_time_utc, 'c'] = bar_array['close_p']
+            df_cache.at[bar_time_utc, 'v'] = float(bar_array['prd_vlm'])
 
-        if force_db_write:
-            # Flush the cache to the DB
-            df_cache = ticker_dict['history_cache']
-            df_cache.sort_index(inplace=True)
-            # Writing the history to v2 DB
-            self._history_v2_flush(ticker_dict['contract'].ticker, history_cache_last_date, df_cache)
-            log.debug(
-                f"HIST V2 Update: {ticker_dict['contract'].ticker} at {history_cache_last_date} #{len(df_cache)} bars")
+
 
 
     def _bar_v2_process(self, iq_ticker, bar_time_utc, bar_array):
@@ -193,11 +187,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             self._last_bar_data[iqticker] = (bar_time_est, bar_data)
         else:
             # Do quotes integrity checks
-            if not np.all(np.isfinite((bar_data[3], bar_data[4], bar_data[5], bar_data[6], bar_data[8]))):
+            if not np.all(np.isfinite((bar_data['open_p'], bar_data['high_p'], bar_data['low_p'], bar_data['close_p'], bar_data['prd_vlm']))):
                 log.error(f"{iqticker}: infinite data detected: {bar_data}")
                 return False
 
-            if not (bar_data[3] > 0 and bar_data[4] > 0 and bar_data[5] > 0 and bar_data[6] > 0 and bar_data[8] >= 0):
+            if not (bar_data['open_p'] > 0 and bar_data['high_p'] > 0 and bar_data['low_p'] > 0 and bar_data['close_p'] > 0 and bar_data['prd_vlm'] >= 0):
                 log.error(f"{iqticker}: negative OHLCV detected: {bar_data}")
                 return False
 
@@ -205,7 +199,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             recent_bar_ohlc = recent_bar[1]
 
             if (bar_time_est-recent_est_time).total_seconds() < 5*60:
-                if np.any([np.abs((bar_data[i] / recent_bar_ohlc[i]) - 1) > 0.01 for i in range(3, 7)]):
+                if np.any([np.abs((bar_data[i] / recent_bar_ohlc[i]) - 1) > 0.01 for i in ['open_p', 'high_p', 'low_p', 'close_p']]):
                     log.warning(f"{iqticker}: Possible spike detected > +- 1%: OLD Bar {recent_bar_ohlc}, NEW Bar: {bar_data}")
 
             self._last_bar_data[iqticker] = (bar_time_est, bar_data)
@@ -215,7 +209,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
     def process_latest_bar_update(self, bar_data: np.array):
         try:
             for bar in bar_data:
-                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
+                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
                 if not self.check_bar_integrity(bar_time_est, bar):
@@ -223,7 +217,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
                 #log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
 
-                ticker_rec = self.symbol_map[bar[0]]
+                ticker_rec = self.symbol_map[bar['symbol']]
 
                 ticker_rec['live_bar'] = {
                     'dt_utc': bar_time_utc,
@@ -254,8 +248,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                     del ticker_rec['history_cache']
                     del ticker_rec['history_v2_last_date']
 
-                self._bar_v2_process(bar[0], bar_time_utc, bar)
-                self._bar_v1_process(bar[0], bar_time_utc, bar)
+                self._bar_v2_process(bar['symbol'], bar_time_utc, bar)
+                self._bar_v1_process(bar['symbol'], bar_time_utc, bar)
         except:
             log.exception("Unhandled exception in process_history_bar()")
 
@@ -273,21 +267,35 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         except:
             log.exception("Unhandled exception in process_live_bar()")
 
-    def process_history_bar(self, bar_data: np.array, force_db_write=False):
+    def process_history_bar(self, bar_data: np.array, force_db_write=False, ticker=None):
         try:
             for bar in bar_data:
-                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1))
+                iq_tckr = ticker
+                if iq_tckr is None:
+                    iq_tckr = bar['symbol']
+
+                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
                 if not self.check_bar_integrity(bar_time_est, bar):
                     log.debug(f"Historical bar integrity checks failed: {bar}")
                     return
 
-                log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
+                log.debug(f"HIST {iq_tckr} {bar_time_est}: {bar}")
 
-                self._history_v2_process(bar[0], bar_time_utc, bar, force_db_write)
+                self._history_v2_process(iq_tckr, bar_time_utc, bar)
 
-                self._bar_v1_process(bar[0], bar_time_utc, bar)
+                self._bar_v1_process(iq_tckr, bar_time_utc, bar)
+
+            if force_db_write:
+                # Flush the cache to the DB
+                ticker_dict = self.symbol_map[iq_tckr]
+                df_cache = ticker_dict['history_cache']
+                df_cache.sort_index(inplace=True)
+                # Writing the history to v2 DB
+                self._history_v2_flush(ticker_dict['contract'].ticker, bar_time_utc.date(), df_cache)
+                log.debug(
+                    f"HIST V2 Update: {ticker_dict['contract'].ticker} at {bar_time_utc} #{len(df_cache)} bars")
         except:
             log.exception("Unhandled exception in process_history_bar()")
 
@@ -345,7 +353,7 @@ if __name__ == "__main__":
 
     arguments = parser.parse_args()
 
-    log.setup('scripts', "IQFeedDataFeed", to_file=True)
+    log.setup('scripts', "IQFeedDataFeed", to_file=True, log_level=logging.INFO)
     log.info('Launching IQFeed datascript')
 
     #
@@ -392,10 +400,15 @@ if __name__ == "__main__":
         bar_conn.add_listener(bar_listener)
 
         hist_conn = iq.HistoryConn()
+        hist_listener = iq.VerboseIQFeedListener("History Bar Listener")
+        hist_conn.add_listener(hist_listener)
 
         last_refresh_date = None
 
         with iq.ConnConnector([bar_conn, admin, hist_conn]) as connector:
+            # Wain till IQFeed connected and initialized
+            time.sleep(5)
+            """
             for iq_ticker, watch_rec in iq_watchlist.items():
                 data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
                 is_delayed = watch_rec['iqfeed_is_delayed']
@@ -406,27 +419,41 @@ if __name__ == "__main__":
                     bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
                                    interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
                 time.sleep(0.05)
-
+            """
 
             while not os.path.isfile(ctrl_file):
                 if last_refresh_date is None or int((datetime.datetime.now() - last_refresh_date).total_seconds()/60) >= historical_refresh_interval:
                     # Do historical updates
                     log.debug(f"Polling historical updates")
-                    for iq_ticker, watch_rec in iq_watchlist.items():
+                    for iq_ticker_b, watch_rec in iq_watchlist.items():
+                        iq_ticker = iq_ticker_b.decode()
                         data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
                         is_delayed = watch_rec['iqfeed_is_delayed']
 
                         if is_delayed:
-                            # Process only delayed tickers
-                            if last_refresh_date is None:
-                                log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
-                                bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                             bgn_prd=data_start, end_prd=datetime.datetime.now() + datetime.timedelta(days=2))
-                            else:
-                                # If data has been recently updated, poll last hour to update the data
-                                bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s', days=2, max_bars=60)
+                            try:
+                                # Process only delayed tickers
+                                if last_refresh_date is None:
+                                    log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
+                                    bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
+                                                                                 bgn_prd=data_start - datetime.timedelta(minutes=20),
+                                                                                 end_prd=datetime.datetime.now() + datetime.timedelta(days=2),
+                                                                                 ascend=True,
+                                                                                 timeout=10)
+                                else:
+                                    # If data has been recently updated, poll last hour to update the data
+                                    bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s',
+                                                                                days=2, max_bars=10,
+                                                                                ascend=True, timeout=10)
+                                # Fix: Historical data comes without ticker, do monkey patch
+                                bar_listener.process_history_bar(bars_data, force_db_write=True, ticker=iq_ticker_b)
+                            except BrokenPipeError:
+                                log.error("IQConnect.exe unexpectedly exited")
+                                sys.exit(-2)
+                            except Exception as exc:
+                                log.error(f'{type(exc)}: {exc}')
 
-                            bar_listener.process_history_bar(bars_data, force_db_write=True)
+
 
                     last_refresh_date = datetime.datetime.now()
 

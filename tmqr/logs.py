@@ -17,7 +17,7 @@ class TMQRLogger(logging.Logger):
         self.log_level = logging.DEBUG
         self.setup(self.logger_class, self.logger_name)
 
-    def setup(self, logger_class, name, to_file=False):
+    def setup(self, logger_class, name, to_file=False, log_level=None):
         self.logger_class = logger_class
 
         if to_file:
@@ -55,7 +55,10 @@ class TMQRLogger(logging.Logger):
             handler_file.setFormatter(formatter)
             self.logger.addHandler(handler_file)
 
-        self.logger.setLevel(self.log_level)
+        if log_level is None:
+            self.logger.setLevel(self.log_level)
+        else:
+            self.logger.setLevel(log_level)
         self.logger.addHandler(handler_console)
 """
     def exception(self, msg):
