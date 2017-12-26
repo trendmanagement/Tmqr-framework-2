@@ -404,10 +404,12 @@ if __name__ == "__main__":
         hist_conn.add_listener(hist_listener)
 
         last_refresh_date = None
+        time.sleep(15)
 
         with iq.ConnConnector([bar_conn, admin, hist_conn]) as connector:
             # Wain till IQFeed connected and initialized
             time.sleep(5)
+
             """
             for iq_ticker, watch_rec in iq_watchlist.items():
                 data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
