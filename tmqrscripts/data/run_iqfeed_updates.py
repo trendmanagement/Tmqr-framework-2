@@ -280,9 +280,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
                 if not self.check_bar_integrity(bar_time_est, bar):
+                    log.debug(f"Historical bar integrity checks failed: {bar}")
                     return
 
-                #log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
+                log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
 
                 self._history_v2_process(bar[0], bar_time_utc, bar, force_db_write)
 
