@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
         last_refresh_date = None
 
-        with iq.ConnConnector([bar_conn, admin, hist_conn]) as connector:
+        with iq.ConnConnector([admin, bar_conn, hist_conn]) as connector:
             # Wain till IQFeed connected and initialized
             #time.sleep(5)
 
