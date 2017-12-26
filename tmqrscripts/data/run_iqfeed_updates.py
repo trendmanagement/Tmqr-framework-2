@@ -281,7 +281,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                     log.debug(f"Historical bar integrity checks failed: {bar}")
                     return
 
-                log.debug(f"HIST {iq_tckr} {bar_time_est}: {bar}")
+                try:
+                    log.debug(f"HIST {iq_tckr} {bar_time_est}: {bar}")
+                except:
+                    pass
 
                 self._history_v2_process(iq_tckr, bar_time_utc, bar)
 
@@ -440,7 +443,7 @@ if __name__ == "__main__":
                                 if last_refresh_date is None:
                                     log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
                                     bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                                 bgn_prd=datetime.datetime.now() - datetime.timedelta(days=10),
+                                                                                 bgn_prd=min(data_start, datetime.datetime.now() - datetime.timedelta(days=2)),
                                                                                  end_prd=datetime.datetime.now() + datetime.timedelta(days=2),
                                                                                  ascend=True,
                                                                                  timeout=120)
