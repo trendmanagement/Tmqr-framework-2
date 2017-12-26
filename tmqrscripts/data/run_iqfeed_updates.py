@@ -178,6 +178,9 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
         self._history_v2_flush(ticker_dict['contract'].ticker, bar_time_utc.date(), df_cache)
 
+    def bar_format(self, bar):
+        return f"OHLCV: {bar['open_p']}, {bar['high_p']}, {bar['low_p']}, {bar['close_p']}, {bar['prd_vlm']}"
+
     def check_bar_integrity(self,  bar_time_est, bar_data):
         iqticker = bar_data[0]
 
@@ -188,11 +191,11 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         else:
             # Do quotes integrity checks
             if not np.all(np.isfinite((bar_data['open_p'], bar_data['high_p'], bar_data['low_p'], bar_data['close_p'], bar_data['prd_vlm']))):
-                log.error(f"{iqticker}: infinite data detected: {bar_data}")
+                log.error(f"{iqticker}: infinite data detected: {bar_time_est} {self.bar_format(bar_data)}")
                 return False
 
             if not (bar_data['open_p'] > 0 and bar_data['high_p'] > 0 and bar_data['low_p'] > 0 and bar_data['close_p'] > 0 and bar_data['prd_vlm'] >= 0):
-                log.error(f"{iqticker}: negative OHLCV detected: {bar_data}")
+                log.error(f"{iqticker}: negative OHLCV detected: {bar_time_est} {self.bar_format(bar_data)}")
                 return False
 
             recent_est_time = recent_bar[0]
@@ -200,7 +203,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
             if (bar_time_est-recent_est_time).total_seconds() < 5*60:
                 if np.any([np.abs((bar_data[i] / recent_bar_ohlc[i]) - 1) > 0.01 for i in ['open_p', 'high_p', 'low_p', 'close_p']]):
-                    log.warning(f"{iqticker}: Possible spike detected > +- 1%: OLD Bar {recent_bar_ohlc}, NEW Bar: {bar_data}")
+                    log.warning(f"{iqticker}: Possible spike detected > +- 1%: OLD Bar {self.bar_format(recent_bar_ohlc)}, NEW Bar: {self.bar_format(bar_data)}")
 
             self._last_bar_data[iqticker] = (bar_time_est, bar_data)
 
@@ -282,7 +285,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                     return
 
                 try:
-                    log.debug(f"HIST {iq_tckr} {bar_time_est}: {bar}")
+                    log.debug(f"HIST {iq_tckr} {bar_time_est}: {self.bar_format(bar)}")
                 except:
                     pass
 
