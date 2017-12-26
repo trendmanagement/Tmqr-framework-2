@@ -438,17 +438,20 @@ if __name__ == "__main__":
                                 if last_refresh_date is None:
                                     log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
                                     bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                                 bgn_prd=data_start - datetime.timedelta(days=1),
+                                                                                 bgn_prd=datetime.datetime.now() - datetime.timedelta(days=10),
                                                                                  end_prd=datetime.datetime.now() + datetime.timedelta(days=2),
                                                                                  ascend=True,
                                                                                  timeout=120)
                                 else:
                                     # If data has been recently updated, poll last hour to update the data
                                     bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                                days=2, max_bars=10,
+                                                                                days=10, max_bars=10,
                                                                                 ascend=True, timeout=10)
                                 # Fix: Historical data comes without ticker, do monkey patch
-                                bar_listener.process_history_bar(bars_data, force_db_write=True, ticker=iq_ticker_b)
+                                bar_listener.process_history_bar(bars_data,
+                                                                 force_db_write=True,
+                                                                 ticker=iq_ticker_b,
+                                                                 )
                             except BrokenPipeError:
                                 log.error("IQConnect.exe unexpectedly exited")
                                 sys.exit(-2)
