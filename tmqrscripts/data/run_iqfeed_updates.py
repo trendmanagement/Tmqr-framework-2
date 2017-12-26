@@ -399,9 +399,8 @@ if __name__ == "__main__":
                 data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
                 is_delayed = watch_rec['iqfeed_is_delayed']
 
-                log.info(f"Subscribing {iq_ticker} from {data_start} {watch_rec['contract']}")
-
                 if not is_delayed:
+                    log.info(f"Subscribing live updates {iq_ticker} from {data_start} {watch_rec['contract']}")
                     # Skip tickers which are not in delayed mode
                     bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
                                    interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
@@ -419,6 +418,7 @@ if __name__ == "__main__":
                         if is_delayed:
                             # Process only delayed tickers
                             if last_refresh_date is None:
+                                log.info(f"Polling historical updates {iq_ticker} from {data_start} {watch_rec['contract']}")
                                 bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
                                                                              bgn_prd=data_start, end_prd=datetime.datetime.now() + datetime.timedelta(days=2))
                             else:
