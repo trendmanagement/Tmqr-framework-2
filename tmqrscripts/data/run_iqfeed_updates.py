@@ -353,7 +353,7 @@ if __name__ == "__main__":
 
     arguments = parser.parse_args()
 
-    log.setup('scripts', "IQFeedDataFeed", to_file=True, log_level=logging.INFO)
+    log.setup('scripts', "IQFeedDataFeed", to_file=True, log_level=logging.DEBUG)
     log.info('Launching IQFeed datascript')
 
     #
