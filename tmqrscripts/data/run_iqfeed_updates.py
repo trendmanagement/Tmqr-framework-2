@@ -287,7 +287,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
                 self._bar_v1_process(iq_tckr, bar_time_utc, bar)
 
-            if force_db_write:
+            if force_db_write and len(bar_data) > 0:
                 # Flush the cache to the DB
                 ticker_dict = self.symbol_map[iq_tckr]
                 df_cache = ticker_dict['history_cache']
