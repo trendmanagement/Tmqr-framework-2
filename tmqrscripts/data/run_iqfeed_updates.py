@@ -221,7 +221,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 if not self.check_bar_integrity(bar_time_est, bar):
                     return
 
-                log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
+                #log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
 
                 ticker_rec = self.symbol_map[bar[0]]
 
@@ -282,7 +282,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 if not self.check_bar_integrity(bar_time_est, bar):
                     return
 
-                log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
+                #log.debug(f"HIST {bar[0]} {bar_time_est}: {bar}")
 
                 self._history_v2_process(bar[0], bar_time_utc, bar, force_db_write)
 
@@ -394,7 +394,7 @@ if __name__ == "__main__":
 
         last_refresh_date = None
 
-        with iq.ConnConnector([bar_conn, admin]) as connector:
+        with iq.ConnConnector([bar_conn, admin, hist_conn]) as connector:
             for iq_ticker, watch_rec in iq_watchlist.items():
                 data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
                 is_delayed = watch_rec['iqfeed_is_delayed']
