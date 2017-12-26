@@ -419,7 +419,8 @@ if __name__ == "__main__":
                         if is_delayed:
                             # Process only delayed tickers
                             if last_refresh_date is None:
-                                bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s', bgn_prd=data_start)
+                                bars_data = hist_conn.request_bars_in_period(ticker=iq_ticker, interval_len=60, interval_type='s',
+                                                                             bgn_prd=data_start, end_prd=datetime.datetime.now() + datetime.timedelta(days=2))
                             else:
                                 # If data has been recently updated, poll last hour to update the data
                                 bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s', days=2, max_bars=60)
