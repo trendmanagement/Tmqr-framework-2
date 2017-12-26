@@ -575,10 +575,11 @@ class Position:
                 if prev_values[iQTY] != 0:
                     try:
                         decision_price, exec_price = asset.price(date)
-                    except (AssetExpiredError, QuoteNotFoundError) as exc:
-                        log.warn(f"Possible data hole detected, asset is not closed before expiration."
-                                 f" Or you are skipping zero exposures in strategy/index. Error: {exc}")
-                        # Warn but do not add already expired asset to the position (prevent future errors)
+                    except AssetExpiredError as exc:
+                        log.debug(f"Asset is not closed before expiration. Error: {exc}")
+                        continue
+                    except QuoteNotFoundError as exc:
+                        log.debug(f"QuoteNotFoundError: {exc}")
                         continue
 
                     costs_value = self.dm.costs_get(asset, -prev_values[iQTY])
