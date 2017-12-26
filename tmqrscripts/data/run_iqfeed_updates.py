@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
         with iq.ConnConnector([bar_conn, admin, hist_conn]) as connector:
             # Wain till IQFeed connected and initialized
-            time.sleep(5)
+            #time.sleep(5)
 
             """
             for iq_ticker, watch_rec in iq_watchlist.items():
