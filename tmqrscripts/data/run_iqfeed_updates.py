@@ -435,7 +435,7 @@ if __name__ == "__main__":
                     for iq_ticker_b, watch_rec in iq_watchlist.items():
                         iq_ticker = iq_ticker_b.decode()
                         data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
-                        date_now = (datetime.datetime.now() - datetime.timedelta(days=2)).astimezone(timezone_est)
+                        date_now = (datetime.datetime.now() - datetime.timedelta(days=10)).astimezone(timezone_est)
                         is_delayed = watch_rec['iqfeed_is_delayed']
 
                         if is_delayed:
