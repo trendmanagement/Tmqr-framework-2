@@ -424,6 +424,8 @@ if __name__ == "__main__":
             while not os.path.isfile(ctrl_file):
                 if last_refresh_date is None or int((datetime.datetime.now() - last_refresh_date).total_seconds()/60) >= historical_refresh_interval:
                     # Do historical updates
+                    start_time = time.time()
+
                     log.debug(f"Polling historical updates")
                     for iq_ticker_b, watch_rec in iq_watchlist.items():
                         iq_ticker = iq_ticker_b.decode()
@@ -456,6 +458,10 @@ if __name__ == "__main__":
 
 
                     last_refresh_date = datetime.datetime.now()
+                    # your code
+                    elapsed_time = time.time() - start_time
+                    log.info(f'Historical update finished in {elapsed_time}')
+
 
                 time.sleep(10)
 
