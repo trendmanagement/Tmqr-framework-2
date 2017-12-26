@@ -441,7 +441,7 @@ if __name__ == "__main__":
                                                                                  bgn_prd=data_start - datetime.timedelta(minutes=20),
                                                                                  end_prd=datetime.datetime.now() + datetime.timedelta(days=2),
                                                                                  ascend=True,
-                                                                                 timeout=10)
+                                                                                 timeout=120)
                                 else:
                                     # If data has been recently updated, poll last hour to update the data
                                     bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s',
