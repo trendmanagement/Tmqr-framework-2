@@ -57,6 +57,7 @@ def get_futures_tickers_for_live(instrument_record, dm, nfuture_contracts=6):
             'contract': fut,
             'v1_contract_id': fut.contract_info.extra('sqlid'),
             'iqfeed_ticker': f"{instrument_record['iqfeed_ticker']}{fut.month_year_code}",
+            'iqfeed_is_delayed': instrument_record.get('iqfeed_is_delayed', False),
             'last_date_utc':  last_quote_date,
             'instrument': instrument_record['name'],
             }
@@ -93,12 +94,12 @@ def get_instruments_list():
             'v1_instrument_id': v1_instrument_id,
             'v1_ticker': exchange_ticker_root,
             'iqfeed_ticker': instr_dict.get('iqfeed_ticker', exchange_ticker_root),
+            'iqfeed_is_delayed': instr_dict.get('iqfeed_is_delayed', False),
         }
 
         instruments.append(insrument_)
 
     return instruments
-
 
 
 if __name__ == '__main__':
