@@ -389,13 +389,16 @@ if __name__ == "__main__":
         headless = arguments.headless
         ctrl_file = arguments.ctrl_file
         historical_refresh_interval = arguments.historical_refresh_interval_min
-        IQ_FEED.launch(timeout=30,
+        IQ_FEED.launch(timeout=15,
                        check_conn=True,
                        headless=headless,
                        nohup=nohup)
 
         # Modify code below to connect to the socket etc as described above
         admin = iq.AdminConn(name="Launcher")
+        #admin.connect()
+
+
         #
         # admin_listener = iq.VerboseAdminListener("Launcher-listen")
         admin_listener = iq.SilentAdminListener("Launcher-listen")
@@ -412,6 +415,7 @@ if __name__ == "__main__":
         last_refresh_date = None
 
         with iq.ConnConnector([admin, bar_conn, hist_conn]) as connector:
+            admin.set_admin_variables(dtn_product_id, dtn_login, dtn_password)
             # Wain till IQFeed connected and initialized
             #time.sleep(5)
 
