@@ -64,9 +64,10 @@ IQFEED_V2_COLLECTION = 'quotes_intraday_iq'
 # IQFEED_V2_COLLECTION = 'quotes_intraday' # TODO: replace after production deployment
 
 IQFEED_V1_COLLECTION = 'futurebarcol_iq'
-
-
 # IQFEED_V1_COLLECTION = 'futurebarcol'  # TODO: replace after production deployment
+
+IQFEED_V2_RFR_COLLECTION = 'quotes_riskfreerate_iq'
+#IQFEED_V2_RFR_COLLECTION = 'quotes_riskfreerate'
 
 
 class TMQRIQFeedBarListener(iq.VerboseBarListener):
@@ -158,9 +159,6 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             df_cache.at[bar_time_utc, 'c'] = bar_array['close_p']
             df_cache.at[bar_time_utc, 'v'] = float(bar_array['prd_vlm'])
 
-
-
-
     def _bar_v2_process(self, iq_ticker, bar_time_utc, bar_array):
         if not check_bday_or_holiday(bar_time_utc):
             # Filter holidays
@@ -180,6 +178,28 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
     def bar_format(self, bar):
         return f"OHLCV: {bar['open_p']}, {bar['high_p']}, {bar['low_p']}, {bar['close_p']}, {bar['prd_vlm']}"
+
+    def process_risk_free_rate(self, bar_data: np.array):
+        if len(bar_data) > 1:
+            # Get v2 RFR series
+            rfr_dict = self.db_v2[IQFEED_V2_RFR_COLLECTION].find_one({'market': 'US'})
+
+            if rfr_dict is None:
+                rfr_series = pd.Series()
+            else:
+                rfr_series = object_load_decompress(rfr_dict['rfr_series'])
+
+            for i in range(len(bar_data)-1):
+                bar = bars_data[i]
+                if bar['date'] not in rfr_series:
+                    # Important: do not update RFR series if the date already in the DB
+                    rfr_series.at[bar['date']] = (100.0-bar['close_p']) / 100.0
+
+            # Save v2 RFR series
+            self.db_v2[IQFEED_V2_RFR_COLLECTION].replace_one({'market': 'US'},
+                                                             {'market': 'US', 'rfr_series': object_save_compress(rfr_series)},
+                                                             upsert=True)
+
 
     def check_bar_integrity(self,  bar_time_est, bar_data, iqticker):
         #iqticker = bar_data[0]
@@ -372,12 +392,16 @@ if __name__ == "__main__":
         log.info("Getting symbols for live updates...")
         for instr in get_instruments_list():
             instruments[instr['name']] = instr
-            ticker_update_rec = get_futures_tickers_for_live(instr, dm, nfuture_contracts=arguments.live_n_futures)
+            try:
+                ticker_update_rec = get_futures_tickers_for_live(instr, dm, nfuture_contracts=arguments.live_n_futures)
 
-            for tckr_rec in ticker_update_rec:
-                # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
-                encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
-                iq_watchlist[encoded_ticker] = tckr_rec
+                for tckr_rec in ticker_update_rec:
+                    # Apply UTF-8 encoding, because IQFeed sends tickers as encoded bytes (performance speedup)
+                    encoded_ticker = tckr_rec['iqfeed_ticker'].encode()
+                    iq_watchlist[encoded_ticker] = tckr_rec
+            except Exception as exc:
+                log.error(f"{instr['name']}: {exc}")
+
         log.info(f"{len(iq_watchlist)} symbols to watch")
 
         IQ_FEED = iq.FeedService(product=dtn_product_id,
@@ -396,10 +420,6 @@ if __name__ == "__main__":
 
         # Modify code below to connect to the socket etc as described above
         admin = iq.AdminConn(name="Launcher")
-        #admin.connect()
-
-
-        #
         # admin_listener = iq.VerboseAdminListener("Launcher-listen")
         admin_listener = iq.SilentAdminListener("Launcher-listen")
         admin.add_listener(admin_listener)
@@ -416,10 +436,7 @@ if __name__ == "__main__":
 
         with iq.ConnConnector([admin, bar_conn, hist_conn]) as connector:
             admin.set_admin_variables(dtn_product_id, dtn_login, dtn_password)
-            # Wain till IQFeed connected and initialized
-            #time.sleep(5)
 
-            """
             for iq_ticker, watch_rec in iq_watchlist.items():
                 data_start = watch_rec['last_date_utc'].astimezone(timezone_est)
                 is_delayed = watch_rec['iqfeed_is_delayed']
@@ -430,7 +447,6 @@ if __name__ == "__main__":
                     bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
                                    interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
                 time.sleep(0.05)
-            """
 
             while not os.path.isfile(ctrl_file):
                 if last_refresh_date is None or int((datetime.datetime.now() - last_refresh_date).total_seconds()/60) >= historical_refresh_interval:
@@ -470,6 +486,12 @@ if __name__ == "__main__":
                             except Exception as exc:
                                 log.error(f'{type(exc)}: {exc}')
 
+                    #
+                    # Updating risk free rate
+                    #
+                    log.debug('Processing risk free rate')
+                    bars_data = hist_conn.request_daily_data(ticker='@ED#', num_days=5, ascend=True, timeout=10)
+                    bar_listener.process_risk_free_rate(bars_data)
 
 
                     last_refresh_date = datetime.datetime.now()
