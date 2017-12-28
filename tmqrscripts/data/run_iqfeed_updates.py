@@ -60,14 +60,9 @@ dtn_password = '43354519'
 timezone_est = pytz.timezone('US/Eastern')
 timezone_pst = pytz.timezone('US/Pacific')
 
-IQFEED_V2_COLLECTION = 'quotes_intraday_iq'
-# IQFEED_V2_COLLECTION = 'quotes_intraday' # TODO: replace after production deployment
-
-IQFEED_V1_COLLECTION = 'futurebarcol_iq'
-# IQFEED_V1_COLLECTION = 'futurebarcol'  # TODO: replace after production deployment
-
-IQFEED_V2_RFR_COLLECTION = 'quotes_riskfreerate_iq'
-#IQFEED_V2_RFR_COLLECTION = 'quotes_riskfreerate'
+IQFEED_V2_COLLECTION = 'quotes_intraday'
+IQFEED_V1_COLLECTION = 'contracts_bars'
+IQFEED_V2_RFR_COLLECTION = 'quotes_riskfreerate'
 
 
 class TMQRIQFeedBarListener(iq.VerboseBarListener):
@@ -75,8 +70,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         super().__init__(name)
         self.symbol_map = symbol_map
 
-        client_v1 = MongoClient(MONGO_CONNSTR_V1_LIVE)
-        self.db_v1 = client_v1[MONGO_DB_V1_LIVE]
+        client_v1 = MongoClient(MONGO_CONNSTR_V1)
+        self.db_v1 = client_v1[MONGO_EXO_DB_V1]
 
         client_v2 = MongoClient(MONGO_CONNSTR)
         self.db_v2 = client_v2[MONGO_DB]
@@ -89,18 +84,17 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
         date_pst = date_utc.astimezone(timezone_pst).replace(tzinfo=None)
 
         req_dict = {
-            "bartime": date_pst,
+            "datetime": date_pst,
             "idcontract": ticker_dict['v1_contract_id'],
             "open": bar_array['open_p'],
             "high": bar_array['high_p'],
             "low": bar_array['low_p'],
             "close": bar_array['close_p'],
             "volume": float(bar_array['prd_vlm']),
-            "errorbar": False,
         }
 
         self.db_v1[IQFEED_V1_COLLECTION].replace_one(
-            {'idcontract': req_dict['idcontract'], 'bartime': req_dict['bartime']},
+            {'idcontract': req_dict['idcontract'], "datetime": req_dict["datetime"]},
             req_dict, upsert=True
             )
 
