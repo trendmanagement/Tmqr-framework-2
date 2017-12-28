@@ -446,7 +446,7 @@ if __name__ == "__main__":
                     # Skip tickers which are not in delayed mode
                     bar_conn.watch(symbol=iq_ticker.decode(), interval_len=60,
                                    interval_type='s', update=arguments.live_update_sec, bgn_bars=data_start)
-                time.sleep(0.05)
+                    time.sleep(0.05)
 
             while not os.path.isfile(ctrl_file):
                 if last_refresh_date is None or int((datetime.datetime.now() - last_refresh_date).total_seconds()/60) >= historical_refresh_interval:
