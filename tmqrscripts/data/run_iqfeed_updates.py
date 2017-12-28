@@ -413,10 +413,13 @@ if __name__ == "__main__":
         headless = arguments.headless
         ctrl_file = arguments.ctrl_file
         historical_refresh_interval = arguments.historical_refresh_interval_min
+        log.info("Launching IQConnect.exe, and wait for 15 seconds")
+
         IQ_FEED.launch(timeout=15,
-                       check_conn=True,
+                       check_conn=False,
                        headless=headless,
                        nohup=nohup)
+        time.sleep(15)
 
         # Modify code below to connect to the socket etc as described above
         admin = iq.AdminConn(name="Launcher")
