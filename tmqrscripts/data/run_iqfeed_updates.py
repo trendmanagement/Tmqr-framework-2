@@ -160,7 +160,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             df_cache.at[bar_time_utc, 'v'] = float(bar_array['prd_vlm'])
 
     def _bar_v2_process(self, iq_ticker, bar_time_utc, bar_array):
-        if not check_bday_or_holiday(bar_time_utc):
+        if not check_bday_or_holiday(bar_time_utc.astimezone(timezone_pst)):
             # Filter holidays
             return
 
@@ -238,7 +238,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 if not self.check_bar_integrity(bar_time_est, bar, bar[0]):
                     return
 
-                #log.debug(f"UPD {bar[0]} {bar_time_est}: {bar}")
+                if not check_bday_or_holiday(bar_time_utc.astimezone(timezone_pst)):
+                    # Filter holidays
+                    return
+
 
                 ticker_rec = self.symbol_map[bar['symbol']]
 
@@ -277,18 +280,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             log.exception("Unhandled exception in process_history_bar()")
 
     def process_live_bar(self, bar_data: np.array):
-        try:
-            for bar in bar_data:
-                bar_time = iq.date_us_to_datetime(bar[1], bar[2]) - datetime.timedelta(minutes=1)
-                # print(f"LIVE {bar_time}: {bar}")
-                ticker_rec = self.symbol_map[bar[0]]
-
-                if 'live_bar' in ticker_rec:
-                    if not np.all(bar == ticker_rec['live_bar']['bar_array']):
-                        log.warning(
-                            f"{bar[0]} live bar prices mismatch: New: {bar} Old: {ticker_rec['live_bar']['bar_array']}")
-        except:
-            log.exception("Unhandled exception in process_live_bar()")
+       pass
 
     def process_history_bar(self, bar_data: np.array, force_db_write=False, ticker=None):
         try:
@@ -299,6 +291,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
+
+                if not check_bday_or_holiday(bar_time_utc.astimezone(timezone_pst)):
+                    # Filter holidays
+                    return
 
                 if not self.check_bar_integrity(bar_time_est, bar, iqticker=iq_tckr):
                     log.debug(f"Historical bar integrity checks failed: {bar}")
