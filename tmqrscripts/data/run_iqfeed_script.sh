@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+killall iqconnect.exe && killall -9 iqconnect.exe && /home/tmqr_framework2/anaconda3/bin/python /home/tmqr_framework2/tmqr_framework2/tmqrscripts/data/run_iqfeed_updates.py --headless --live_n_futures=6
