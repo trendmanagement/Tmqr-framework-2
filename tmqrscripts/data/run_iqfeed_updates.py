@@ -473,7 +473,7 @@ if __name__ == "__main__":
                                 else:
                                     # If data has been recently updated, poll last hour to update the data
                                     bars_data = hist_conn.request_bars_for_days(ticker=iq_ticker, interval_len=60, interval_type='s',
-                                                                                days=10, max_bars=10,
+                                                                                days=10, max_bars=5,
                                                                                 ascend=True, timeout=10)
 
                                 if len(bars_data) == 0:
