@@ -27,9 +27,9 @@ from tmqrindex import IndexBase
 from tmqr.logs import log
 import os
 
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import pytz
-from tmqr.errors import DataEngineNotFoundError
+from tmqr.errors import DataEngineNotFoundError, QuoteNotFoundError
 # import threading
 
 # log.disabled = True
@@ -128,10 +128,24 @@ class IndexGenerationScript:
 
         #instrument_list = ['US.ES', 'US.CL', 'US.ZN', 'US.6C', 'US.6J', 'US.6E', 'US.6B']
 
-        for instrument in self.asset_info_collection.find({},{'instrument':1,'last_bar_update':1}):
+        for instrument in self.asset_info_collection.find({},{'instrument':1}):
         # instrument = {'instrument':'US.ES'}
         # instrument = {'instrument':'US.6J'}
+
             if not 'DEFAULT' in instrument['instrument'] and instrument['instrument'] in self.instrument_list:
+
+                dm_current_time = DataManager(date_start=datetime.now())
+
+                fut_chain = dm_current_time.datafeed.get_fut_chain(instrument['instrument'])
+
+                futures_tuple = fut_chain.get_list(datetime.now() - timedelta(days=7), offset=0, limit=1)
+                fut = futures_tuple[0][0]
+                try:
+                    instrument['last_bar_update'] = dm_current_time.datafeed.get_last_quote_date(fut.ticker,
+                                                                                                 fut.data_source)
+                except QuoteNotFoundError:
+                    instrument['last_bar_update'] = datetime.now().astimezone(pytz.utc)
+
                 log.setup('scripts', 'IndexGenerationScript', to_file=True)
                 log.info(f"{instrument['instrument']} Last bar update: {instrument['last_bar_update']}")
 
