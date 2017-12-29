@@ -183,15 +183,23 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
             else:
                 rfr_series = object_load_decompress(rfr_dict['rfr_series'])
 
+
+
             for i in range(len(bar_data)-1):
                 bar = bars_data[i]
                 if bar['date'] not in rfr_series:
                     # Important: do not update RFR series if the date already in the DB
                     rfr_series.at[bar['date']] = (100.0-bar['close_p']) / 100.0
 
+            last_rfr = None
+            if len(rfr_series) > 0:
+                last_rfr = rfr_series[-1]
+
             # Save v2 RFR series
             self.db_v2[IQFEED_V2_RFR_COLLECTION].replace_one({'market': 'US'},
-                                                             {'market': 'US', 'rfr_series': object_save_compress(rfr_series)},
+                                                             {'market': 'US',
+                                                              'rfr_series': object_save_compress(rfr_series),
+                                                              'last_rfr': last_rfr},
                                                              upsert=True)
 
 
