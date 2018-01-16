@@ -87,7 +87,9 @@ def get_instruments_list():
 
         v1_instrum_dict = db_v1['instruments'].find_one({'exchangesymbol': exchange_ticker_root})
 
-        v1_instrument_id = v1_instrum_dict.get('idinstrument', None)
+        v1_instrument_id = None
+        if v1_instrum_dict is not None:
+            v1_instrument_id = v1_instrum_dict.get('idinstrument', None)
 
         insrument_ = {
             'name': instr_dict['instrument'],
