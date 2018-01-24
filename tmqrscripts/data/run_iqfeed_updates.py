@@ -80,6 +80,10 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
 
     def _bar_v1_process(self, iq_ticker, date_utc, bar_array):
         ticker_dict = self.symbol_map[iq_ticker]
+        if not ticker_dict.get('v1_contract_id', None):
+            # Skip contracts which are not present in V1 and have no reference to contract ID in v2.
+            return
+
         # Make the datetime tz-aware (PST) and replace tz-info
         date_pst = date_utc.astimezone(timezone_pst).replace(tzinfo=None)
 
@@ -292,6 +296,7 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                     iq_tckr = bar['symbol']
 
                 bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
+
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
                 if not check_bday_or_holiday(bar_time_utc.astimezone(timezone_pst)):
@@ -377,7 +382,7 @@ if __name__ == "__main__":
 
     arguments = parser.parse_args()
 
-    log.setup('scripts', "IQFeedDataFeed", to_file=True, log_level=logging.DEBUG)
+    log.setup('scripts', "IQFeedDataFeed", to_file=True, log_level=logging.INFO)
     log.info('Launching IQFeed datascript')
 
     #
@@ -486,7 +491,7 @@ if __name__ == "__main__":
                                                                  force_db_write=True,
                                                                  ticker=iq_ticker_b,
                                                                  )
-                            except BrokenPipeError:
+                            except (BrokenPipeError, ConnectionRefusedError, ConnectionResetError):
                                 log.error("IQConnect.exe unexpectedly exited")
                                 sys.exit(-2)
                             except Exception as exc:
