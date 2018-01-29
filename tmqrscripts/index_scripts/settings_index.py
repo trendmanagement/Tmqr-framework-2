@@ -46,7 +46,8 @@ from tmqrindex.deployed.v6_exo_short_yield_enhancement_passive_call import EXO_S
 
 
 INSTRUMENT_LIST_TO_RUN_INDEXES = ['US.ES', 'US.CL', 'US.ZN', 'US.ZC', 'US.6J', 'US.6B', 'US.6E', 'US.6C', 'US.DC',
-                                  'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE', 'US.SI', 'US.HG']
+                                  'US.NG', 'US.ZW', 'US.ZS', 'US.GC', 'US.ZL', 'US.LE', 'US.HE', 'US.SI', 'US.HG',
+                                  'US.ZB']
 
 INDEX_LIST = [
 
