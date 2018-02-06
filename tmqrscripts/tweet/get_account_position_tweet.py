@@ -4,8 +4,10 @@ import pandas as pd
 # import pytz
 from pymongo import MongoClient
 import pymongo
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from datetime import datetime, time, timedelta
+from datetime import timedelta #datetime, time,
 from tmqr.settings import *
 # from tqdm import tqdm_notebook
 # from tmqrfeed import DataManager
@@ -45,7 +47,7 @@ class AccountPositionTweet:
         # for cmp in campaign_list_dict:
         #     campaign_list.append(cmp['name'])
         # return list(self.mongo_db_v1['accounts'].find({'campaign_name':{'$in': campaign_list}}))
-        return list(self.mongo_db_v1['accounts'].find({'campaign_name':campaign_name}))
+        return list(self.mongo_db_v1['accounts'].find({'campaign_name':campaign_name, 'twitter':True}))
 
     def get_accounts_positions_mongo(self,account_name):
         return list(self.mongo_db_v1['accounts_positions'].find({'name':account_name}))[0]
