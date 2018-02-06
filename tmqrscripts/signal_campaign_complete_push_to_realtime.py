@@ -11,6 +11,8 @@ from tradingcore.execution_manager import ExecutionManager
 from tradingcore.messages import *
 from tradingcore.signalapp import SignalApp, APPCLASS_SIGNALS
 
+from tmqrscripts.tweet.run_tweet_updates import RunningAccountTweet
+
 from tmqr.settings import *
 from tmqr.logs import log
 
@@ -31,6 +33,8 @@ class CampaignUpdateCheckPushToRealtime:
             unique=False)
 
         self.signalapp_exo = SignalApp('Campaign Status', APPCLASS_SIGNALS, RABBIT_HOST, RABBIT_USER, RABBIT_PASSW)
+
+        self.running_account_tweet = RunningAccountTweet()
 
     def get_alphas_list_from_settings(self, campaing_dict):
         #     alphas = []
@@ -124,6 +128,8 @@ class CampaignUpdateCheckPushToRealtime:
 
                             self.db_v1['campaigns'].update_one({'name': smart_campaign['name']},
                                                              {'$set': {'context.update_time_instrument.{}'.format(product): current_time_utc}})
+
+                            self.running_account_tweet(smart_campaign['name'], product)
 
                             campaign_ready_to_push_to_realtime = True
 

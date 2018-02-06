@@ -39,6 +39,11 @@ QTYPE_OPTIONS_EOD = 4
 QDATE_MIN = datetime(1900, 1, 1)
 QDATE_MAX = datetime(2100, 1, 1)
 
+TWITTER_ACCESS_TOKEN = '956610364019392512-QdLMvzDPUO2zYjVAuSlMXGXCsZToar6'
+TWITTER_ACCESS_TOKEN_SECRET = '3R1tiFq4oRpkNyp3pbwsnoKp8smbpCJB90Dt4wl47R0ZS'
+CONSUMER_KEY = 'H16nSIP7NhWaqLDopZDH3HQYt'
+CONSUMER_SECRET = 'RJvvFuk2WsLwcDhQTHPJqC50u43oT9RDTd2WU4OYcicIfuC07X'
+
 # Allow any settings to be defined in settings_local.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
