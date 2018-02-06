@@ -713,6 +713,8 @@ class AccountPositionTweet:
 
         # print(payoff_percent_final.to_html(border=0))
         # print('pl', instrument_outputs['total_pl'], sum(instrument_outputs['total_pl']))
+
+        options = {"xvfb": ""}
         table_image = 'tables.jpg'
         imgkit.from_string(self._format_position_table()
                            .format(instrument_outputs['output_rows'],
@@ -726,7 +728,7 @@ class AccountPositionTweet:
                                    round(sum(instrument_outputs['total_vega']), 4),
                                    round(sum(instrument_outputs['total_theta']), 4),
                                    self.calc_transactions(instrument, accounts_positions, accounts_positions_archive)),
-                           table_image)
+                           table_image,options =options)
 
 
         # order_table_image = 'order_table.jpg'
