@@ -643,8 +643,11 @@ class AccountPositionTweet:
         #             self.fill_future_payoff_output_row(position, instrument_outputs['future_dict'], instrument,
         #                                                      instrument_outputs, position['qty'])
 
+        log.info('start of image manipulation')
 
         f, (ax1, ax2) = plt.subplots(2, gridspec_kw={'height_ratios': [3, 1]});
+
+        log.info('created sub plots')
 
         future_settle = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['settlement']
         # future_settle = future_dict[list(future_dict)[0]]['close']
@@ -681,6 +684,7 @@ class AccountPositionTweet:
         # future_close_idx = payoff_df.index[np.searchsorted(payoff_df.index, future_close)]
         # print('test',payoff_df['Payoff Current'].loc[future_close_idx])
 
+        log.info('going to plot payoff')
 
         payoff_df.plot(ax=ax1)
         # print('close',instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['current_bar']['close'])
@@ -688,6 +692,7 @@ class AccountPositionTweet:
         plt.axes(ax1)
         plt.axvline(x=future_close, ymin=0, ymax=1, color='red')
 
+        log.info('plotted payoff')
 
         delta_df = pd.DataFrame()
         delta_df['Future Price'] = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']
