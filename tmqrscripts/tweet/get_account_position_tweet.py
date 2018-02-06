@@ -62,12 +62,12 @@ class AccountPositionTweet:
 
         # instrument_list = list(product_dict)
         # print('instrument_list',instrument_list)
-        print(product_list)
+        # print(product_list)
         instruments = list(self.mongo_db_v1['instruments'].find({'exchangesymbol': {'$in': list(product_list)}}))
 
         final_product_list = {}
         for instrument in instruments:
-            print(instrument)
+            # print(instrument)
             final_product_list[instrument['exchangesymbol']] = instrument
 
         return final_product_list
@@ -345,8 +345,8 @@ class AccountPositionTweet:
                                       instrument_outputs, qty):
         if qty != None:
             '''adds the future to the payoff and delta calculations because qty is not equal to 0'''
-            print('payoff_price_series',future_dict[position['asset']['idcontract']]['payoff_price_series'])
-            print('close',future_dict[position['asset']['idcontract']]['current_bar']['close'])
+            # print('payoff_price_series',future_dict[position['asset']['idcontract']]['payoff_price_series'])
+            # print('close',future_dict[position['asset']['idcontract']]['current_bar']['close'])
             temp_payoff = (future_dict[position['asset']['idcontract']]['payoff_price_series'] - \
                            future_dict[position['asset']['idcontract']]['current_bar']['close']) \
                           / instrument['ticksize'] \
@@ -646,7 +646,7 @@ class AccountPositionTweet:
 
         future_close = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['current_bar']['close']
 
-        print('payoff_price_series', len(instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']), len(instrument_outputs['payoff_val']))
+        # print('payoff_price_series', len(instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']), len(instrument_outputs['payoff_val']))
 
         payoff_percent = pd.DataFrame()
         payoff_percent['Future Price'] = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']
@@ -697,7 +697,7 @@ class AccountPositionTweet:
         f.savefig(payoff_image)
 
         # print(payoff_percent_final.to_html(border=0))
-        print('pl', instrument_outputs['total_pl'], sum(instrument_outputs['total_pl']))
+        # print('pl', instrument_outputs['total_pl'], sum(instrument_outputs['total_pl']))
         table_image = 'tables.jpg'
         imgkit.from_string(self._format_position_table()
                            .format(instrument_outputs['output_rows'],
@@ -773,7 +773,7 @@ class AccountPositionTweet:
         #now negate any final position and that will be the order
         for key, value in position_dict.items():
             if value['final_position'] != 0:
-                print('final_position',value['final_position'])
+                # print('final_position',value['final_position'])
                 if value['asset']['_type'] == 'opt':
                     orders_rows += self._format_order_row(value['asset']['optionname'], -value['final_position'],
                                            instrument)

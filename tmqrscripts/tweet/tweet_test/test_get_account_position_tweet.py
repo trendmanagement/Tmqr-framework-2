@@ -59,13 +59,13 @@ class Test_AccountPositionTweet(unittest.TestCase):
         # ['CL', 'ZW', 'HE', 'NG', '6E', 'LE', 'ZC', '6J', 'GC', '6C', 'ZN', 'ES', 'ZS', '6B', 'ZL']
         for id, product in product_dict.items():
             # print(id,product['exchangesymbol'])
-            if id == 'CL':
-                message = '#{}__{}'.format(product['exchangesymbol'],ap_current['name'],ap_current['campaign_name'])
+            # if id == 'CL':
+            message = '#{}__{}'.format(product['exchangesymbol'],ap_current['name'],ap_current['campaign_name'])
 
-                # self.apt.calc_payoff(self.test_account, product, ap_current, ap_archive)
+            # self.apt.calc_payoff(self.test_account, product, ap_current, ap_archive)
 
-                ts.post_tweets_with_image(message=message,
-                                      img=self.apt.calc_payoff(self.test_account, product, ap_current, ap_archive))
+            ts.post_tweets_with_image(message=message,
+                                  img=self.apt.calc_payoff(self.test_account, product, ap_current, ap_archive))
 
             # time.sleep(5)
 
