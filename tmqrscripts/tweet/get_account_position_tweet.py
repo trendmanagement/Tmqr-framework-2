@@ -14,7 +14,7 @@ from tmqr.settings import *
 # from smartcampaign import SmartCampaignBase
 from exobuilder.algorithms.blackscholes import blackscholes, \
     blackscholes_greeks, blackscholes_gamma, blackscholes_vega, blackscholes_theta
-# import seaborn as sns
+import seaborn as sns
 # import ipywidgets as widgets
 # # from IPython.display import clear_output
 # # from IPython.display import display, HTML
@@ -430,6 +430,7 @@ class AccountPositionTweet:
                         #####################################################
 
                         if not is_archive:
+                            option = instrument_outputs['option_dict'][position['asset']['idoption']]
 
                             end_future_price = \
                                 instrument_outputs['future_dict'][position['asset']['idcontract']]['current_bar'][
@@ -728,6 +729,8 @@ class AccountPositionTweet:
         img_merge = PIL.Image.fromarray(img_merge)
         combined_img = 'combined_image.jpg'
         img_merge.save(combined_img)
+
+        plt.close('all')
 
         return '{}/{}'.format(os.getcwd(), combined_img)
 

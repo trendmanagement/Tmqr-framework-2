@@ -63,7 +63,7 @@ class CampaignUpdateCheckPushToRealtime:
 
         return product_list
 
-    def run_query_to_test_campaign_components(self):
+    def run_query_to_test_campaign_components(self, override_send_tweet = False):
 
         campaign_names = list(self.db_v1['accounts'].distinct('campaign_name'))
 
@@ -121,6 +121,13 @@ class CampaignUpdateCheckPushToRealtime:
                                         campaign_ready = False
                                         break
 
+                        if campaign_ready or override_send_tweet:
+                            try:
+                                self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
+                            except Exception as e:
+                                log.warning(e)
+
+
                         if campaign_ready:
 
                             self.signalapp_exo.send(
@@ -129,7 +136,7 @@ class CampaignUpdateCheckPushToRealtime:
                             self.db_v1['campaigns'].update_one({'name': smart_campaign['name']},
                                                              {'$set': {'context.update_time_instrument.{}'.format(product): current_time_utc}})
 
-                            self.running_account_tweet(smart_campaign['name'], product)
+
 
                             campaign_ready_to_push_to_realtime = True
 
