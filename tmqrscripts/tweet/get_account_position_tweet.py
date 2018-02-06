@@ -22,8 +22,13 @@ import seaborn as sns
 import PIL
 import imgkit
 
+from tmqr.logs import log
+
 class AccountPositionTweet:
     def __init__(self):
+        log.setup('scripts', 'TweetingScript', to_file=True)
+        log.info('Running tweet script')
+
         mongo_client_v1 = MongoClient(MONGO_CONNSTR_V1)
         self.mongo_db_v1 = mongo_client_v1[MONGO_EXO_DB_V1]
 
@@ -693,8 +698,11 @@ class AccountPositionTweet:
         plt.axes(ax2)
         plt.axvline(x=future_close, ymin=0, ymax=1, color='red')
 
+        log.info('saving payoff image')
+
         payoff_image = 'payoff.jpg'
         f.savefig(payoff_image)
+        log.info('saved payoff image')
 
         # print(payoff_percent_final.to_html(border=0))
         # print('pl', instrument_outputs['total_pl'], sum(instrument_outputs['total_pl']))
