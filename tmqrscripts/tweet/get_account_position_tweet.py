@@ -716,7 +716,8 @@ class AccountPositionTweet:
 
         options = {"xvfb": ""}
         table_image = 'tables.jpg'
-        imgkit.from_string(self._format_position_table()
+        try:
+            imgkit.from_string(self._format_position_table()
                            .format(instrument_outputs['output_rows'],
                                    self.query_time.date(),
                                    payoff_percent_final.to_html(border=0),
@@ -728,7 +729,23 @@ class AccountPositionTweet:
                                    round(sum(instrument_outputs['total_vega']), 4),
                                    round(sum(instrument_outputs['total_theta']), 4),
                                    self.calc_transactions(instrument, accounts_positions, accounts_positions_archive)),
-                           table_image,options =options)
+                           table_image, options = options)
+        except Exception as e:
+            imgkit.from_string(self._format_position_table()
+                               .format(instrument_outputs['output_rows'],
+                                       self.query_time.date(),
+                                       payoff_percent_final.to_html(border=0),
+                                       round(sum(instrument_outputs['total_settle_delta']), 4),
+                                       round(sum(instrument_outputs['total_gamma']), 4),
+                                       future_close,  # future price
+                                       round(sum(instrument_outputs['total_pl']), 4),
+                                       # round(payoff_df['Payoff Current'].loc[future_close_idx], 4),
+                                       instrument['exchangesymbol'],
+                                       round(sum(instrument_outputs['total_vega']), 4),
+                                       round(sum(instrument_outputs['total_theta']), 4),
+                                       self.calc_transactions(instrument, accounts_positions,
+                                                              accounts_positions_archive)),
+                               table_image)
 
 
         # order_table_image = 'order_table.jpg'

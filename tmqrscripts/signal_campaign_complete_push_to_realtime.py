@@ -83,6 +83,8 @@ class CampaignUpdateCheckPushToRealtime:
 
         campaign_ready_to_push_to_realtime = False;
 
+        tweet_queue = []
+
         for smart_campaign in smart_campaign_list:
 
             try:
@@ -123,7 +125,8 @@ class CampaignUpdateCheckPushToRealtime:
 
                         if campaign_ready or override_send_tweet:
                             try:
-                                self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
+                                # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
+                                tweet_queue.append((smart_campaign['name'], product))
                             except Exception as e:
                                 log.warning(e)
 
@@ -156,6 +159,13 @@ class CampaignUpdateCheckPushToRealtime:
             exmgr.account_positions_process(write_to_db=True)
             # pass
 
+        for tweets in tweet_queue:
+            try:
+                self.running_account_tweet.run_through_accounts(tweets[0], tweets[1])
+            except Exception as e:
+                log.warning(e)
+            # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
+            # tweet_queue.append((smart_campaign['name'], product))
 
 if __name__ == "__main__":
     cuc = CampaignUpdateCheckPushToRealtime()
