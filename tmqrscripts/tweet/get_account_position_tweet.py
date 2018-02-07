@@ -256,13 +256,20 @@ class AccountPositionTweet:
         else:
             instrument_outputs['delta_val_ae'] = np.add(instrument_outputs['delta_val_ae'], temp_delta_ae)
 
-        # return payoff_val, delta_val, payoff_val_ae, delta_val_ae
+    def check_size_payoff_arrays(self, instrument_outputs, length):
 
-    # def blackscholes_gamma(self, ulprice, strike, toexpiry, riskfreerate, iv):
-    #     d1 = (math.log(ulprice / strike) + (riskfreerate + iv * iv / 2) * toexpiry) / (iv * math.sqrt(toexpiry))
-    #     nd = math.exp(-d1 * d1 / 2) / 2.5066282746310002
-    #
-    #     return nd / (ulprice * iv * math.sqrt(toexpiry))
+        if instrument_outputs['payoff_val'].size == 0:
+            instrument_outputs['payoff_val'] = np.zeros(length)
+
+        if instrument_outputs['delta_val'].size == 0:
+            instrument_outputs['delta_val'] = np.zeros(length)
+
+        if instrument_outputs['payoff_val_ae'].size == 0:
+            instrument_outputs['payoff_val_ae'] = np.zeros(length)
+
+        if instrument_outputs['delta_val_ae'].size == 0:
+            instrument_outputs['delta_val_ae'] = np.zeros(length)
+
 
     def option_price(self, callorput, underlyingprice, strike, to_expiration_years, iv, riskfreerate=0.01, option_price_return_type = 1):
         '''
@@ -656,7 +663,9 @@ class AccountPositionTweet:
 
         future_close = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['current_bar']['close']
 
-        # print('payoff_price_series', len(instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']), len(instrument_outputs['payoff_val']))
+        self.check_size_payoff_arrays(instrument_outputs,
+                                 len(instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]][
+                                         'payoff_price_series']))
 
         payoff_percent = pd.DataFrame()
         payoff_percent['Future Price'] = instrument_outputs['future_dict'][list(instrument_outputs['future_dict'])[0]]['payoff_price_series']
