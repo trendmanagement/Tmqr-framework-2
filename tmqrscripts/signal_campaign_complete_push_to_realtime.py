@@ -19,6 +19,8 @@ from tmqr.logs import log
 
 class CampaignUpdateCheckPushToRealtime:
     def __init__(self):
+        log.setup('scripts', 'CampaignMessageUpdate', to_file=True)
+        log.info('Running CampaignUpdateCheckPushToRealtime')
 
         self.client_v2 = MongoClient(MONGO_CONNSTR)
         self.db_v2 = self.client_v2[MONGO_DB]
@@ -67,7 +69,7 @@ class CampaignUpdateCheckPushToRealtime:
 
         campaign_names = list(self.db_v1['accounts'].distinct('campaign_name'))
 
-        # campaign_names = ['SmartCampaign_Diversified_Str_Concept_NO_GC']
+        # campaign_names = ['SmartCampaign_JPlusA_Futures_Only_SmartC']
 
         # campaign_list = list(self.db_v1['campaigns'].find({'name': {'$in': campaign_names}}))
 
@@ -75,7 +77,7 @@ class CampaignUpdateCheckPushToRealtime:
 
         final_alpha_list = []
 
-        #current_time_local = datetime.now(pytz.timezone(DEFAULT_TIMEZONE))
+        current_time_local = datetime.now()
         current_date_local = datetime.now(pytz.timezone(DEFAULT_TIMEZONE)).date()
 
         current_time_utc = datetime.utcnow()
@@ -126,9 +128,11 @@ class CampaignUpdateCheckPushToRealtime:
                         if campaign_ready or override_send_tweet:
                             try:
                                 # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
-                                tweet_queue.append((smart_campaign['name'], product))
+                                # print(smart_campaign['name'])
+                                log.info(f"Preparing Tweet List {smart_campaign['name']}: {product} : {current_time_local}")
+                                tweet_queue.append((smart_campaign['name'], product, current_time_local))
                             except Exception as e:
-                                log.warning(e)
+                                log.error(f"Preparing Tweet List Error {smart_campaign['name']}: {product} : {current_time_local} : {e}")
 
 
                         if campaign_ready:
@@ -143,10 +147,13 @@ class CampaignUpdateCheckPushToRealtime:
 
                             campaign_ready_to_push_to_realtime = True
 
-                            print('campaign ready', smart_campaign['name'])
+                            # print('campaign ready', smart_campaign['name'])
+                            log.info(
+                                f"Campaign Ready {smart_campaign['name']}: {product} : {current_time_local} : {current_time_utc}")
 
             except Exception as e:
-                log.warning(e)
+                log.error(
+                    f"Campaign Ready Error {smart_campaign['name']}: {product} : {current_time_local} : {current_time_utc} : {e}")
 
         if campaign_ready_to_push_to_realtime:
             assetindex = AssetIndexMongo(MONGO_CONNSTR_V1, MONGO_EXO_DB_V1)
@@ -161,9 +168,12 @@ class CampaignUpdateCheckPushToRealtime:
 
         for tweets in tweet_queue:
             try:
-                self.running_account_tweet.run_through_accounts(tweets[0], tweets[1])
+                log.info(
+                    f"Sending Tweet List {tweets[0]}: {tweets[1]} : {tweets[2]}")
+                self.running_account_tweet.run_through_accounts(tweets[0], tweets[1], tweets[2])
             except Exception as e:
-                log.warning(e)
+                log.error(
+                    f"Sending Tweet List Error {tweets[0]}: {tweets[1]} : {tweets[2]} : {e}")
             # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
             # tweet_queue.append((smart_campaign['name'], product))
 
