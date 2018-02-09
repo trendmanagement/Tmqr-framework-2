@@ -67,6 +67,8 @@ class CampaignUpdateCheckPushToRealtime:
 
     def run_query_to_test_campaign_components(self, override_send_tweet = False):
 
+        log.setup('scripts', 'CampaignMessageUpdate', to_file=True)
+        
         campaign_names = list(self.db_v1['accounts'].distinct('campaign_name'))
 
         # campaign_names = ['SmartCampaign_JPlusA_Futures_Only_SmartC']
@@ -135,7 +137,7 @@ class CampaignUpdateCheckPushToRealtime:
                                 log.error(f"Preparing Tweet List Error {smart_campaign['name']}: {product} : {current_time_local} : {e}")
 
 
-                        if campaign_ready:
+                        if campaign_ready and not override_send_tweet:
 
                             self.signalapp_exo.send(
                                 MsgStatus('Campaign Status', 'Ready {0} {1}'.format(smart_campaign['name'], product), notify=True))
@@ -167,6 +169,7 @@ class CampaignUpdateCheckPushToRealtime:
             # pass
 
         for tweets in tweet_queue:
+
             try:
                 log.info(
                     f"Sending Tweet List {tweets[0]}: {tweets[1]} : {tweets[2]}")

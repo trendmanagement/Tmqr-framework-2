@@ -11,7 +11,8 @@ class RunningAccountTweet:
         self.ts = Tweet_System()
 
     def run_through_accounts(self, campaign_name, product_in, current_time_local):
-        # print(campaign_name)
+        log.setup('scripts', 'CampaignMessageUpdate', to_file=True)
+
         accounts_list = self.apt.get_accounts(campaign_name)
         print(accounts_list)
         for account in accounts_list:
@@ -21,7 +22,8 @@ class RunningAccountTweet:
 
             loop_count = 0
             account_time = ap_current['date_now']
-            # print('time compare',account_time, current_time_local)
+
+
             log.info(
                 f"Running Account Tweet {campaign_name}: {product_in} : messagetime{current_time_local} : account_time{account_time}")
             while account_time < current_time_local and loop_count < 10:
