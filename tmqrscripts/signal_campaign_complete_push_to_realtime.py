@@ -87,7 +87,7 @@ class CampaignUpdateCheckPushToRealtime:
 
         campaign_ready_to_push_to_realtime = False;
 
-        tweet_queue = []
+        campaign_finished_tweet_and_c2_queue = []
 
         for smart_campaign in smart_campaign_list:
 
@@ -132,7 +132,7 @@ class CampaignUpdateCheckPushToRealtime:
                                 # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
                                 # print(smart_campaign['name'])
                                 log.info(f"Preparing Tweet List {smart_campaign['name']}: {product} : {current_time_local}")
-                                tweet_queue.append((smart_campaign['name'], product, current_time_local))
+                                campaign_finished_tweet_and_c2_queue.append((smart_campaign['name'], product, current_time_local))
                             except Exception as e:
                                 log.error(f"Preparing Tweet List Error {smart_campaign['name']}: {product} : {current_time_local} : {e}")
 
@@ -168,7 +168,7 @@ class CampaignUpdateCheckPushToRealtime:
             exmgr.account_positions_process(write_to_db=True)
             # pass
 
-        for tweets in tweet_queue:
+        for tweets in campaign_finished_tweet_and_c2_queue:
 
             try:
                 log.info(
@@ -178,7 +178,19 @@ class CampaignUpdateCheckPushToRealtime:
                 log.error(
                     f"Sending Tweet List Error {tweets[0]}: {tweets[1]} : {tweets[2]} : {e}")
             # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
-            # tweet_queue.append((smart_campaign['name'], product))
+            # campaign_finished_tweet_and_c2_queue.append((smart_campaign['name'], product))
+
+        for c2_orders in campaign_finished_tweet_and_c2_queue:
+
+            try:
+                log.info(
+                    f"Sending C2 List {c2_orders[0]}: {c2_orders[1]} : {c2_orders[2]}")
+                self.running_account_tweet.run_through_accounts(c2_orders[0], c2_orders[1], c2_orders[2])
+            except Exception as e:
+                log.error(
+                    f"Sending C2 List Error {c2_orders[0]}: {c2_orders[1]} : {c2_orders[2]} : {e}")
+            # self.running_account_tweet.run_through_accounts(smart_campaign['name'], product)
+            # campaign_finished_tweet_and_c2_queue.append((smart_campaign['name'], product))
 
 if __name__ == "__main__":
     cuc = CampaignUpdateCheckPushToRealtime()

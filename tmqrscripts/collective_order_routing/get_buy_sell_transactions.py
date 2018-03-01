@@ -43,12 +43,20 @@ class OrderGeneration:
         return list(self.mongo_db_v1['accounts'].find({'campaign_name': campaign_name, 'c2': True}))
 
     def get_accounts_positions_mongo(self, account_name):
-        return list(self.mongo_db_v1['accounts_positions'].find({'name': account_name}))[0]
+        ap = list(self.mongo_db_v1['accounts_positions'].find({'name': account_name}))
+        if ap:
+            return ap[0]
+        else:
+            return []
 
     def get_accounts_positions_archive_mongo(self, account_name):
-        return list(self.mongo_db_v1['accounts_positions_archive'].find({'name': account_name}).sort('date_now',
-                                                                                                     pymongo.DESCENDING).limit(
-            1))[0]
+        ap_a = list(self.mongo_db_v1['accounts_positions_archive'].find({'name': account_name}).sort('date_now',
+                                                pymongo.DESCENDING).limit(1))
+
+        if ap_a:
+            return ap_a[0]
+        else:
+            return []
 
     def get_smart_campaign(self, campaign_name):
         return list(self.mongo_db_v1['campaigns_smart'].find({'name': campaign_name}))[0]
@@ -81,7 +89,53 @@ class OrderGeneration:
         year = product['asset']['year']%10
         return f'{c2_symbol}{month}{year}'
 
+    def consolidate(self, instrument, accounts_positions, accounts_positions_archive):
 
+        position_dict = {}
+
+        if accounts_positions_archive:
+            for position in accounts_positions_archive['positions']:
+                if position['asset']['idinstrument'] == instrument['idinstrument']:
+
+                    if position['asset']['_type'] == 'opt':
+                        key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
+                    else:
+                        key = (position['asset']['_type'], position['asset']['idcontract'])
+
+                    if key not in position_dict:
+                        position_dict[key] = position
+                        position_dict[key]['final_position'] = 0
+
+                        position_dict[key]['before_transaction_position'] = 0
+                        position_dict[key]['after_transaction_position'] = 0
+
+
+                    position_dict[key]['final_position'] += position['qty']
+
+                    #fill position_dict[key]['before_transaction_position']
+                    position_dict[key]['before_transaction_position'] = position_dict[key]['final_position']
+
+
+        if accounts_positions:
+            for position in accounts_positions['positions']:
+                if position['asset']['idinstrument'] == instrument['idinstrument']:
+
+                    if position['asset']['_type'] == 'opt':
+                        key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
+                    else:
+                        key = (position['asset']['_type'], position['asset']['idcontract'])
+
+                    if key not in position_dict:
+                        position_dict[key] = position
+                        position_dict[key]['final_position'] = 0
+
+                        position_dict[key]['before_transaction_position'] = 0
+                        position_dict[key]['after_transaction_position'] = 0
+
+
+                    position_dict[key]['final_position'] -= position['qty']
+
+                    position_dict[key]['after_transaction_position'] += position['qty']
 
     def calc_transactions(self, instrument, accounts_positions, accounts_positions_archive):
 
@@ -89,48 +143,49 @@ class OrderGeneration:
         position_dict = {}
         transaction_list = []
 
-        for position in accounts_positions_archive['positions']:
-            if position['asset']['idinstrument'] == instrument['idinstrument']:
+        if accounts_positions_archive:
+            for position in accounts_positions_archive['positions']:
+                if position['asset']['idinstrument'] == instrument['idinstrument']:
 
-                if position['asset']['_type'] == 'opt':
-                    key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
-                else:
-                    key = (position['asset']['_type'], position['asset']['idcontract'])
+                    if position['asset']['_type'] == 'opt':
+                        key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
+                    else:
+                        key = (position['asset']['_type'], position['asset']['idcontract'])
 
-                if key not in position_dict:
-                    position_dict[key] = position
-                    position_dict[key]['final_position'] = 0
+                    if key not in position_dict:
+                        position_dict[key] = position
+                        position_dict[key]['final_position'] = 0
 
-                    position_dict[key]['before_transaction_position'] = 0
-                    position_dict[key]['after_transaction_position'] = 0
-
-
-                position_dict[key]['final_position'] += position['qty']
-
-                #fill position_dict[key]['before_transaction_position']
-                position_dict[key]['before_transaction_position'] = position_dict[key]['final_position']
+                        position_dict[key]['before_transaction_position'] = 0
+                        position_dict[key]['after_transaction_position'] = 0
 
 
+                    position_dict[key]['final_position'] += position['qty']
 
-        for position in accounts_positions['positions']:
-            if position['asset']['idinstrument'] == instrument['idinstrument']:
-
-                if position['asset']['_type'] == 'opt':
-                    key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
-                else:
-                    key = (position['asset']['_type'], position['asset']['idcontract'])
-
-                if key not in position_dict:
-                    position_dict[key] = position
-                    position_dict[key]['final_position'] = 0
-
-                    position_dict[key]['before_transaction_position'] = 0
-                    position_dict[key]['after_transaction_position'] = 0
+                    #fill position_dict[key]['before_transaction_position']
+                    position_dict[key]['before_transaction_position'] = position_dict[key]['final_position']
 
 
-                position_dict[key]['final_position'] -= position['qty']
+        if accounts_positions:
+            for position in accounts_positions['positions']:
+                if position['asset']['idinstrument'] == instrument['idinstrument']:
 
-                position_dict[key]['after_transaction_position'] += position['qty']
+                    if position['asset']['_type'] == 'opt':
+                        key = (position['asset']['_type'], position['asset']['idcontract'], position['asset']['idoption'])
+                    else:
+                        key = (position['asset']['_type'], position['asset']['idcontract'])
+
+                    if key not in position_dict:
+                        position_dict[key] = position
+                        position_dict[key]['final_position'] = 0
+
+                        position_dict[key]['before_transaction_position'] = 0
+                        position_dict[key]['after_transaction_position'] = 0
+
+
+                    position_dict[key]['final_position'] -= position['qty']
+
+                    position_dict[key]['after_transaction_position'] += position['qty']
 
         # now negate any final position and that will be the order
         for key, value in position_dict.items():

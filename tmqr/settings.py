@@ -44,8 +44,9 @@ TWITTER_ACCESS_TOKEN_SECRET = '3R1tiFq4oRpkNyp3pbwsnoKp8smbpCJB90Dt4wl47R0ZS'
 CONSUMER_KEY = 'H16nSIP7NhWaqLDopZDH3HQYt'
 CONSUMER_SECRET = 'RJvvFuk2WsLwcDhQTHPJqC50u43oT9RDTd2WU4OYcicIfuC07X'
 
-COLLECTIVE2_SYSTEMID = '116517033'
+COLLECTIVE2_SYSTEMID = '203005734'
 COLLECTIVE2_PWD = 'test'
+COLLECTIVE2_API_KEY = 'sgCrYWS6T3fl961BCVcO9PeEOQodcDlytaprVCXr13Qls6JJ2G'
 
 # Allow any settings to be defined in settings_local.py which should be
 # ignored in your version control system allowing for settings to be
