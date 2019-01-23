@@ -1,6 +1,6 @@
 pymongo
 pika
-pandas
+pandas==0.19.2
 numpy
 cython
 tqdm
@@ -11,3 +11,7 @@ lz4==0.9.0
 python-dateutil>=2.6.0
 deap
 git+https://github.com/alexveden/pyiqfeed.git#egg=pyiqfeed
+line_profiler
+memory_profiler
+quandl
+bt
