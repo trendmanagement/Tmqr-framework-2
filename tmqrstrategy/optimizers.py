@@ -230,7 +230,10 @@ class OptimizerGenetic(OptimizerBase):
         """
         strategy_exposure = self.strategy.calculate(*individual)
         score = self.strategy.score(strategy_exposure)
-        return (score,)
+        if math.isfinite(score):
+            return (score,)
+        else:
+            return (0, )
 
     def optimize(self):
         """

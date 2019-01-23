@@ -2,13 +2,13 @@ from datetime import datetime
 
 # MongoDB credentials
 #
-MONGO_CONNSTR = 'mongodb://tmqr:tmqr@10.0.1.2/tmqr2?authMechanism=SCRAM-SHA-1'
+MONGO_CONNSTR = 'mongodb://localhost'
 MONGO_DB = 'tmqr2'
 
-MONGO_CONNSTR_V1 = 'mongodb://tmqr:tmqr@10.0.1.2/tmldb_v2?authMechanism=SCRAM-SHA-1'
+MONGO_CONNSTR_V1 = 'mongodb://localhost'
 MONGO_EXO_DB_V1 = 'tmldb_v2'
 
-MONGO_CONNSTR_V1_LIVE = 'mongodb://tml:tml@10.0.1.2/tmldb_test?authMechanism=SCRAM-SHA-1'
+MONGO_CONNSTR_V1_LIVE = 'mongodb://localhost'
 MONGO_DB_V1_LIVE = 'tmldb_test'
 
 DEFAULT_TIMEZONE = 'US/Pacific'
