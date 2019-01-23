@@ -138,7 +138,7 @@ class IndexGenerationScript:
 
                 fut_chain = dm_current_time.datafeed.get_fut_chain(instrument['instrument'])
 
-                futures_tuple = fut_chain.get_list(datetime.now() - timedelta(days=7), offset=0, limit=1)
+                futures_tuple = fut_chain.get_list(datetime.now() + timedelta(days=1), offset=0, limit=1)
                 fut = futures_tuple[0][0]
                 try:
                     instrument['last_bar_update'] = dm_current_time.datafeed.get_last_quote_date(fut.ticker,

@@ -294,12 +294,8 @@ class TMQRIQFeedBarListener(iq.VerboseBarListener):
                 iq_tckr = ticker
                 if iq_tckr is None:
                     iq_tckr = bar['symbol']
-                try:
-                    bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
-                except AssertionError as exc:
-                    # Temporary hook to catch pyiqfeed assert exception
-                    log.error(f"Failed to process bar date/time: {bar['date']} / {bar['time']}")
-                    raise exc
+
+                bar_time_est = timezone_est.localize(iq.date_us_to_datetime(bar['date'], bar['time']) - datetime.timedelta(minutes=1))
 
                 bar_time_utc = bar_time_est.astimezone(pytz.utc)
 
